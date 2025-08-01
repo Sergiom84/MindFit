@@ -304,7 +304,7 @@ const HomeScreen = () => {
       <div className="relative z-10 pt-20 pb-32 px-6">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-6xl font-bold mb-6 bg-gradient-to-r from-yellow-400 to-yellow-200 bg-clip-text text-transparent">
-            MindMixer
+            MindFit
           </h1>
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
             Tu entrenador personal inteligente que adapta rutinas, nutrición y seguimiento 
