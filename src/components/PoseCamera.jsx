@@ -1,5 +1,57 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import Webcam from 'react-webcam';
+
+// Componente Webcam simplificado para evitar problemas de build
+const Webcam = React.forwardRef(({ videoConstraints, onUserMedia, onUserMediaError, className, style }, ref) => {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const startCamera = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(videoConstraints || { video: true });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+        if (onUserMedia) onUserMedia(stream);
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        if (onUserMediaError) onUserMediaError(error);
+      }
+    };
+
+    startCamera();
+
+    return () => {
+      if (videoRef.current && videoRef.current.srcObject) {
+        const tracks = videoRef.current.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+      }
+    };
+  }, [videoConstraints, onUserMedia, onUserMediaError]);
+
+  // Exponer el ref para compatibilidad
+  React.useImperativeHandle(ref, () => ({
+    getScreenshot: () => {
+      if (!videoRef.current) return null;
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      ctx.drawImage(videoRef.current, 0, 0);
+      return canvas.toDataURL('image/jpeg');
+    }
+  }));
+
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      muted
+      className={className}
+      style={style}
+    />
+  );
+});
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

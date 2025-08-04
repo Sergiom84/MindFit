@@ -1,13 +1,53 @@
 // API para manejo de feedback de postura con GPT-4o
-// Integración real con OpenAI API
+// Integración con OpenAI API (usando fetch para compatibilidad con build)
 
-import OpenAI from 'openai';
+// Función para llamar a OpenAI usando fetch (compatible con build)
+async function callOpenAI(messages, options = {}) {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      messages: messages,
+      temperature: options.temperature || 0.7,
+      max_tokens: options.max_tokens || 600,
+      ...options
+    })
+  });
 
-// Configuración de OpenAI
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true // Solo para desarrollo, en producción usar backend
-});
+  if (!response.ok) {
+    throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+// Función para llamar a OpenAI con prompt personalizado
+async function callOpenAIWithPrompt(promptId, version, variables) {
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      prompt: {
+        id: promptId,
+        version: version
+      },
+      variables: variables
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`OpenAI Prompt API error: ${response.status} ${response.statusText}`);
+  }
+
+  return await response.json();
+}
 
 // Clase de respaldo para simulación (si no hay API key)
 class MockOpenAI {
@@ -15,7 +55,7 @@ class MockOpenAI {
     this.apiKey = config.apiKey;
   }
 
-  async chat.completions.create(params) {
+  async createCompletion(params) {
     // Simulación de respuesta de GPT-4o
     return new Promise((resolve) => {
       setTimeout(() => {
@@ -121,27 +161,27 @@ export async function getPoseFeedback(metrics, userVariables) {
       console.log('🤖 Conectando a OpenAI con prompt personalizado...');
 
       try {
-        // Usar el método responses.create con tu prompt ID específico
-        completion = await openai.responses.create({
-          prompt: {
-            id: import.meta.env.VITE_OPENAI_PROMPT_ID || "pmpt_688fd23d27448193b5bfbb2c4ef9548103c68f1f6b84e824",
-            version: parseInt(import.meta.env.VITE_OPENAI_PROMPT_VERSION) || 2
-          },
-          variables: {
-            usuario: promptVariables.usuario,
-            nivel: promptVariables.nivel,
-            objetivo: promptVariables.objetivo,
-            ejercicio_actual: promptVariables.ejercicio_actual,
-            resumen_errores: promptVariables.resumen_errores,
-            datos_pose: promptVariables.datos_pose,
-            // Variables adicionales que tu prompt pueda necesitar
-            repeticiones: metrics.repeticiones || 0,
-            precision: metrics.precision || 0,
-            angulo_rodilla: metrics.anguloMinRodilla || 'N/A',
-            tempo_concentrico: metrics.tempoConc || 'N/A',
-            tempo_excentrico: metrics.tempoEcc || 'N/A'
-          }
-        });
+        // Intentar usar el prompt personalizado primero
+        const promptVariablesForAPI = {
+          usuario: promptVariables.usuario,
+          nivel: promptVariables.nivel,
+          objetivo: promptVariables.objetivo,
+          ejercicio_actual: promptVariables.ejercicio_actual,
+          resumen_errores: promptVariables.resumen_errores,
+          datos_pose: promptVariables.datos_pose,
+          // Variables adicionales que tu prompt pueda necesitar
+          repeticiones: metrics.repeticiones || 0,
+          precision: metrics.precision || 0,
+          angulo_rodilla: metrics.anguloMinRodilla || 'N/A',
+          tempo_concentrico: metrics.tempoConc || 'N/A',
+          tempo_excentrico: metrics.tempoEcc || 'N/A'
+        };
+
+        completion = await callOpenAIWithPrompt(
+          import.meta.env.VITE_OPENAI_PROMPT_ID || "pmpt_688fd23d27448193b5bfbb2c4ef9548103c68f1f6b84e824",
+          parseInt(import.meta.env.VITE_OPENAI_PROMPT_VERSION) || 2,
+          promptVariablesForAPI
+        );
 
         console.log('✅ Respuesta recibida de OpenAI con prompt personalizado');
 
@@ -149,31 +189,31 @@ export async function getPoseFeedback(metrics, userVariables) {
         console.warn('⚠️ Error con prompt personalizado, usando chat.completions:', promptError.message);
 
         // Fallback a chat.completions si el prompt personalizado falla
-        completion = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: [
-            {
-              role: "system",
-              content: `Eres un entrenador personal experto en biomecánica y análisis de movimiento.
-                       Analiza los datos de postura del usuario y proporciona feedback constructivo,
-                       específico y personalizado. Usa un tono motivador pero técnicamente preciso.
+        const messages = [
+          {
+            role: "system",
+            content: `Eres un entrenador personal experto en biomecánica y análisis de movimiento.
+                     Analiza los datos de postura del usuario y proporciona feedback constructivo,
+                     específico y personalizado. Usa un tono motivador pero técnicamente preciso.
 
-                       Estructura tu respuesta así:
-                       📊 **Análisis Técnico:** [errores detectados]
-                       📈 **Métricas de Rendimiento:** [datos específicos]
-                       🎯 **Recomendaciones:** [consejos personalizados]
-                       💡 **Próximos pasos:** [acciones concretas]`
-            },
-            {
-              role: "user",
-              content: `Analiza esta sesión de entrenamiento:
-                       Usuario: ${promptVariables.usuario}
-                       Nivel: ${promptVariables.nivel}
-                       Ejercicio: ${promptVariables.ejercicio_actual}
-                       Errores detectados: ${promptVariables.resumen_errores}
-                       Datos técnicos: ${promptVariables.datos_pose}`
-            }
-          ],
+                     Estructura tu respuesta así:
+                     📊 **Análisis Técnico:** [errores detectados]
+                     📈 **Métricas de Rendimiento:** [datos específicos]
+                     🎯 **Recomendaciones:** [consejos personalizados]
+                     💡 **Próximos pasos:** [acciones concretas]`
+          },
+          {
+            role: "user",
+            content: `Analiza esta sesión de entrenamiento:
+                     Usuario: ${promptVariables.usuario}
+                     Nivel: ${promptVariables.nivel}
+                     Ejercicio: ${promptVariables.ejercicio_actual}
+                     Errores detectados: ${promptVariables.resumen_errores}
+                     Datos técnicos: ${promptVariables.datos_pose}`
+          }
+        ];
+
+        completion = await callOpenAI(messages, {
           temperature: 0.7,
           max_tokens: 600
         });
@@ -184,7 +224,7 @@ export async function getPoseFeedback(metrics, userVariables) {
       // Usar simulación si no hay API key
       console.log('🔄 Usando simulación (no hay API key configurada)');
       const mockOpenAI = new MockOpenAI({ apiKey: 'mock-key' });
-      completion = await mockOpenAI.chat.completions.create({ variables: promptVariables });
+      completion = await mockOpenAI.createCompletion({ variables: promptVariables });
     }
 
     return {
