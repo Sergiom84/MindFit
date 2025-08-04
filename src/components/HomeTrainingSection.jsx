@@ -3,11 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  Home, 
-  Dumbbell, 
-  Target, 
-  Clock, 
+import SpaceEvaluationModal from './SpaceEvaluationModal'
+import { useUserContext } from '@/contexts/UserContext'
+import {
+  Home,
+  Dumbbell,
+  Target,
+  Clock,
   Users,
   CheckCircle,
   Play,
@@ -19,6 +21,22 @@ import {
 
 const HomeTrainingSection = () => {
   const [selectedEquipment, setSelectedEquipment] = useState('minimal')
+  const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false)
+  const { entrenamientoCasa, userData, progreso } = useUserContext()
+
+  // Determinar equipamiento inicial basado en el usuario
+  React.useEffect(() => {
+    if (entrenamientoCasa.equipoDisponible) {
+      const equipoUsuario = entrenamientoCasa.equipoDisponible.join(' ').toLowerCase();
+      if (equipoUsuario.includes('barra') || equipoUsuario.includes('rack') || equipoUsuario.includes('kettlebell')) {
+        setSelectedEquipment('advanced');
+      } else if (equipoUsuario.includes('mancuernas') || equipoUsuario.includes('banda')) {
+        setSelectedEquipment('basic');
+      } else {
+        setSelectedEquipment('minimal');
+      }
+    }
+  }, [entrenamientoCasa.equipoDisponible]);
 
   const equipmentLevels = {
     minimal: {
@@ -220,6 +238,62 @@ const HomeTrainingSection = () => {
           ))}
         </Tabs>
 
+        {/* Estadísticas Personales del Usuario */}
+        <Card className="bg-gray-900 border-yellow-400/20 mb-8">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center">
+              <TrendingUp className="w-5 h-5 mr-2 text-yellow-400" />
+              Tu Progreso en Casa - {userData.nombre}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-400">{entrenamientoCasa.rutinasCompletadas || 0}</div>
+                <div className="text-sm text-gray-400">Rutinas Completadas</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-400">{entrenamientoCasa.tiempoTotalEntrenamiento || '0h'}</div>
+                <div className="text-sm text-gray-400">Tiempo Total</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-yellow-400">{entrenamientoCasa.nivelDificultad || 'Básico'}</div>
+                <div className="text-sm text-gray-400">Nivel Actual</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-purple-400">{entrenamientoCasa.duracionSesion || '30 min'}</div>
+                <div className="text-sm text-gray-400">Duración Sesión</div>
+              </div>
+            </div>
+
+            {/* Información adicional del usuario */}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="text-white font-semibold mb-2">Tu Espacio de Entrenamiento:</h4>
+                <p className="text-gray-300 text-sm">{entrenamientoCasa.espacioDisponible || 'No especificado'}</p>
+              </div>
+              <div>
+                <h4 className="text-white font-semibold mb-2">Horario Preferido:</h4>
+                <p className="text-gray-300 text-sm">{entrenamientoCasa.horarioPreferido || 'Flexible'}</p>
+              </div>
+            </div>
+
+            {/* Ejercicios favoritos del usuario */}
+            {entrenamientoCasa.ejerciciosFavoritos && entrenamientoCasa.ejerciciosFavoritos.length > 0 && (
+              <div className="mt-4">
+                <h4 className="text-white font-semibold mb-2">Tus Ejercicios Favoritos:</h4>
+                <div className="flex flex-wrap gap-2">
+                  {entrenamientoCasa.ejerciciosFavoritos.map((ejercicio, idx) => (
+                    <Badge key={idx} className="bg-yellow-400/20 text-yellow-400">
+                      {ejercicio}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Características de Adaptación */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {adaptationFeatures.map((feature, index) => (
@@ -273,10 +347,19 @@ const HomeTrainingSection = () => {
         </Card>
 
         <div className="text-center">
-          <Button className="bg-yellow-400 text-black hover:bg-yellow-300 px-8 py-3">
+          <Button
+            onClick={() => setIsEvaluationModalOpen(true)}
+            className="bg-yellow-400 text-black hover:bg-yellow-300 px-8 py-3"
+          >
             Comenzar Evaluación de Espacio
           </Button>
         </div>
+
+        {/* Modal de Evaluación de Espacio */}
+        <SpaceEvaluationModal
+          isOpen={isEvaluationModalOpen}
+          onClose={() => setIsEvaluationModalOpen(false)}
+        />
       </div>
     </div>
   )

@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import ActivateAdaptiveAI from './ActivateAdaptiveAI'
+import { useUserContext } from '@/contexts/UserContext'
 import { 
   Brain, 
   TrendingUp, 
@@ -20,6 +22,8 @@ import {
 
 const AIAdaptiveSection = () => {
   const [selectedFeature, setSelectedFeature] = useState(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const { panelIA, getEstadoMetabolicoColor, getAlertColor } = useUserContext()
 
   const aiFeatures = [
     {
@@ -241,49 +245,66 @@ const AIAdaptiveSection = () => {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-400">Óptimo</div>
+                <div className={`text-2xl font-bold ${getEstadoMetabolicoColor(panelIA.estadoMetabolico)}`}>
+                  {panelIA.estadoMetabolico}
+                </div>
                 <div className="text-sm text-gray-400">Estado Metabólico</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-yellow-400">85%</div>
+                <div className="text-2xl font-bold text-yellow-400">{panelIA.recuperacionNeural}</div>
                 <div className="text-sm text-gray-400">Recuperación Neural</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-400">+12%</div>
+                <div className="text-2xl font-bold text-blue-400">{panelIA.eficienciaAdaptativa}</div>
                 <div className="text-sm text-gray-400">Eficiencia Adaptativa</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-purple-400">3 días</div>
-                <div className="text-sm text-gray-400">Próximo Ajuste</div>
+                <div className="text-2xl font-bold text-purple-400">{panelIA.proximaRevision}</div>
+                <div className="text-sm text-gray-400">Próxima Revisión</div>
               </div>
             </div>
+            {panelIA.modoActivo && (
+              <div className="mt-4 text-center">
+                <Badge className="bg-yellow-400/20 text-yellow-400">
+                  Modo Activo: {panelIA.modoActivo.charAt(0).toUpperCase() + panelIA.modoActivo.slice(1)}
+                </Badge>
+              </div>
+            )}
           </CardContent>
         </Card>
 
         {/* Alertas y Recomendaciones */}
         <div className="space-y-4">
-          <Alert className="border-blue-400 bg-blue-400/10">
-            <Info className="h-4 w-4" />
-            <AlertDescription className="text-blue-300">
-              <strong>Recomendación IA:</strong> Tu metabolismo está respondiendo óptimamente. 
-              Se sugiere mantener el protocolo actual por 2 semanas más antes del próximo ajuste.
-            </AlertDescription>
-          </Alert>
-          
-          <Alert className="border-green-400 bg-green-400/10">
-            <CheckCircle className="h-4 w-4" />
-            <AlertDescription className="text-green-300">
-              <strong>Adaptación Detectada:</strong> Mejora del 8% en recuperación muscular. 
-              Incrementando volumen de entrenamiento automáticamente.
-            </AlertDescription>
-          </Alert>
+          {panelIA.alertas.map((alerta, index) => (
+            <Alert key={index} className={getAlertColor(alerta.tipo)}>
+              {alerta.tipo === 'success' && <CheckCircle className="h-4 w-4" />}
+              {alerta.tipo === 'warning' && <AlertTriangle className="h-4 w-4" />}
+              {alerta.tipo === 'info' && <Info className="h-4 w-4" />}
+              <AlertDescription>
+                <strong>{alerta.titulo}:</strong> {alerta.mensaje}
+              </AlertDescription>
+            </Alert>
+          ))}
         </div>
 
         <div className="mt-8 text-center">
-          <Button className="bg-yellow-400 text-black hover:bg-yellow-300 px-8 py-3">
+          <Button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-yellow-400 text-black hover:bg-yellow-300 px-8 py-3"
+          >
             Activar IA Adaptativa Completa
           </Button>
         </div>
+
+        {/* Modal de IA Adaptativa */}
+        <ActivateAdaptiveAI
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onResult={(data) => {
+            console.log('Resultado de IA:', data);
+            // Los datos ya se actualizan automáticamente a través del contexto
+          }}
+        />
       </div>
     </div>
   )

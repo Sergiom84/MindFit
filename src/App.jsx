@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
+import { UserProvider, useUserContext } from './contexts/UserContext'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
+import LoginPage from './components/LoginPage'
+import UserProfile from './components/UserProfile'
 import { Button } from '@/components/ui/button.jsx'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.jsx'
 import { Badge } from '@/components/ui/badge.jsx'
@@ -41,6 +45,10 @@ import './App.css'
 import AIAdaptiveSection from './components/AIAdaptiveSection'
 import HomeTrainingSection from './components/HomeTrainingSection'
 import VideoCorrectionSection from './components/VideoCorrectionSection'
+import NutritionScreen from './components/NutritionScreen'
+import InjuriesScreen from './components/InjuriesScreen'
+import ProgressScreen from './components/ProgressScreen'
+import OpenAITest from './components/OpenAITest'
 
 // Enhanced Floating Music Bubble Component
 const MusicBubble = () => {
@@ -111,6 +119,8 @@ const MusicBubble = () => {
 // Navigation Component
 const Navigation = () => {
   const location = useLocation()
+  const { logout, getCurrentUserInfo } = useAuth()
+  const userInfo = getCurrentUserInfo()
   
   const navItems = [
     { path: '/', icon: Home, label: 'Inicio' },
@@ -123,8 +133,13 @@ const Navigation = () => {
     { path: '/settings', icon: Settings, label: 'Ajustes' }
   ]
 
+  const handleLogout = () => {
+    logout();
+  };
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-sm border-t border-yellow-400/20 z-40">
+      {/* Navegación principal */}
       <div className="flex justify-around items-center py-2 px-4">
         {navItems.map((item) => {
           const Icon = item.icon
@@ -134,8 +149,8 @@ const Navigation = () => {
               key={item.path}
               to={item.path}
               className={`flex flex-col items-center p-2 rounded-lg transition-colors ${
-                isActive 
-                  ? 'text-yellow-400' 
+                isActive
+                  ? 'text-yellow-400'
                   : 'text-gray-400 hover:text-yellow-300'
               }`}
             >
@@ -1180,820 +1195,17 @@ const RoutinesScreen = () => {
   )
 }
 
-// Enhanced Nutrition Screen
-const NutritionScreen = () => {
-  const [activeNutritionTab, setActiveNutritionTab] = useState('overview')
-  const [selectedMeal, setSelectedMeal] = useState(null)
+// Nutrition Screen component is now in separate file
 
-  const nutritionData = {
-    dailyCalories: 2450,
-    targetCalories: 2500,
-    macros: {
-      protein: { current: 150, target: 160, percentage: 94 },
-      carbs: { current: 300, target: 320, percentage: 94 },
-      fats: { current: 80, target: 85, percentage: 94 }
-    },
-    meals: [
-      {
-        id: 1,
-        name: "Desayuno",
-        time: "08:00",
-        calories: 650,
-        foods: [
-          { name: "Avena", amount: "80g", calories: 304, protein: 10.7, carbs: 54.8, fats: 6.9 },
-          { name: "Plátano", amount: "1 mediano", calories: 105, protein: 1.3, carbs: 27, fats: 0.4 },
-          { name: "Proteína Whey", amount: "30g", calories: 120, protein: 24, carbs: 2, fats: 1 },
-          { name: "Almendras", amount: "20g", calories: 121, protein: 4.4, carbs: 4.6, fats: 10.5 }
-        ]
-      },
-      {
-        id: 2,
-        name: "Almuerzo",
-        time: "13:00",
-        calories: 720,
-        foods: [
-          { name: "Pechuga de Pollo", amount: "150g", calories: 231, protein: 43.5, carbs: 0, fats: 5.1 },
-          { name: "Arroz Integral", amount: "100g", calories: 216, protein: 5, carbs: 45, fats: 1.8 },
-          { name: "Brócoli", amount: "200g", calories: 68, protein: 5.7, carbs: 13.6, fats: 0.7 },
-          { name: "Aceite de Oliva", amount: "10ml", calories: 90, protein: 0, carbs: 0, fats: 10 }
-        ]
-      }
-    ],
-    supplements: [
-      { name: "Proteína Whey", dosage: "30g", timing: "Post-entreno", status: "Recomendado por IA", priority: "high" },
-      { name: "Creatina", dosage: "5g", timing: "Diario", status: "Recomendado por IA", priority: "high" },
-      { name: "Omega-3", dosage: "1000mg", timing: "Con comida", status: "Sugerido", priority: "medium" },
-      { name: "Vitamina D3", dosage: "2000 UI", timing: "Mañana", status: "Sugerido", priority: "medium" },
-      { name: "Magnesio", dosage: "400mg", timing: "Noche", status: "Opcional", priority: "low" }
-    ]
-  }
 
-  return (
-    <div className="min-h-screen bg-black text-white p-6 pb-24">
-      <h1 className="text-3xl font-bold mb-6 text-yellow-400">Nutrición y Dietas</h1>
+// Injuries Screen component is now in separate file
 
-      <Tabs value={activeNutritionTab} onValueChange={setActiveNutritionTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 bg-gray-800 mb-6">
-          <TabsTrigger value="overview">Resumen</TabsTrigger>
-          <TabsTrigger value="meals">Comidas</TabsTrigger>
-          <TabsTrigger value="supplements">Suplementos</TabsTrigger>
-          <TabsTrigger value="tracking">Seguimiento</TabsTrigger>
-        </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          <Card className="bg-gray-900 border-yellow-400/20">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <Brain className="w-5 h-5 mr-2 text-yellow-400" />
-                Gasto Calórico Diario (IA Adaptativa)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-yellow-400">{nutritionData.dailyCalories}</p>
-                <p className="text-gray-400">calorías consumidas</p>
-                <p className="text-sm text-green-400 mt-2">
-                  Meta: {nutritionData.targetCalories} kcal • Ajustado automáticamente según evolución
-                </p>
-                <Progress
-                  value={(nutritionData.dailyCalories / nutritionData.targetCalories) * 100}
-                  className="mt-3 bg-gray-700"
-                />
-              </div>
-            </CardContent>
-          </Card>
+// Progress Screen component is now in separate file
 
-          <Card className="bg-gray-900 border-yellow-400/20">
-            <CardHeader>
-              <CardTitle className="text-white">Macronutrientes Inteligentes</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-gray-400">Proteínas</span>
-                  <span className="text-white">{nutritionData.macros.protein.current}g / {nutritionData.macros.protein.target}g</span>
-                </div>
-                <Progress value={nutritionData.macros.protein.percentage} className="bg-gray-700" />
-                <p className="text-xs text-gray-500 mt-1">{nutritionData.macros.protein.percentage}% completado</p>
-              </div>
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-gray-400">Carbohidratos</span>
-                  <span className="text-white">{nutritionData.macros.carbs.current}g / {nutritionData.macros.carbs.target}g</span>
-                </div>
-                <Progress value={nutritionData.macros.carbs.percentage} className="bg-gray-700" />
-                <p className="text-xs text-gray-500 mt-1">{nutritionData.macros.carbs.percentage}% completado</p>
-              </div>
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-gray-400">Grasas</span>
-                  <span className="text-white">{nutritionData.macros.fats.current}g / {nutritionData.macros.fats.target}g</span>
-                </div>
-                <Progress value={nutritionData.macros.fats.percentage} className="bg-gray-700" />
-                <p className="text-xs text-gray-500 mt-1">{nutritionData.macros.fats.percentage}% completado</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        <TabsContent value="meals" className="space-y-6">
-          <div className="grid gap-4">
-            {nutritionData.meals.map((meal) => (
-              <Card key={meal.id} className="bg-gray-900 border-yellow-400/20">
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <CardTitle className="text-white">{meal.name}</CardTitle>
-                      <CardDescription className="text-gray-400">{meal.time} • {meal.calories} kcal</CardDescription>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedMeal(meal)}
-                      className="border-yellow-400/20 text-yellow-400 hover:bg-yellow-400/10"
-                    >
-                      Ver Detalle
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {meal.foods.slice(0, 2).map((food, idx) => (
-                      <div key={idx} className="flex justify-between text-sm">
-                        <span className="text-gray-300">{food.name} ({food.amount})</span>
-                        <span className="text-gray-400">{food.calories} kcal</span>
-                      </div>
-                    ))}
-                    {meal.foods.length > 2 && (
-                      <p className="text-xs text-gray-500">+{meal.foods.length - 2} alimentos más</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
 
-        <TabsContent value="supplements" className="space-y-6">
-          <Card className="bg-gray-900 border-yellow-400/20">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <Zap className="w-5 h-5 mr-2 text-yellow-400" />
-                Suplementación Personalizada IA
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {nutritionData.supplements.map((supplement, idx) => (
-                  <div key={idx} className="flex justify-between items-center p-3 bg-gray-800 rounded">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <h4 className="text-white font-semibold">{supplement.name}</h4>
-                        <Badge
-                          className={`text-xs ${
-                            supplement.priority === 'high' ? 'bg-red-400 text-black' :
-                            supplement.priority === 'medium' ? 'bg-yellow-400 text-black' :
-                            'bg-gray-400 text-black'
-                          }`}
-                        >
-                          {supplement.priority === 'high' ? 'Esencial' :
-                           supplement.priority === 'medium' ? 'Recomendado' : 'Opcional'}
-                        </Badge>
-                      </div>
-                      <p className="text-gray-400 text-sm">{supplement.dosage} • {supplement.timing}</p>
-                      <p className="text-blue-400 text-xs">{supplement.status}</p>
-                    </div>
-                    <Button size="sm" className="bg-yellow-400 text-black hover:bg-yellow-300">
-                      Comprar
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        <TabsContent value="tracking" className="space-y-6">
-          <Card className="bg-gray-900 border-yellow-400/20">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <BarChart3 className="w-5 h-5 mr-2 text-yellow-400" />
-                Seguimiento Nutricional IA
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-yellow-400">7</p>
-                    <p className="text-gray-400 text-sm">días consecutivos</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-green-400">94%</p>
-                    <p className="text-gray-400 text-sm">adherencia promedio</p>
-                  </div>
-                </div>
-
-                <Alert className="border-blue-400 bg-blue-400/10">
-                  <AlertDescription className="text-blue-300">
-                    🤖 IA detectó patrón óptimo. Manteniendo distribución actual de macronutrientes.
-                  </AlertDescription>
-                </Alert>
-
-                <div className="space-y-2">
-                  <h4 className="text-white font-semibold">Ajustes Automáticos Esta Semana:</h4>
-                  <ul className="space-y-1 text-sm">
-                    <li className="text-green-400">✓ Aumentadas proteínas +10g (mejor recuperación)</li>
-                    <li className="text-blue-400">→ Carbohidratos mantenidos (energía estable)</li>
-                    <li className="text-yellow-400">⚡ Sugerido: Omega-3 para reducir inflamación</li>
-                  </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
-  )
-}
-
-// Enhanced Injuries and Adaptations Screen
-const InjuriesScreen = () => {
-  const [activeInjuryTab, setActiveInjuryTab] = useState('status')
-  const [showReportModal, setShowReportModal] = useState(false)
-
-  const injuryData = {
-    currentStatus: {
-      active: 0,
-      recovering: 1,
-      riskFactors: 2
-    },
-    history: [
-      {
-        id: 1,
-        type: "Dolor lumbar leve",
-        severity: "Leve",
-        date: "Marzo 2024",
-        status: "Recuperado",
-        adaptations: [
-          "Eliminado peso muerto convencional",
-          "Añadido peso muerto sumo",
-          "Reducida intensidad en sentadillas",
-          "Incorporados ejercicios de movilidad lumbar"
-        ],
-        recoveryTime: "6 semanas",
-        aiActions: "IA adaptó rutina automáticamente y monitoreó progreso"
-      },
-      {
-        id: 2,
-        type: "Tensión en hombro derecho",
-        severity: "Leve",
-        date: "Enero 2024",
-        status: "Recuperado",
-        adaptations: [
-          "Modificado press militar por press con mancuernas",
-          "Añadidos ejercicios de movilidad escapular",
-          "Reducido volumen de press de banca"
-        ],
-        recoveryTime: "4 semanas",
-        aiActions: "Detección temprana por análisis de video IA"
-      }
-    ],
-    riskFactors: [
-      {
-        factor: "Movilidad de cadera limitada",
-        risk: "Medio",
-        impact: "Puede afectar sentadillas y peso muerto",
-        prevention: "Rutina de movilidad diaria implementada",
-        status: "En seguimiento"
-      },
-      {
-        factor: "Desequilibrio muscular hombros",
-        risk: "Bajo",
-        impact: "Posible tensión en press de banca",
-        prevention: "Ejercicios correctivos añadidos",
-        status: "Mejorando"
-      }
-    ],
-    preventiveActions: [
-      "Calentamiento dinámico personalizado",
-      "Ejercicios correctivos integrados",
-      "Monitoreo de RPE por ejercicio",
-      "Análisis de técnica por video IA",
-      "Ajustes automáticos de volumen/intensidad"
-    ]
-  }
-
-  return (
-    <div className="min-h-screen bg-black text-white p-6 pb-24">
-      <h1 className="text-3xl font-bold mb-6 text-yellow-400">Lesiones y Adaptaciones</h1>
-
-      <Tabs value={activeInjuryTab} onValueChange={setActiveInjuryTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 bg-gray-800 mb-6">
-          <TabsTrigger value="status">Estado</TabsTrigger>
-          <TabsTrigger value="history">Historial</TabsTrigger>
-          <TabsTrigger value="prevention">Prevención</TabsTrigger>
-          <TabsTrigger value="adaptations">Adaptaciones</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="status" className="space-y-6">
-          <Card className="bg-gray-900 border-yellow-400/20">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <Brain className="w-5 h-5 mr-2 text-yellow-400" />
-                Estado Actual (Monitoreado por IA)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-green-400">{injuryData.currentStatus.active}</p>
-                  <p className="text-gray-400 text-sm">Lesiones activas</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-yellow-400">{injuryData.currentStatus.recovering}</p>
-                  <p className="text-gray-400 text-sm">En recuperación</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-orange-400">{injuryData.currentStatus.riskFactors}</p>
-                  <p className="text-gray-400 text-sm">Factores de riesgo</p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2 mb-3">
-                <div className="w-3 h-3 bg-green-400 rounded-full"></div>
-                <span className="text-white">Sin lesiones activas</span>
-              </div>
-
-              <Alert className="border-green-400 bg-green-400/10">
-                <AlertDescription className="text-green-300">
-                  🤖 IA monitorea automáticamente tu feedback y ajusta la rutina preventivamente.
-                  Sistema de detección temprana activo.
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-900 border-yellow-400/20">
-            <CardHeader>
-              <CardTitle className="text-white">Factores de Riesgo Detectados</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {injuryData.riskFactors.map((risk, idx) => (
-                  <div key={idx} className="p-3 bg-gray-800 rounded">
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="text-white font-semibold">{risk.factor}</h4>
-                      <Badge
-                        className={`${
-                          risk.risk === 'Alto' ? 'bg-red-400 text-black' :
-                          risk.risk === 'Medio' ? 'bg-yellow-400 text-black' :
-                          'bg-green-400 text-black'
-                        }`}
-                      >
-                        Riesgo {risk.risk}
-                      </Badge>
-                    </div>
-                    <p className="text-gray-400 text-sm mb-1">{risk.impact}</p>
-                    <p className="text-blue-400 text-xs">{risk.prevention}</p>
-                    <p className="text-green-400 text-xs mt-1">Estado: {risk.status}</p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="history" className="space-y-6">
-          <div className="space-y-4">
-            {injuryData.history.map((injury) => (
-              <Card key={injury.id} className="bg-gray-900 border-yellow-400/20">
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-white">{injury.type}</CardTitle>
-                      <CardDescription className="text-gray-400">{injury.date} • {injury.recoveryTime}</CardDescription>
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className={`${
-                        injury.status === 'Recuperado' ? 'border-green-400 text-green-400' :
-                        injury.status === 'En recuperación' ? 'border-yellow-400 text-yellow-400' :
-                        'border-red-400 text-red-400'
-                      }`}
-                    >
-                      {injury.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div>
-                      <h4 className="text-white font-semibold mb-2">Adaptaciones Aplicadas:</h4>
-                      <ul className="space-y-1">
-                        {injury.adaptations.map((adaptation, idx) => (
-                          <li key={idx} className="text-gray-300 text-sm flex items-start">
-                            <span className="text-blue-400 mr-2">•</span>
-                            {adaptation}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="p-2 bg-blue-900/20 rounded">
-                      <p className="text-blue-400 text-sm">{injury.aiActions}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="prevention" className="space-y-6">
-          <Card className="bg-gray-900 border-yellow-400/20">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <Activity className="w-5 h-5 mr-2 text-yellow-400" />
-                Sistema de Prevención Activa
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {injuryData.preventiveActions.map((action, idx) => (
-                  <div key={idx} className="flex items-center space-x-3 p-2 bg-gray-800 rounded">
-                    <CheckCircle className="w-5 h-5 text-green-400" />
-                    <span className="text-white">{action}</span>
-                  </div>
-                ))}
-              </div>
-
-              <Alert className="mt-4 border-blue-400 bg-blue-400/10">
-                <AlertDescription className="text-blue-300">
-                  💡 El sistema IA analiza patrones de movimiento, fatiga y feedback para prevenir lesiones antes de que ocurran.
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="adaptations" className="space-y-6">
-          <Card className="bg-gray-900 border-yellow-400/20">
-            <CardHeader>
-              <CardTitle className="text-white">Adaptaciones Automáticas Activas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="p-3 bg-green-900/20 rounded">
-                  <h4 className="text-green-400 font-semibold mb-2">Adaptaciones por Movilidad de Cadera</h4>
-                  <ul className="space-y-1 text-sm">
-                    <li className="text-gray-300">• Sentadillas con rango reducido temporalmente</li>
-                    <li className="text-gray-300">• Ejercicios de movilidad añadidos al calentamiento</li>
-                    <li className="text-gray-300">• Peso muerto sumo priorizado sobre convencional</li>
-                  </ul>
-                </div>
-
-                <div className="p-3 bg-blue-900/20 rounded">
-                  <h4 className="text-blue-400 font-semibold mb-2">Monitoreo Continuo</h4>
-                  <ul className="space-y-1 text-sm">
-                    <li className="text-gray-300">• RPE monitoreado por ejercicio</li>
-                    <li className="text-gray-300">• Análisis de técnica por video IA</li>
-                    <li className="text-gray-300">• Ajustes automáticos de volumen según recuperación</li>
-                  </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      <Button
-        className="w-full mt-6 bg-yellow-400 text-black hover:bg-yellow-300"
-        onClick={() => setShowReportModal(true)}
-      >
-        <Heart className="mr-2" size={16} />
-        Reportar Nueva Lesión o Molestia
-      </Button>
-    </div>
-  )
-}
-
-const ProgressScreen = () => {
-  const [activeProgressTab, setActiveProgressTab] = useState('overview')
-
-  const progressData = {
-    overview: {
-      weightChange: { value: 3, unit: 'kg', trend: 'up', target: 5 },
-      bodyFatChange: { value: -2, unit: '%', trend: 'down', target: -3 },
-      muscleGain: { value: 2.1, unit: 'kg', trend: 'up', target: 3 },
-      strengthGain: { value: 15, unit: '%', trend: 'up', target: 20 }
-    },
-    weeklyMetrics: {
-      workouts: { completed: 4, planned: 4, consistency: 100 },
-      calories: { average: 2400, target: 2450, adherence: 98 },
-      sleep: { average: 7.2, target: 8, quality: 'Buena' },
-      recovery: { score: 85, status: 'Óptima' }
-    },
-    strengthProgress: [
-      { exercise: 'Sentadilla', current: '80kg', previous: '70kg', change: '+10kg', trend: 'excellent' },
-      { exercise: 'Press Banca', current: '70kg', previous: '65kg', change: '+5kg', trend: 'good', weakness: true },
-      { exercise: 'Peso Muerto', current: '100kg', previous: '85kg', change: '+15kg', trend: 'excellent' },
-      { exercise: 'Press Militar', current: '45kg', previous: '40kg', change: '+5kg', trend: 'good' }
-    ],
-    bodyMetrics: {
-      measurements: [
-        { part: 'Pecho', current: '98cm', change: '+2cm', trend: 'up' },
-        { part: 'Brazos', current: '35cm', change: '+1.5cm', trend: 'up' },
-        { part: 'Cintura', current: '82cm', change: '-1cm', trend: 'down' },
-        { part: 'Muslos', current: '58cm', change: '+2cm', trend: 'up' }
-      ]
-    },
-    aiInsights: [
-      {
-        type: 'success',
-        title: 'Progreso Óptimo Detectado',
-        message: 'La IA detectó progreso óptimo. Manteniendo rutina actual con ajustes menores.',
-        action: 'Continuar protocolo actual'
-      },
-      {
-        type: 'warning',
-        title: 'Punto Débil Identificado',
-        message: 'Press de banca progresando más lento. IA redirigiendo volumen para equilibrar desarrollo.',
-        action: 'Aumentar frecuencia de press de banca'
-      },
-      {
-        type: 'info',
-        title: 'Optimización Nutricional',
-        message: 'Patrón de adherencia excelente. Sugerido aumento de 50 kcal para acelerar ganancia muscular.',
-        action: 'Ajustar calorías automáticamente'
-      }
-    ]
-  }
-
-  return (
-    <div className="min-h-screen bg-black text-white p-6 pb-24">
-      <h1 className="text-3xl font-bold mb-6 text-yellow-400">Seguimiento y Evolución</h1>
-
-      <Tabs value={activeProgressTab} onValueChange={setActiveProgressTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 bg-gray-800 mb-6">
-          <TabsTrigger value="overview">Resumen</TabsTrigger>
-          <TabsTrigger value="strength">Fuerza</TabsTrigger>
-          <TabsTrigger value="body">Físico</TabsTrigger>
-          <TabsTrigger value="insights">IA Insights</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-6">
-          <Card className="bg-gray-900 border-yellow-400/20">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <Brain className="mr-2 text-yellow-400" />
-                Análisis IA en Tiempo Real
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-yellow-400">
-                    {progressData.overview.weightChange.value > 0 ? '+' : ''}{progressData.overview.weightChange.value}{progressData.overview.weightChange.unit}
-                  </p>
-                  <p className="text-gray-400">Peso ganado</p>
-                  <Progress value={(Math.abs(progressData.overview.weightChange.value) / progressData.overview.weightChange.target) * 100} className="mt-2 bg-gray-700" />
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-yellow-400">
-                    {progressData.overview.bodyFatChange.value}{progressData.overview.bodyFatChange.unit}
-                  </p>
-                  <p className="text-gray-400">Grasa corporal</p>
-                  <Progress value={(Math.abs(progressData.overview.bodyFatChange.value) / Math.abs(progressData.overview.bodyFatChange.target)) * 100} className="mt-2 bg-gray-700" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <p className="text-xl font-bold text-green-400">+{progressData.overview.muscleGain.value}{progressData.overview.muscleGain.unit}</p>
-                  <p className="text-gray-400 text-sm">Masa muscular</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xl font-bold text-blue-400">+{progressData.overview.strengthGain.value}{progressData.overview.strengthGain.unit}</p>
-                  <p className="text-gray-400 text-sm">Fuerza general</p>
-                </div>
-              </div>
-
-              <Alert className="mt-4 border-blue-400 bg-blue-400/10">
-                <AlertDescription className="text-blue-300">
-                  🤖 {progressData.aiInsights[0].message}
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-900 border-yellow-400/20">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <Clock className="mr-2 text-yellow-400" />
-                Métricas Semanales
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-gray-400">Entrenamientos</span>
-                    <span className="text-white">{progressData.weeklyMetrics.workouts.completed}/{progressData.weeklyMetrics.workouts.planned}</span>
-                  </div>
-                  <Progress value={progressData.weeklyMetrics.workouts.consistency} className="bg-gray-700" />
-                  <p className="text-xs text-green-400 mt-1">{progressData.weeklyMetrics.workouts.consistency}% consistencia</p>
-                </div>
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-gray-400">Calorías promedio</span>
-                    <span className="text-white">{progressData.weeklyMetrics.calories.average}</span>
-                  </div>
-                  <Progress value={progressData.weeklyMetrics.calories.adherence} className="bg-gray-700" />
-                  <p className="text-xs text-green-400 mt-1">{progressData.weeklyMetrics.calories.adherence}% adherencia</p>
-                </div>
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-gray-400">Sueño promedio</span>
-                    <span className="text-white">{progressData.weeklyMetrics.sleep.average}h</span>
-                  </div>
-                  <Progress value={(progressData.weeklyMetrics.sleep.average / progressData.weeklyMetrics.sleep.target) * 100} className="bg-gray-700" />
-                  <p className="text-xs text-yellow-400 mt-1">Calidad: {progressData.weeklyMetrics.sleep.quality}</p>
-                </div>
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-gray-400">Recuperación</span>
-                    <Badge className="bg-green-400 text-black">{progressData.weeklyMetrics.recovery.status}</Badge>
-                  </div>
-                  <Progress value={progressData.weeklyMetrics.recovery.score} className="bg-gray-700" />
-                  <p className="text-xs text-green-400 mt-1">Score: {progressData.weeklyMetrics.recovery.score}/100</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="strength" className="space-y-6">
-          <Card className="bg-gray-900 border-yellow-400/20">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <BarChart3 className="mr-2 text-yellow-400" />
-                Progreso de Fuerza y Puntos Débiles
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {progressData.strengthProgress.map((exercise, idx) => (
-                  <div key={idx} className="p-3 bg-gray-800 rounded">
-                    <div className="flex justify-between items-center mb-2">
-                      <h4 className="text-white font-semibold">{exercise.exercise}</h4>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-white">{exercise.current}</span>
-                        <Badge
-                          className={`text-xs ${
-                            exercise.trend === 'excellent' ? 'bg-green-400 text-black' :
-                            exercise.trend === 'good' ? 'bg-yellow-400 text-black' :
-                            'bg-red-400 text-black'
-                          }`}
-                        >
-                          {exercise.change}
-                        </Badge>
-                        {exercise.weakness && (
-                          <Badge className="bg-orange-400 text-black text-xs">Punto débil</Badge>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Anterior: {exercise.previous}</span>
-                      <span className={`${
-                        exercise.trend === 'excellent' ? 'text-green-400' :
-                        exercise.trend === 'good' ? 'text-yellow-400' :
-                        'text-red-400'
-                      }`}>
-                        {exercise.trend === 'excellent' ? 'Excelente progreso' :
-                         exercise.trend === 'good' ? 'Buen progreso' : 'Necesita atención'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <Alert className="mt-4 border-orange-400 bg-orange-400/10">
-                <AlertDescription className="text-orange-300">
-                  🎯 IA redirigiendo volumen hacia press de banca para equilibrar desarrollo muscular
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="body" className="space-y-6">
-          <Card className="bg-gray-900 border-yellow-400/20">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <Activity className="mr-2 text-yellow-400" />
-                Evolución Corporal
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                {progressData.bodyMetrics.measurements.map((measurement, idx) => (
-                  <div key={idx} className="p-3 bg-gray-800 rounded">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">{measurement.part}</span>
-                      <div className="text-right">
-                        <p className="text-white font-semibold">{measurement.current}</p>
-                        <p className={`text-xs ${
-                          measurement.trend === 'up' ? 'text-green-400' : 'text-blue-400'
-                        }`}>
-                          {measurement.change}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-4 p-3 bg-blue-900/20 rounded">
-                <h4 className="text-blue-400 font-semibold mb-2">Análisis de Composición Corporal</h4>
-                <ul className="space-y-1 text-sm">
-                  <li className="text-gray-300">• Ganancia muscular equilibrada en tren superior</li>
-                  <li className="text-gray-300">• Reducción de grasa abdominal progresiva</li>
-                  <li className="text-gray-300">• Desarrollo proporcional mantenido</li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="insights" className="space-y-6">
-          <div className="space-y-4">
-            {progressData.aiInsights.map((insight, idx) => (
-              <Card key={idx} className={`bg-gray-900 ${
-                insight.type === 'success' ? 'border-green-400/20' :
-                insight.type === 'warning' ? 'border-orange-400/20' :
-                'border-blue-400/20'
-              }`}>
-                <CardHeader>
-                  <CardTitle className={`flex items-center ${
-                    insight.type === 'success' ? 'text-green-400' :
-                    insight.type === 'warning' ? 'text-orange-400' :
-                    'text-blue-400'
-                  }`}>
-                    {insight.type === 'success' ? <CheckCircle className="mr-2" /> :
-                     insight.type === 'warning' ? <AlertTriangle className="mr-2" /> :
-                     <Brain className="mr-2" />}
-                    {insight.title}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-300 mb-3">{insight.message}</p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-400">Acción recomendada:</span>
-                    <Badge className="bg-yellow-400 text-black">{insight.action}</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <Card className="bg-gray-900 border-yellow-400/20">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <Trophy className="mr-2 text-yellow-400" />
-                Logros y Hitos
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3 p-2 bg-green-900/20 rounded">
-                  <Trophy className="w-5 h-5 text-yellow-400" />
-                  <div>
-                    <p className="text-white font-semibold">¡Peso muerto 100kg alcanzado!</p>
-                    <p className="text-gray-400 text-sm">Hace 2 días</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3 p-2 bg-blue-900/20 rounded">
-                  <CheckCircle className="w-5 h-5 text-blue-400" />
-                  <div>
-                    <p className="text-white font-semibold">4 semanas de consistencia perfecta</p>
-                    <p className="text-gray-400 text-sm">Hace 1 semana</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3 p-2 bg-purple-900/20 rounded">
-                  <Target className="w-5 h-5 text-purple-400" />
-                  <div>
-                    <p className="text-white font-semibold">Meta de composición corporal 60% completada</p>
-                    <p className="text-gray-400 text-sm">Progreso continuo</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
-  )
-}
 
 const SettingsScreen = () => {
   return (
@@ -2074,10 +1286,32 @@ const SettingsScreen = () => {
   )
 }
 
-function App() {
+// Componente principal de la aplicación con autenticación
+const AppContent = () => {
+  const { currentUser, isLoading } = useAuth();
+
+  // Mostrar loading mientras se verifica la autenticación
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-lg">Cargando MindFit...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Si no hay usuario logueado, mostrar página de login
+  if (!currentUser) {
+    return <LoginPage />;
+  }
+
+  // Si hay usuario logueado, mostrar la aplicación principal
   return (
-    <Router>
+    <UserProvider>
       <div className="App">
+        <UserProfile />
         <Routes>
           <Route path="/" element={<HomeScreen />} />
           <Route path="/profile" element={<ProfileScreen />} />
@@ -2090,11 +1324,22 @@ function App() {
           <Route path="/ai-adaptive" element={<AIAdaptiveSection />} />
           <Route path="/home-training" element={<HomeTrainingSection />} />
           <Route path="/video-correction" element={<VideoCorrectionSection />} />
+          <Route path="/openai-test" element={<OpenAITest />} />
         </Routes>
         <Navigation />
         <MusicBubble />
       </div>
-    </Router>
+    </UserProvider>
+  );
+};
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </AuthProvider>
   )
 }
 

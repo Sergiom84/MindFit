@@ -3,11 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { 
-  Camera, 
-  Eye, 
-  Zap, 
-  Target, 
+import { useUserContext } from '@/contexts/UserContext'
+import VideoCorrectionScreen from './VideoCorrectionScreen'
+import {
+  Camera,
+  Eye,
+  Zap,
+  Target,
   AlertTriangle,
   CheckCircle,
   Play,
@@ -17,12 +19,21 @@ import {
   Smartphone,
   Wifi,
   Clock,
-  TrendingUp
+  TrendingUp,
+  ExternalLink,
+  Brain
 } from 'lucide-react'
 
 const VideoCorrectionSection = () => {
   const [isRecording, setIsRecording] = useState(false)
   const [selectedExercise, setSelectedExercise] = useState('squat')
+  const [showAdvancedIA, setShowAdvancedIA] = useState(false)
+  const { videoCorreccion, userData } = useUserContext()
+
+  // Si se activa el modo avanzado, mostrar la nueva pantalla
+  if (showAdvancedIA) {
+    return <VideoCorrectionScreen />
+  }
 
   const analysisFeatures = [
     {
@@ -324,48 +335,74 @@ const VideoCorrectionSection = () => {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-400">92%</div>
+                <div className="text-2xl font-bold text-green-400">{videoCorreccion.precisionPromedio || '0%'}</div>
                 <div className="text-sm text-gray-400">Precisión Promedio</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-400">156</div>
+                <div className="text-2xl font-bold text-blue-400">{videoCorreccion.sesionesAnalizadas || 0}</div>
                 <div className="text-sm text-gray-400">Sesiones Analizadas</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-yellow-400">-67%</div>
+                <div className="text-2xl font-bold text-yellow-400">{videoCorreccion.reduccionErrores || '0%'}</div>
                 <div className="text-sm text-gray-400">Reducción de Errores</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-purple-400">12</div>
+                <div className="text-2xl font-bold text-purple-400">{videoCorreccion.ejerciciosDominados || 0}</div>
                 <div className="text-sm text-gray-400">Ejercicios Dominados</div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Alertas del Sistema */}
+        {/* Alertas del Sistema - Dinámicas */}
         <div className="space-y-4 mb-8">
-          <Alert className="border-green-400 bg-green-400/10">
-            <CheckCircle className="h-4 w-4" />
-            <AlertDescription className="text-green-300">
-              <strong>Técnica Mejorada:</strong> Tu sentadilla ha mejorado un 15% en los últimos 7 días. 
-              Excelente progreso en la alineación de rodillas.
-            </AlertDescription>
-          </Alert>
-          
-          <Alert className="border-yellow-400 bg-yellow-400/10">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription className="text-yellow-300">
-              <strong>Punto de Atención:</strong> Se detecta compensación en el hombro derecho durante el press. 
-              Considera ejercicios de movilidad específicos.
-            </AlertDescription>
-          </Alert>
+          {videoCorreccion.mejoras && videoCorreccion.mejoras.length > 0 && (
+            <Alert className="border-green-400 bg-green-400/10">
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription className="text-green-300">
+                <strong>Mejoras Detectadas:</strong> {videoCorreccion.mejoras.join(', ')}.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {videoCorreccion.erroresComunes && videoCorreccion.erroresComunes.length > 0 && (
+            <Alert className="border-yellow-400 bg-yellow-400/10">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="text-yellow-300">
+                <strong>Puntos de Atención:</strong> {videoCorreccion.erroresComunes.join(', ')}.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Alerta personalizada según nivel del usuario */}
+          {userData.nivel === 'principiante' && (
+            <Alert className="border-blue-400 bg-blue-400/10">
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription className="text-blue-300">
+                <strong>Consejo para Principiantes:</strong> Enfócate en dominar la técnica básica antes de aumentar la intensidad. ¡Vas muy bien!
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
 
-        <div className="text-center">
-          <Button className="bg-yellow-400 text-black hover:bg-yellow-300 px-8 py-3">
-            Activar Corrección IA Completa
+        <div className="text-center space-y-4">
+          <Button
+            className="bg-yellow-400 text-black hover:bg-yellow-300 px-8 py-3"
+            onClick={() => setShowAdvancedIA(true)}
+          >
+            <Brain className="w-5 h-5 mr-2" />
+            Activar Corrección IA Avanzada
           </Button>
+
+          <div className="flex justify-center">
+            <Alert className="border-green-400 bg-green-400/10 max-w-md">
+              <ExternalLink className="w-4 h-4" />
+              <AlertDescription className="text-green-300 text-sm">
+                <strong>¡Nuevo!</strong> Análisis en tiempo real con MediaPipe + GPT-4o.
+                Feedback instantáneo y personalizado.
+              </AlertDescription>
+            </Alert>
+          </div>
         </div>
       </div>
     </div>
