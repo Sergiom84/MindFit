@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getUserById } from '../data/UserProfiles';
 
 // Crear el contexto de autenticación
 const AuthContext = createContext();
@@ -22,15 +21,10 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const loadUserFromStorage = () => {
       try {
-        const storedUserId = localStorage.getItem('mindfit_current_user');
-        if (storedUserId) {
-          const userData = getUserById(storedUserId);
-          if (userData) {
-            setCurrentUser(userData);
-          } else {
-            // Si el usuario almacenado no existe, limpiar localStorage
-            localStorage.removeItem('mindfit_current_user');
-          }
+        const storedUser = localStorage.getItem('mindfit_current_user');
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          setCurrentUser(userData);
         }
       } catch (error) {
         console.error('Error cargando usuario desde localStorage:', error);
@@ -44,26 +38,31 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Función para hacer login
-  const login = async (userId) => {
+  const login = async (email, password) => {
     try {
       setIsLoading(true);
-      
-      // Simular delay de autenticación (opcional)
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const userData = getUserById(userId);
-      
-      if (!userData) {
-        throw new Error('Usuario no encontrado');
+
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Error en el login');
       }
 
-      // Guardar en localStorage
-      localStorage.setItem('mindfit_current_user', userId);
-      
+      // Guardar usuario en localStorage
+      localStorage.setItem('mindfit_current_user', JSON.stringify(result.user));
+
       // Actualizar estado
-      setCurrentUser(userData);
-      
-      return { success: true, user: userData };
+      setCurrentUser(result.user);
+
+      return { success: true, user: result.user };
     } catch (error) {
       console.error('Error en login:', error);
       return { success: false, error: error.message };
@@ -157,13 +156,32 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Función para cambiar de usuario (útil para testing)
-  const switchUser = async (userId) => {
-    if (currentUser && currentUser.id === userId) {
-      return { success: true, user: currentUser };
+  // Función para registrar usuario
+  const register = async (userData) => {
+    try {
+      setIsLoading(true);
+
+      const response = await fetch('/api/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData)
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Error en el registro');
+      }
+
+      return { success: true, user: result.user };
+    } catch (error) {
+      console.error('Error en registro:', error);
+      return { success: false, error: error.message };
+    } finally {
+      setIsLoading(false);
     }
-    
-    return await login(userId);
   };
 
   // Función para obtener información básica del usuario actual
@@ -189,7 +207,7 @@ export const AuthProvider = ({ children }) => {
     // Funciones de autenticación
     login,
     logout,
-    switchUser,
+    register,
     isAuthenticated,
     
     // Funciones de datos

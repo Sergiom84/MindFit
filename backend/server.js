@@ -8,6 +8,8 @@ import OpenAI from 'openai';
 import fs from 'fs';
 import path from 'path';
 import iaAdaptativa from './routes/iaAdaptativa.js';
+import authRoutes from './routes/auth.js';
+import { testConnection } from './db.js';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -52,6 +54,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Rutas
 app.use('/api', iaAdaptativa);
+app.use('/api', authRoutes);
 
 // Crear directorio de uploads si no existe
 if (!fs.existsSync('uploads')) {
@@ -272,9 +275,22 @@ if (!process.env.OPENAI_API_KEY) {
   process.exit(1);
 }
 
-// Iniciar servidor
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor MindFit Backend ejecutándose en puerto ${PORT}`);
-  console.log(`📍 Health check: http://localhost:${PORT}/health`);
-  console.log(`🤖 OpenAI API configurada correctamente`);
-});
+// Inicializar conexión a base de datos y servidor
+const startServer = async () => {
+  // Probar conexión a base de datos
+  const dbConnected = await testConnection();
+  if (!dbConnected) {
+    console.error('❌ No se pudo conectar a la base de datos');
+    process.exit(1);
+  }
+
+  // Iniciar servidor
+  app.listen(PORT, () => {
+    console.log(`🚀 Servidor MindFit Backend ejecutándose en puerto ${PORT}`);
+    console.log(`📍 Health check: http://localhost:${PORT}/health`);
+    console.log(`🤖 OpenAI API configurada correctamente`);
+    console.log(`🗄️ Base de datos PostgreSQL conectada`);
+  });
+};
+
+startServer();

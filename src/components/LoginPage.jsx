@@ -1,66 +1,31 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '../contexts/AuthContext';
-import { getAvailableUsers } from '../data/UserProfiles';
-import Avatar from './Avatar';
-import { 
-  Brain, 
-  User, 
-  Zap, 
-  Target, 
-  Trophy,
+import {
+  Brain,
+  Mail,
+  Lock,
   Loader2,
   AlertCircle,
-  CheckCircle
+  UserPlus
 } from 'lucide-react';
 
 const LoginPage = () => {
   const { login, isLoading } = useAuth();
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const availableUsers = getAvailableUsers();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  // Configuración visual para cada nivel de usuario
-  const userLevelConfig = {
-    principiante: {
-      color: 'border-green-400',
-      bgColor: 'bg-green-400/10',
-      textColor: 'text-green-400',
-      icon: <Target className="w-8 h-8" />,
-      description: 'Comenzando el viaje fitness',
-      features: ['Rutinas básicas', 'Técnica fundamental', 'Progreso gradual']
-    },
-    intermedio: {
-      color: 'border-yellow-400',
-      bgColor: 'bg-yellow-400/10',
-      textColor: 'text-yellow-400',
-      icon: <Zap className="w-8 h-8" />,
-      description: 'Desarrollando fuerza y técnica',
-      features: ['Rutinas variadas', 'Técnica refinada', 'Objetivos específicos']
-    },
-    avanzado: {
-      color: 'border-red-400',
-      bgColor: 'bg-red-400/10',
-      textColor: 'text-red-400',
-      icon: <Trophy className="w-8 h-8" />,
-      description: 'Maximizando rendimiento',
-      features: ['Entrenamiento complejo', 'Periodización avanzada', 'Rendimiento óptimo']
-    }
-  };
-
-  const handleUserSelect = (userId) => {
-    setSelectedUser(userId);
-    setLoginError(null);
-  };
-
-  const handleLogin = async () => {
-    if (!selectedUser) {
-      setLoginError('Por favor selecciona un usuario');
+    if (!email || !password) {
+      setLoginError('Por favor completa todos los campos');
       return;
     }
 
@@ -68,8 +33,8 @@ const LoginPage = () => {
     setLoginError(null);
 
     try {
-      const result = await login(selectedUser);
-      
+      const result = await login(email, password);
+
       if (!result.success) {
         setLoginError(result.error || 'Error al iniciar sesión');
       }
@@ -101,82 +66,81 @@ const LoginPage = () => {
           </p>
         </div>
 
-        {/* Selección de Usuario */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {availableUsers.map((user) => {
-            const config = userLevelConfig[user.nivel];
-            const isSelected = selectedUser === user.id;
-            
-            return (
-              <Card
-                key={user.id}
-                className={`cursor-pointer transition-all duration-300 hover:scale-105 ${
-                  isSelected
-                    ? `${config.color} ${config.bgColor} shadow-lg shadow-${config.color.split('-')[1]}-400/20`
-                    : 'bg-gray-900 border-gray-700 hover:border-gray-600'
-                }`}
-                onClick={() => handleUserSelect(user.id)}
-              >
-                <CardHeader className="text-center">
-                  <div className="flex flex-col items-center space-y-4">
-                    {/* Avatar con iniciales */}
-                    <Avatar
-                      avatar={user.avatar}
-                      iniciales={user.iniciales}
-                      nombre={user.nombre}
-                      size="2xl"
-                      showBorder={isSelected}
+        {/* Formulario de Login */}
+        <div className="max-w-md mx-auto">
+          <Card className="bg-gray-900 border-yellow-400/20">
+            <CardHeader className="text-center">
+              <CardTitle className="text-white text-2xl">Iniciar Sesión</CardTitle>
+              <p className="text-gray-400">Accede a tu cuenta MindFit</p>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="email" className="text-gray-300">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="tu@email.com"
+                      className="bg-gray-800 border-gray-600 text-white pl-10"
+                      required
                     />
-
-                    {/* Icono de nivel */}
-                    <div className={isSelected ? config.textColor : 'text-gray-400'}>
-                      {config.icon}
-                    </div>
-                    
-                    {/* Nombre y nivel */}
-                    <div>
-                      <CardTitle className="text-white text-2xl mb-2">
-                        {user.nombre}
-                      </CardTitle>
-                      <Badge 
-                        className={`${config.bgColor} ${config.textColor} border-0 text-sm font-semibold uppercase tracking-wide`}
-                      >
-                        {user.nivel}
-                      </Badge>
-                    </div>
-                    
-                    {/* Descripción */}
-                    <p className="text-gray-400 text-sm text-center">
-                      {config.description}
-                    </p>
                   </div>
-                </CardHeader>
-                
-                <CardContent>
-                  {/* Características del nivel */}
-                  <ul className="space-y-2">
-                    {config.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-center space-x-2 text-sm">
-                        <CheckCircle className={`w-4 h-4 ${isSelected ? config.textColor : 'text-gray-500'}`} />
-                        <span className={isSelected ? 'text-white' : 'text-gray-400'}>
-                          {feature}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                  
-                  {/* Indicador de selección */}
-                  {isSelected && (
-                    <div className="mt-4 text-center">
-                      <Badge className={`${config.bgColor} ${config.textColor} border-0`}>
-                        ✓ Seleccionado
-                      </Badge>
-                    </div>
+                </div>
+                <div>
+                  <Label htmlFor="password" className="text-gray-300">Contraseña</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Tu contraseña"
+                      className="bg-gray-800 border-gray-600 text-white pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isLoggingIn || isLoading}
+                  className="w-full bg-yellow-400 text-black hover:bg-yellow-300 disabled:opacity-50"
+                >
+                  {isLoggingIn || isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Iniciando sesión...
+                    </>
+                  ) : (
+                    <>
+                      <Brain className="w-4 h-4 mr-2" />
+                      Iniciar Sesión
+                    </>
                   )}
-                </CardContent>
-              </Card>
-            );
-          })}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Enlace a registro */}
+          <div className="text-center mt-6">
+            <p className="text-gray-400">
+              ¿No tienes cuenta?{' '}
+              <Button
+                variant="link"
+                onClick={() => window.location.href = '/register'}
+                className="text-yellow-400 hover:text-yellow-300 p-0"
+              >
+                <UserPlus className="w-4 h-4 mr-1" />
+                Crear cuenta
+              </Button>
+            </p>
+          </div>
         </div>
 
         {/* Error de login */}
@@ -189,42 +153,12 @@ const LoginPage = () => {
           </Alert>
         )}
 
-        {/* Información adicional */}
-        {selectedUser && (
-          <Alert className="border-blue-400 bg-blue-400/10 mb-6">
-            <User className="h-4 w-4" />
-            <AlertDescription className="text-blue-300">
-              <strong>Usuario seleccionado:</strong> {availableUsers.find(u => u.id === selectedUser)?.nombre} - 
-              Accederás a datos y métricas personalizadas para nivel {availableUsers.find(u => u.id === selectedUser)?.nivel}.
-            </AlertDescription>
-          </Alert>
-        )}
 
-        {/* Botón de login */}
-        <div className="text-center">
-          <Button
-            onClick={handleLogin}
-            disabled={!selectedUser || isLoggingIn || isLoading}
-            className="bg-yellow-400 text-black hover:bg-yellow-300 px-12 py-4 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoggingIn || isLoading ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Iniciando sesión...
-              </>
-            ) : (
-              <>
-                <Brain className="w-5 h-5 mr-2" />
-                Acceder a MindFit
-              </>
-            )}
-          </Button>
-        </div>
 
         {/* Footer */}
         <div className="text-center mt-12 text-gray-500 text-sm">
-          <p>Demo de MindFit App - Datos simulados para demostración</p>
-          <p className="mt-2">Cada usuario tiene métricas y progreso únicos</p>
+          <p>MindFit App - Tu entrenador personal inteligente</p>
+          <p className="mt-2">Datos seguros y privados</p>
         </div>
       </div>
     </div>

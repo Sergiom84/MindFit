@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate 
 import { UserProvider, useUserContext } from './contexts/UserContext'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import LoginPage from './components/LoginPage'
+import InitialProfileForm from './components/InitialProfileForm'
 import UserProfile from './components/UserProfile'
 import { Button } from '@/components/ui/button.jsx'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.jsx'
@@ -384,7 +385,12 @@ const HomeScreen = () => {
 
 // Enhanced Profile Screen
 const ProfileScreen = () => {
-  const [activeTab, setActiveTab] = useState('basic')
+  const [activeTab, setActiveTab] = useState('basic');
+  const { currentUser } = useAuth();
+
+  if (!currentUser) {
+    return <div>Cargando perfil...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-black text-white p-6 pb-24">
@@ -409,28 +415,47 @@ const ProfileScreen = () => {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
+                  <label className="text-gray-400">Nombre Completo</label>
+                  <p className="text-white font-semibold">{currentUser.nombre} {currentUser.apellido}</p>
+                </div>
+                <div>
+                  <label className="text-gray-400">Email</label>
+                  <p className="text-white font-semibold">{currentUser.email}</p>
+                </div>
+                <div>
                   <label className="text-gray-400">Edad</label>
-                  <p className="text-white font-semibold">28 años</p>
+                  <p className="text-white font-semibold">{currentUser.edad ? `${currentUser.edad} años` : 'No especificado'}</p>
                 </div>
                 <div>
                   <label className="text-gray-400">Peso Actual</label>
-                  <p className="text-white font-semibold">75 kg</p>
+                  <p className="text-white font-semibold">{currentUser.peso ? `${currentUser.peso} kg` : 'No especificado'}</p>
                 </div>
                 <div>
                   <label className="text-gray-400">Estatura</label>
-                  <p className="text-white font-semibold">1.78 m</p>
+                  <p className="text-white font-semibold">{currentUser.altura ? `${currentUser.altura} cm` : 'No especificado'}</p>
                 </div>
                 <div>
                   <label className="text-gray-400">Sexo</label>
-                  <p className="text-white font-semibold">Masculino</p>
+                  <p className="text-white font-semibold">{currentUser.sexo || 'No especificado'}</p>
                 </div>
                 <div>
                   <label className="text-gray-400">IMC</label>
-                  <p className="text-white font-semibold">23.7 <span className="text-green-400 text-sm">(Normal)</span></p>
+                  <p className="text-white font-semibold">
+                    {currentUser.imc ? (
+                      <>
+                        {currentUser.imc}
+                        <span className="text-green-400 text-sm ml-1">
+                          ({currentUser.imc < 18.5 ? 'Bajo peso' :
+                            currentUser.imc < 25 ? 'Normal' :
+                            currentUser.imc < 30 ? 'Sobrepeso' : 'Obesidad'})
+                        </span>
+                      </>
+                    ) : 'No calculado'}
+                  </p>
                 </div>
                 <div>
                   <label className="text-gray-400">Nivel de Actividad</label>
-                  <p className="text-white font-semibold">Moderadamente Activo</p>
+                  <p className="text-white font-semibold">{currentUser.nivel_actividad || 'No especificado'}</p>
                 </div>
               </div>
             </CardContent>
@@ -444,19 +469,25 @@ const ProfileScreen = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-gray-400">Nivel Actual</label>
-                  <Badge className="bg-yellow-400 text-black">Amateur</Badge>
+                  <Badge className={`${
+                    currentUser.nivel === 'principiante' ? 'bg-green-400 text-black' :
+                    currentUser.nivel === 'intermedio' ? 'bg-yellow-400 text-black' :
+                    'bg-red-400 text-black'
+                  }`}>
+                    {currentUser.nivel || 'No especificado'}
+                  </Badge>
                 </div>
                 <div>
                   <label className="text-gray-400">Años Entrenando</label>
-                  <p className="text-white">3 años</p>
+                  <p className="text-white">{currentUser.años_entrenando ? `${currentUser.años_entrenando} años` : 'No especificado'}</p>
                 </div>
                 <div>
                   <label className="text-gray-400">Metodología Preferida</label>
-                  <p className="text-white">Hipertrofia</p>
+                  <p className="text-white">{currentUser.metodologia_preferida || 'No especificado'}</p>
                 </div>
                 <div>
                   <label className="text-gray-400">Frecuencia Semanal</label>
-                  <p className="text-white">4-5 días</p>
+                  <p className="text-white">{currentUser.frecuencia_semanal ? `${currentUser.frecuencia_semanal} días` : 'No especificado'}</p>
                 </div>
               </div>
             </CardContent>
@@ -475,19 +506,26 @@ const ProfileScreen = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-gray-400">Grasa Corporal</label>
-                  <p className="text-white font-semibold">15% <span className="text-green-400 text-sm">(Saludable)</span></p>
+                  <p className="text-white font-semibold">
+                    {currentUser.grasa_corporal ? (
+                      <>
+                        {currentUser.grasa_corporal}%
+                        <span className="text-green-400 text-sm ml-1">(Saludable)</span>
+                      </>
+                    ) : 'No especificado'}
+                  </p>
                 </div>
                 <div>
                   <label className="text-gray-400">Masa Muscular</label>
-                  <p className="text-white font-semibold">58.5 kg</p>
+                  <p className="text-white font-semibold">{currentUser.masa_muscular ? `${currentUser.masa_muscular} kg` : 'No especificado'}</p>
                 </div>
                 <div>
                   <label className="text-gray-400">Agua Corporal</label>
-                  <p className="text-white font-semibold">62%</p>
+                  <p className="text-white font-semibold">{currentUser.agua_corporal ? `${currentUser.agua_corporal}%` : 'No especificado'}</p>
                 </div>
                 <div>
                   <label className="text-gray-400">Metabolismo Basal</label>
-                  <p className="text-white font-semibold">1,680 kcal</p>
+                  <p className="text-white font-semibold">{currentUser.metabolismo_basal ? `${currentUser.metabolismo_basal} kcal` : 'No especificado'}</p>
                 </div>
               </div>
             </CardContent>
@@ -501,27 +539,27 @@ const ProfileScreen = () => {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="text-gray-400">Cintura</label>
-                  <p className="text-white font-semibold">82 cm</p>
+                  <p className="text-white font-semibold">{currentUser.cintura ? `${currentUser.cintura} cm` : 'No especificado'}</p>
                 </div>
                 <div>
                   <label className="text-gray-400">Pecho</label>
-                  <p className="text-white font-semibold">98 cm</p>
+                  <p className="text-white font-semibold">{currentUser.pecho ? `${currentUser.pecho} cm` : 'No especificado'}</p>
                 </div>
                 <div>
                   <label className="text-gray-400">Brazos</label>
-                  <p className="text-white font-semibold">35 cm</p>
+                  <p className="text-white font-semibold">{currentUser.brazos ? `${currentUser.brazos} cm` : 'No especificado'}</p>
                 </div>
                 <div>
                   <label className="text-gray-400">Muslos</label>
-                  <p className="text-white font-semibold">58 cm</p>
+                  <p className="text-white font-semibold">{currentUser.muslos ? `${currentUser.muslos} cm` : 'No especificado'}</p>
                 </div>
                 <div>
                   <label className="text-gray-400">Cuello</label>
-                  <p className="text-white font-semibold">38 cm</p>
+                  <p className="text-white font-semibold">{currentUser.cuello ? `${currentUser.cuello} cm` : 'No especificado'}</p>
                 </div>
                 <div>
                   <label className="text-gray-400">Antebrazos</label>
-                  <p className="text-white font-semibold">28 cm</p>
+                  <p className="text-white font-semibold">{currentUser.antebrazos ? `${currentUser.antebrazos} cm` : 'No especificado'}</p>
                 </div>
               </div>
             </CardContent>
@@ -537,22 +575,22 @@ const ProfileScreen = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div>
-                  <label className="text-gray-400">Presión Arterial</label>
-                  <p className="text-white font-semibold">120/80 <span className="text-green-400 text-sm">(Normal)</span></p>
+                  <label className="text-gray-400">Historial Médico</label>
+                  <p className="text-white font-semibold">{currentUser.historial_medico || 'Sin historial médico registrado'}</p>
                 </div>
                 <div>
-                  <label className="text-gray-400">Frecuencia Cardíaca Reposo</label>
-                  <p className="text-white font-semibold">65 bpm</p>
+                  <label className="text-gray-400">Limitaciones</label>
+                  <p className="text-white font-semibold">{currentUser.limitaciones || 'Sin limitaciones registradas'}</p>
                 </div>
                 <div>
                   <label className="text-gray-400">Alergias</label>
-                  <p className="text-white font-semibold">Ninguna conocida</p>
+                  <p className="text-white font-semibold">{currentUser.alergias || 'Sin alergias registradas'}</p>
                 </div>
                 <div>
                   <label className="text-gray-400">Medicamentos</label>
-                  <p className="text-white font-semibold">Ninguno</p>
+                  <p className="text-white font-semibold">{currentUser.medicamentos || 'Sin medicamentos registrados'}</p>
                 </div>
               </div>
             </CardContent>
@@ -595,19 +633,29 @@ const ProfileScreen = () => {
               <div className="space-y-4">
                 <div>
                   <label className="text-gray-400">Objetivo Principal</label>
-                  <p className="text-white font-semibold">Ganar masa muscular magra</p>
+                  <p className="text-white font-semibold">{currentUser.objetivo_principal || 'No especificado'}</p>
                 </div>
                 <div>
                   <label className="text-gray-400">Meta de Peso</label>
-                  <p className="text-white font-semibold">80 kg (+5 kg)</p>
-                  <Progress value={60} className="mt-2 bg-gray-700" />
-                  <p className="text-sm text-gray-400 mt-1">Progreso: 60%</p>
+                  <p className="text-white font-semibold">
+                    {currentUser.meta_peso ? `${currentUser.meta_peso} kg` : 'No especificado'}
+                    {currentUser.peso && currentUser.meta_peso && (
+                      <span className="text-gray-400 ml-2">
+                        ({currentUser.meta_peso > currentUser.peso ? '+' : ''}{(currentUser.meta_peso - currentUser.peso).toFixed(1)} kg)
+                      </span>
+                    )}
+                  </p>
                 </div>
                 <div>
                   <label className="text-gray-400">Meta de Grasa Corporal</label>
-                  <p className="text-white font-semibold">12% (-3%)</p>
-                  <Progress value={40} className="mt-2 bg-gray-700" />
-                  <p className="text-sm text-gray-400 mt-1">Progreso: 40%</p>
+                  <p className="text-white font-semibold">
+                    {currentUser.meta_grasa ? `${currentUser.meta_grasa}%` : 'No especificado'}
+                    {currentUser.grasa_corporal && currentUser.meta_grasa && (
+                      <span className="text-gray-400 ml-2">
+                        ({currentUser.meta_grasa > currentUser.grasa_corporal ? '+' : ''}{(currentUser.meta_grasa - currentUser.grasa_corporal).toFixed(1)}%)
+                      </span>
+                    )}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -621,28 +669,25 @@ const ProfileScreen = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-gray-400">Enfoque Seleccionado</label>
-                  <p className="text-white">Powerlifter amateur saludable</p>
+                  <p className="text-white">{currentUser.enfoque || 'No especificado'}</p>
                 </div>
                 <div>
                   <label className="text-gray-400">Horario Preferido</label>
-                  <p className="text-white">Mañana (7:00-9:00)</p>
+                  <p className="text-white">{currentUser.horario_preferido || 'No especificado'}</p>
                 </div>
                 <div>
                   <label className="text-gray-400">Comidas diarias</label>
-                  <p className="text-white">4 comidas</p>
+                  <p className="text-white">{currentUser.comidas_diarias ? `${currentUser.comidas_diarias} comidas` : 'No especificado'}</p>
                 </div>
                 <div>
                   <label className="text-gray-400">Suplementación</label>
-                  <p className="text-white">Proteína + Creatina</p>
+                  <p className="text-white">{currentUser.suplementacion || 'No especificado'}</p>
                 </div>
               </div>
 
               <div>
                 <label className="text-gray-400">Alimentos excluidos</label>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <Badge variant="outline" className="border-red-400 text-red-400">Lácteos</Badge>
-                  <Badge variant="outline" className="border-red-400 text-red-400">Gluten</Badge>
-                </div>
+                <p className="text-white mt-2">{currentUser.alimentos_excluidos || 'Ninguno especificado'}</p>
               </div>
             </CardContent>
           </Card>
@@ -1289,6 +1334,7 @@ const SettingsScreen = () => {
 // Componente principal de la aplicación con autenticación
 const AppContent = () => {
   const { currentUser, isLoading } = useAuth();
+  const location = useLocation();
 
   // Mostrar loading mientras se verifica la autenticación
   if (isLoading) {
@@ -1302,8 +1348,11 @@ const AppContent = () => {
     );
   }
 
-  // Si no hay usuario logueado, mostrar página de login
+  // Si no hay usuario logueado, mostrar página de login o registro
   if (!currentUser) {
+    if (location.pathname === '/register') {
+      return <InitialProfileForm />;
+    }
     return <LoginPage />;
   }
 
