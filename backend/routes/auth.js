@@ -40,6 +40,9 @@ router.post('/register', async (req, res) => {
       imc = (data.peso / (alturaEnMetros * alturaEnMetros)).toFixed(1);
     }
 
+    // Función auxiliar para números
+    const parseOrNull = v => (v === "" || v === undefined ? null : isNaN(Number(v)) ? null : Number(v));
+
     // Insertar usuario en la base de datos
     const insertText = `
       INSERT INTO users(
@@ -63,13 +66,39 @@ router.post('/register', async (req, res) => {
 
     const values = [
       data.nombre, data.apellido, data.email, hashedPassword, iniciales,
-      data.nivel || 'principiante', data.edad, data.sexo, data.peso, data.altura, imc,
-      data.nivel_actividad, data.experiencia, data.años_entrenando, data.metodologia_preferida, data.frecuencia_semanal,
-      data.grasa_corporal, data.masa_muscular, data.agua_corporal, data.metabolismo_basal,
-      data.cintura, data.pecho, data.brazos, data.muslos, data.cuello, data.antebrazos,
-      data.historial_medico, data.limitaciones, data.alergias, data.medicamentos,
-      data.objetivo_principal, data.meta_peso, data.meta_grasa, data.enfoque, data.horario_preferido,
-      data.comidas_diarias, data.suplementacion, data.alimentos_excluidos
+      data.nivel || 'principiante',
+      parseOrNull(data.edad), // INT
+      data.sexo,
+      parseOrNull(data.peso), // DECIMAL
+      parseOrNull(data.altura), // DECIMAL
+      imc,
+      data.nivel_actividad,
+      data.experiencia,
+      parseOrNull(data.años_entrenando), // INT
+      data.metodologia_preferida,
+      parseOrNull(data.frecuencia_semanal), // INT
+      parseOrNull(data.grasa_corporal), // DECIMAL
+      parseOrNull(data.masa_muscular), // DECIMAL
+      parseOrNull(data.agua_corporal), // DECIMAL
+      parseOrNull(data.metabolismo_basal), // INT
+      parseOrNull(data.cintura), // DECIMAL
+      parseOrNull(data.pecho), // DECIMAL
+      parseOrNull(data.brazos), // DECIMAL
+      parseOrNull(data.muslos), // DECIMAL
+      parseOrNull(data.cuello), // DECIMAL
+      parseOrNull(data.antebrazos), // DECIMAL
+      data.historial_medico,
+      data.limitaciones,
+      data.alergias,
+      data.medicamentos,
+      data.objetivo_principal,
+      parseOrNull(data.meta_peso), // DECIMAL
+      parseOrNull(data.meta_grasa), // DECIMAL
+      data.enfoque,
+      data.horario_preferido,
+      parseOrNull(data.comidas_diarias), // INT
+      data.suplementacion,
+      data.alimentos_excluidos
     ];
 
     const result = await query(insertText, values);
