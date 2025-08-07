@@ -51,7 +51,7 @@ Una aplicación de entrenamiento personal impulsada por IA que adapta rutinas, n
 ## 📋 Requisitos Previos
 
 - Node.js 18+ 
-- npm o yarn
+- pnpm (recomendado) o npm
 - API Key de OpenAI
 - Cámara web (para corrección por video)
 
@@ -65,7 +65,8 @@ cd MindFit
 
 2. **Instalar dependencias:**
 ```bash
-npm install
+pnpm install
+# o si prefieres npm: npm install
 ```
 
 3. **Configurar variables de entorno:**
@@ -82,7 +83,8 @@ VITE_OPENAI_PROMPT_VERSION=2
 
 4. **Iniciar el servidor de desarrollo:**
 ```bash
-npm run dev
+pnpm run dev
+# o si usas npm: npm run dev
 ```
 
 5. **Abrir en el navegador:**
