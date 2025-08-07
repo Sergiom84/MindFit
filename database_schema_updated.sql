@@ -2,7 +2,7 @@
 DROP TABLE IF EXISTS user_profiles;
 DROP TABLE IF EXISTS users;
 
--- Crear tabla users según el proyecto MindFit
+-- Crear tabla users según el proyecto MindFit (ACTUALIZADA)
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
@@ -48,6 +48,39 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Crear usuario de prueba (la contraseña se hasheará automáticamente en el backend)
--- Para crear usuarios, usar el endpoint /api/register
--- Usuario de prueba: test@example.com / password123
+-- Crear función para calcular IMC automáticamente
+CREATE OR REPLACE FUNCTION calculate_imc()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Calcular IMC si peso y altura están disponibles
+    IF NEW.peso IS NOT NULL AND NEW.altura IS NOT NULL AND NEW.altura > 0 THEN
+        NEW.imc = ROUND((NEW.peso / POWER(NEW.altura / 100.0, 2))::numeric, 1);
+    END IF;
+    
+    -- Generar iniciales si no están definidas
+    IF NEW.iniciales IS NULL OR NEW.iniciales = '' THEN
+        NEW.iniciales = UPPER(LEFT(NEW.nombre, 1) || LEFT(NEW.apellido, 1));
+    END IF;
+    
+    -- Actualizar timestamp
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Crear trigger para calcular IMC automáticamente
+CREATE TRIGGER trigger_calculate_imc
+    BEFORE INSERT OR UPDATE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION calculate_imc();
+
+-- Crear usuario de prueba
+INSERT INTO users (
+    nombre, apellido, email, password, edad, sexo, peso, altura, objetivo_principal
+) VALUES (
+    'Test', 'User', 'test@example.com', 'password123', 25, 'masculino', 75.5, 175, 'mantener_forma'
+);
+
+-- Verificar que el IMC se calculó correctamente
+SELECT nombre, apellido, peso, altura, imc, iniciales FROM users WHERE email = 'test@example.com';

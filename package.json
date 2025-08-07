@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "setup-db": "cd backend && node setup-database.js",
+    "fix-test-user": "cd backend && node fix-test-user.js",
+    "verify-app": "node verificar-aplicacion.js",
+    "start-app": "start-mindfit.bat"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",

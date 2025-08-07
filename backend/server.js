@@ -15,7 +15,7 @@ dotenv.config();
 
 const app = express();
 
-const PORT = process.env.PORT || 5050; // Usa 5050 para pruebas
+const PORT = process.env.PORT || 5000; // Puerto estándar para MindFit
 
 console.log('⛔ INICIANDO SERVER.JS EN EL PUERTO:', PORT);
 
@@ -34,10 +34,13 @@ const upload = multer({
   }
 });
 
-// Inicializar cliente OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Inicializar cliente OpenAI solo si hay API key
+let openai = null;
+if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'tu_api_key_de_openai_aqui') {
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 // Middlewares
 app.use(helmet());
@@ -113,9 +116,11 @@ app.use('*', (req, res) => {
 });
 
 // Verificar que la API key esté configurada
-if (!process.env.OPENAI_API_KEY) {
-  console.error('❌ OPENAI_API_KEY no está configurada en las variables de entorno');
-  process.exit(1);
+if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'tu_api_key_de_openai_aqui') {
+  console.warn('⚠️ OPENAI_API_KEY no está configurada. Algunas funcionalidades de IA no estarán disponibles.');
+  console.warn('   Configura tu API key en backend/.env para habilitar todas las funciones.');
+} else {
+  console.log('🤖 OpenAI API configurada correctamente');
 }
 
 // Inicializar conexión a base de datos y servidor
@@ -130,7 +135,9 @@ const startServer = async () => {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Servidor MindFit Backend ejecutándose en puerto ${PORT}`);
     console.log(`📍 Health check: http://localhost:${PORT}/health`);
-    console.log(`🤖 OpenAI API configurada correctamente`);
+    if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'tu_api_key_de_openai_aqui') {
+      console.log(`🤖 OpenAI API configurada correctamente`);
+    }
     console.log(`🗄️ Base de datos PostgreSQL conectada`);
   });
 };

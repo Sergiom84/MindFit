@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -25,7 +25,7 @@ const HomeTrainingSection = () => {
   const { entrenamientoCasa, userData, progreso } = useUserContext()
 
   // Determinar equipamiento inicial basado en el usuario
-  React.useEffect(() => {
+  useEffect(() => {
     if (entrenamientoCasa.equipoDisponible) {
       const equipoUsuario = entrenamientoCasa.equipoDisponible.join(' ').toLowerCase();
       if (equipoUsuario.includes('barra') || equipoUsuario.includes('rack') || equipoUsuario.includes('kettlebell')) {

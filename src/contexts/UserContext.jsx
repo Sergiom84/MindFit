@@ -25,6 +25,7 @@ export const UserProvider = ({ children }) => {
   const entrenamientoCasa = getUserData('entrenamientoCasa') || {};
   const progreso = getUserData('progreso') || {};
   const rutinas = getUserData('rutinas') || {};
+  const metodologiaActiva = getUserData('metodologiaActiva') || null;
 
   // Función para actualizar datos del usuario
   const updateUserData = (newData) => {
@@ -129,6 +130,52 @@ export const UserProvider = ({ children }) => {
     }
   };
 
+  // Función para establecer metodología activa
+  const setMetodologiaActiva = (metodologia, fechaInicio, fechaFin) => {
+    if (!currentUser) return false;
+
+    const metodologiaData = {
+      metodologia,
+      fechaInicio,
+      fechaFin,
+      progreso: 0,
+      entrenamientosCompletados: 0,
+      fechaSeleccion: new Date().toISOString()
+    };
+
+    return updateAuthUserData('metodologiaActiva', metodologiaData);
+  };
+
+  // Función para actualizar progreso de metodología
+  const updateMetodologiaProgress = (nuevoProgreso, entrenamientosCompletados = null) => {
+    if (!currentUser || !metodologiaActiva) return false;
+
+    const updatedData = {
+      ...metodologiaActiva,
+      progreso: nuevoProgreso,
+      entrenamientosCompletados: entrenamientosCompletados || metodologiaActiva.entrenamientosCompletados || 0,
+      ultimaActualizacion: new Date().toISOString()
+    };
+
+    return updateAuthUserData('metodologiaActiva', updatedData);
+  };
+
+  // Función para completar un entrenamiento
+  const completarEntrenamiento = () => {
+    if (!currentUser || !metodologiaActiva) return false;
+
+    const entrenamientosCompletados = (metodologiaActiva.entrenamientosCompletados || 0) + 1;
+    const metodologia = metodologiaActiva.metodologia;
+
+    // Calcular progreso basado en entrenamientos completados
+    const frecuenciaSemanal = parseInt(metodologia.frequency?.split('-')[0]) || 3;
+    const duracionSemanas = parseInt(metodologia.programDuration?.split('-')[1]) || 8;
+    const totalEntrenamientos = frecuenciaSemanal * duracionSemanas;
+    const nuevoProgreso = Math.min((entrenamientosCompletados / totalEntrenamientos) * 100, 100);
+
+    return updateMetodologiaProgress(nuevoProgreso, entrenamientosCompletados);
+  };
+
   // Función para obtener el color de las alertas
   const getAlertColor = (tipo) => {
     switch (tipo) {
@@ -158,6 +205,12 @@ export const UserProvider = ({ children }) => {
     entrenamientoCasa,
     progreso,
     rutinas,
+
+    // Metodología activa
+    metodologiaActiva,
+    setMetodologiaActiva,
+    updateMetodologiaProgress,
+    completarEntrenamiento,
 
     // Estados
     isLoading,

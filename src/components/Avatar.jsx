@@ -1,12 +1,38 @@
 import React from 'react';
+import {
+  Dumbbell,
+  Trophy,
+  Target,
+  Zap,
+  Activity,
+  Heart,
+  UserCircle,
+  Flame,
+  Medal,
+  Crown
+} from 'lucide-react';
 
-const Avatar = ({ 
-  avatar, 
-  iniciales, 
-  nombre, 
-  size = 'md', 
+// Iconos de gimnasio disponibles
+const GYM_ICONS = {
+  dumbbell: Dumbbell,
+  trophy: Trophy,
+  target: Target,
+  zap: Zap,
+  activity: Activity,
+  heart: Heart,
+  flame: Flame,
+  medal: Medal,
+  crown: Crown,
+  user: UserCircle
+};
+
+const Avatar = ({
+  avatar,
+  iniciales,
+  nombre,
+  size = 'md',
   className = '',
-  showBorder = false 
+  showBorder = false
 }) => {
   // Tamaños disponibles
   const sizes = {
@@ -40,16 +66,52 @@ const Avatar = ({
 
   const sizeClass = sizes[size] || sizes.md;
   const borderClass = showBorder ? 'ring-2 ring-yellow-400 ring-offset-2 ring-offset-black' : '';
-  
+
+  // Obtener tamaño del icono basado en el tamaño del avatar
+  const getIconSize = () => {
+    switch(size) {
+      case 'sm': return 16;
+      case 'md': return 24;
+      case 'lg': return 32;
+      case 'xl': return 40;
+      case '2xl': return 48;
+      default: return 24;
+    }
+  };
+
   // Si hay avatar (URL de imagen), mostrar imagen
   if (avatar && typeof avatar === 'string' && avatar.startsWith('http')) {
     return (
       <div className={`${sizeClass} ${borderClass} ${className} rounded-full overflow-hidden flex-shrink-0`}>
-        <img 
-          src={avatar} 
-          alt={nombre || 'Avatar'} 
+        <img
+          src={avatar}
+          alt={nombre || 'Avatar'}
           className="w-full h-full object-cover"
         />
+      </div>
+    );
+  }
+
+  // Si hay un icono de gimnasio, mostrarlo
+  if (avatar && GYM_ICONS[avatar]) {
+    const IconComponent = GYM_ICONS[avatar];
+    return (
+      <div
+        className={`
+          ${sizeClass}
+          bg-yellow-400
+          ${borderClass}
+          ${className}
+          rounded-full
+          flex
+          items-center
+          justify-center
+          text-black
+          flex-shrink-0
+          shadow-lg
+        `}
+      >
+        <IconComponent size={getIconSize()} />
       </div>
     );
   }
@@ -59,18 +121,18 @@ const Avatar = ({
   const displayInitials = iniciales || (nombre ? nombre.charAt(0).toUpperCase() : '?');
 
   return (
-    <div 
+    <div
       className={`
-        ${sizeClass} 
-        ${bgColor} 
-        ${borderClass} 
-        ${className} 
-        rounded-full 
-        flex 
-        items-center 
-        justify-center 
-        text-white 
-        font-bold 
+        ${sizeClass}
+        ${bgColor}
+        ${borderClass}
+        ${className}
+        rounded-full
+        flex
+        items-center
+        justify-center
+        text-white
+        font-bold
         flex-shrink-0
         shadow-lg
       `}
@@ -78,6 +140,15 @@ const Avatar = ({
       {displayInitials}
     </div>
   );
+};
+
+// Exportar iconos disponibles para uso en otros componentes
+export const getAvailableGymIcons = () => {
+  return Object.keys(GYM_ICONS).map(key => ({
+    key,
+    component: GYM_ICONS[key],
+    name: key.charAt(0).toUpperCase() + key.slice(1)
+  }));
 };
 
 export default Avatar;
