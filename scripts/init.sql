@@ -48,6 +48,9 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Crear usuario de prueba (la contraseña se hasheará automáticamente en el backend)
--- Para crear usuarios, usar el endpoint /api/register
--- Usuario de prueba: test@example.com / password123
+Insertar usuario de prueba
+-- Nota: el hash de la contraseña fue generado previamente con bcrypt
+INSERT INTO users (nombre, apellido, email, password)
+VALUES ('Test', 'User', 'test@example.com', '$2b$10$NAJZ2eTBc55cf4/l61.CsOhVXNH1Mzers9p63tbA4IC1/tzwanh/q');
+
+-- Para crear usuarios adicionales, usar el endpoint /api/register

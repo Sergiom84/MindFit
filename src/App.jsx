@@ -47,6 +47,7 @@ import {
   UserCircle,
   Key,
   Edit,
+  Pencil,
   Upload,
   Save,
   MousePointer,
@@ -105,7 +106,7 @@ const MusicBubble = () => {
   }, [isDragging])
 
   return (
-    <div 
+    <div
       className={`fixed z-50 w-16 h-16 ${musicPhases[currentPhase].color} rounded-full shadow-lg cursor-move flex items-center justify-center hover:scale-110 transition-all duration-200`}
       style={{ left: position.x, top: position.y }}
       onMouseDown={handleMouseDown}
@@ -119,7 +120,7 @@ const MusicBubble = () => {
       >
         {isPlaying ? <Pause size={20} /> : <Play size={20} />}
       </Button>
-      
+
       {/* Phase indicator */}
       <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
         <Music size={10} className="text-black" />
@@ -133,7 +134,7 @@ const Navigation = () => {
   const location = useLocation()
   const { logout, getCurrentUserInfo } = useAuth()
   const userInfo = getCurrentUserInfo()
-  
+
   const navItems = [
     { path: '/', icon: Home, label: 'Inicio' },
     { path: '/profile', icon: User, label: 'Perfil' },
@@ -239,11 +240,11 @@ const VersionSelectionModal = ({ methodology, onSelect }) => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           {Object.entries(versions).map(([key, version]) => (
-            <Card 
+            <Card
               key={key}
               className={`cursor-pointer transition-all ${
-                selectedVersion === key 
-                  ? 'border-yellow-400 bg-yellow-400/10' 
+                selectedVersion === key
+                  ? 'border-yellow-400 bg-yellow-400/10'
                   : 'border-gray-600 hover:border-yellow-400/50'
               } ${version.recommended ? 'ring-2 ring-green-400' : ''}`}
               onClick={() => handleVersionSelect(key)}
@@ -287,15 +288,15 @@ const VersionSelectionModal = ({ methodology, onSelect }) => {
           <Alert className="border-orange-400 bg-orange-400/10">
             <AlertTriangle className="h-4 w-4 text-orange-400" />
             <AlertDescription className="text-orange-300">
-              ⚠️ Advertencia: Has seleccionado la versión estricta siendo principiante. 
-              Esto puede aumentar el riesgo de lesiones o sobreentrenamiento. 
+              ⚠️ Advertencia: Has seleccionado la versión estricta siendo principiante.
+              Esto puede aumentar el riesgo de lesiones o sobreentrenamiento.
               Se recomienda usar la versión adaptada durante 4-6 semanas mínimo.
             </AlertDescription>
           </Alert>
         )}
 
         <div className="flex justify-end space-x-2 mt-6">
-          <Button 
+          <Button
             onClick={confirmSelection}
             disabled={!selectedVersion}
             className="bg-yellow-400 text-black hover:bg-yellow-300"
@@ -324,13 +325,13 @@ const HomeScreen = () => {
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
       {/* Animated background effect */}
-      <div 
+      <div
         className="absolute inset-0 opacity-10"
         style={{
           background: `radial-gradient(circle at ${mousePosition.x}px ${mousePosition.y}px, yellow 0%, transparent 50%)`
         }}
       />
-      
+
       {/* Hero Section */}
       <div className="relative z-10 pt-20 pb-32 px-6">
         <div className="max-w-4xl mx-auto text-center">
@@ -338,12 +339,12 @@ const HomeScreen = () => {
             MindFit
           </h1>
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Tu entrenador personal inteligente que adapta rutinas, nutrición y seguimiento 
+            Tu entrenador personal inteligente que adapta rutinas, nutrición y seguimiento
             automáticamente según tu progreso y objetivos.
           </p>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
-            <Card 
+            <Card
               className="bg-black/50 border-yellow-400/20 hover:border-yellow-400/40 transition-colors cursor-pointer"
               onClick={() => navigate('/ai-adaptive')}
             >
@@ -357,8 +358,8 @@ const HomeScreen = () => {
                 </p>
               </CardContent>
             </Card>
-            
-            <Card 
+
+            <Card
               className="bg-black/50 border-yellow-400/20 hover:border-yellow-400/40 transition-colors cursor-pointer"
               onClick={() => navigate('/home-training')}
             >
@@ -372,8 +373,8 @@ const HomeScreen = () => {
                 </p>
               </CardContent>
             </Card>
-            
-            <Card 
+
+            <Card
               className="bg-black/50 border-yellow-400/20 hover:border-yellow-400/40 transition-colors cursor-pointer"
               onClick={() => navigate('/video-correction')}
             >
@@ -397,21 +398,33 @@ const HomeScreen = () => {
 // Enhanced Profile Screen
 const ProfileScreen = () => {
   const [activeTab, setActiveTab] = useState('basic');
-  const [isEditing, setIsEditing] = useState(false);
+  const [editingSection, setEditingSection] = useState(null);
   const [editedData, setEditedData] = useState({});
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
-  const [passwordError, setPasswordError] = useState('');
-  const [passwordSuccess, setPasswordSuccess] = useState('');
-  const { currentUser, updateUserData } = useAuth();
+  const { currentUser } = useAuth();
+  const { updateUserData } = useUserContext();
 
-  // Initialize edited data when entering edit mode
-  const handleEditMode = () => {
-    setEditedData({ ...currentUser });
-    setIsEditing(true);
+  // Función para activar edición
+  const startEdit = (section, sectionFields) => {
+    setEditingSection(section);
+    setEditedData(sectionFields);
+  };
+
+  // Guardar sólo los campos de la sección editada
+  const handleSave = async () => {
+    if (!editingSection) return;
+    const ok = await updateUserData(editedData);
+    if (ok) {
+      setEditingSection(null);
+      setEditedData({});
+    } else {
+      alert("Error al guardar los datos.");
+    }
+  };
+
+  // Cancelar edición
+  const handleCancel = () => {
+    setEditingSection(null);
+    setEditedData({});
   };
 
   // Handle input changes
@@ -422,77 +435,12 @@ const ProfileScreen = () => {
     }));
   };
 
-  // Save changes
-  const handleSave = async () => {
-    try {
-      await updateUserData(editedData);
-      setIsEditing(false);
-      setEditedData({});
-    } catch (error) {
-      console.error('Error updating profile:', error);
-    }
-  };
-
-  // Cancel editing
-  const handleCancel = () => {
-    setIsEditing(false);
-    setEditedData({});
-  };
-
-  // Handle password change
-  const handlePasswordChange = (field, value) => {
-    setPasswordData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    setPasswordError('');
-  };
-
-  // Submit password change
-  const handlePasswordSubmit = async () => {
-    setPasswordError('');
-    setPasswordSuccess('');
-
-    // Validations
-    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
-      setPasswordError('Todos los campos son obligatorios');
-      return;
-    }
-
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setPasswordError('Las contraseñas nuevas no coinciden');
-      return;
-    }
-
-    if (passwordData.newPassword.length < 6) {
-      setPasswordError('La nueva contraseña debe tener al menos 6 caracteres');
-      return;
-    }
-
-    try {
-      // Aquí iría la llamada al backend para cambiar la contraseña
-      // Por ahora simulamos el éxito
-      console.log('Changing password...', passwordData);
-
-      // Simular delay de API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      setPasswordSuccess('Contraseña actualizada correctamente');
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      });
-    } catch (error) {
-      setPasswordError('Error al cambiar la contraseña. Inténtalo de nuevo.');
-    }
-  };
-
-  // Component for editable field
+  // Renderizado de campo editable
   const EditableField = ({ label, field, value, type = "text", options = null, suffix = "" }) => {
-    const displayValue = isEditing ? (editedData[field] || '') : (value || 'No especificado');
+    const isCurrentSectionEditing = editingSection !== null;
+    const displayValue = isCurrentSectionEditing ? (editedData[field] ?? value ?? '') : (value ?? 'No especificado');
 
-    if (!isEditing) {
+    if (!isCurrentSectionEditing) {
       return (
         <div>
           <label className="text-gray-400">{label}</label>
@@ -535,42 +483,23 @@ const ProfileScreen = () => {
     );
   };
 
-  if (!currentUser) {
-    return <div>Cargando perfil...</div>;
-  }
+  if (!currentUser) return <div>Cargando perfil...</div>;
 
   return (
     <div className="min-h-screen bg-black text-white p-6 pb-24">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-yellow-400">Perfil de Usuario</h1>
-        <div className="flex space-x-2">
-          {isEditing ? (
-            <>
-              <Button
-                onClick={handleSave}
-                className="bg-green-500 hover:bg-green-600 text-white flex items-center space-x-2"
-              >
-                <Save className="w-4 h-4" />
-                <span>Guardar</span>
-              </Button>
-              <Button
-                onClick={handleCancel}
-                variant="outline"
-                className="border-gray-600 text-gray-300 hover:bg-gray-700"
-              >
-                Cancelar
-              </Button>
-            </>
-          ) : (
-            <Button
-              onClick={handleEditMode}
-              className="bg-yellow-400 text-black hover:bg-yellow-300 flex items-center space-x-2"
-            >
-              <Edit className="w-4 h-4" />
-              <span>Editar Perfil</span>
+        {editingSection && (
+          <div className="flex space-x-2">
+            <Button onClick={handleSave} className="bg-green-500 hover:bg-green-600 text-white flex items-center space-x-2">
+              <Save className="w-4 h-4" />
+              <span>Guardar</span>
             </Button>
-          )}
-        </div>
+            <Button onClick={handleCancel} variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-700">
+              Cancelar
+            </Button>
+          </div>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -579,59 +508,50 @@ const ProfileScreen = () => {
           <TabsTrigger value="body">Composición</TabsTrigger>
           <TabsTrigger value="health">Salud</TabsTrigger>
           <TabsTrigger value="goals">Objetivos</TabsTrigger>
-          <TabsTrigger value="personalization">Personalización</TabsTrigger>
+          <TabsTrigger value="settings">Configuración</TabsTrigger>
         </TabsList>
 
+        {/* --- TAB DATOS BÁSICOS --- */}
         <TabsContent value="basic" className="space-y-6">
           <Card className="bg-gray-900 border-yellow-400/20">
             <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <User className="mr-2 text-yellow-400" />
-                Datos Básicos
+              <CardTitle className="text-white flex items-center justify-between">
+                <div className="flex items-center">
+                  <User className="mr-2 text-yellow-400" />
+                  Datos Básicos
+                </div>
+                <button
+                  onClick={() => startEdit('basic', {
+                    nombre: currentUser.nombre,
+                    apellido: currentUser.apellido,
+                    edad: currentUser.edad,
+                    peso: currentUser.peso,
+                    altura: currentUser.altura,
+                    sexo: currentUser.sexo,
+                    nivel_actividad: currentUser.nivel_actividad,
+                  })}
+                  disabled={editingSection && editingSection !== 'basic'}
+                  className={`p-2 ${editingSection === 'basic' ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-400'} transition-colors`}
+                  title="Editar datos básicos"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <EditableField
-                  label="Nombre"
-                  field="nombre"
-                  value={currentUser.nombre}
-                />
-                <EditableField
-                  label="Apellido"
-                  field="apellido"
-                  value={currentUser.apellido}
-                />
+                <EditableField label="Nombre" field="nombre" value={currentUser.nombre} />
+                <EditableField label="Apellido" field="apellido" value={currentUser.apellido} />
                 <div>
                   <label className="text-gray-400">Email</label>
                   <p className="text-white font-semibold">{currentUser.email}</p>
-                  {isEditing && <p className="text-xs text-gray-500 mt-1">El email no se puede modificar</p>}
+                  {editingSection && <p className="text-xs text-gray-500 mt-1">El email no se puede modificar</p>}
                 </div>
+                <EditableField label="Edad" field="edad" value={currentUser.edad} type="number" suffix=" años" />
+                <EditableField label="Peso Actual" field="peso" value={currentUser.peso} type="number" suffix=" kg" />
+                <EditableField label="Estatura" field="altura" value={currentUser.altura} type="number" suffix=" cm" />
                 <EditableField
-                  label="Edad"
-                  field="edad"
-                  value={currentUser.edad}
-                  type="number"
-                  suffix=" años"
-                />
-                <EditableField
-                  label="Peso Actual"
-                  field="peso"
-                  value={currentUser.peso}
-                  type="number"
-                  suffix=" kg"
-                />
-                <EditableField
-                  label="Estatura"
-                  field="altura"
-                  value={currentUser.altura}
-                  type="number"
-                  suffix=" cm"
-                />
-                <EditableField
-                  label="Sexo"
-                  field="sexo"
-                  value={currentUser.sexo}
+                  label="Sexo" field="sexo" value={currentUser.sexo}
                   options={[
                     { value: 'masculino', label: 'Masculino' },
                     { value: 'femenino', label: 'Femenino' },
@@ -657,22 +577,43 @@ const ProfileScreen = () => {
                     })()}
                   </p>
                 </div>
-                <div>
-                  <label className="text-gray-400">Nivel de Actividad</label>
-                  <p className="text-white font-semibold">{currentUser.nivel_actividad || 'No especificado'}</p>
-                </div>
+                <EditableField
+                  label="Nivel de Actividad" field="nivel_actividad" value={currentUser.nivel_actividad}
+                  options={[
+                    { value: 'sedentario', label: 'Sedentario' },
+                    { value: 'ligero', label: 'Ligero' },
+                    { value: 'moderado', label: 'Moderado' },
+                    { value: 'activo', label: 'Activo' },
+                    { value: 'muy_activo', label: 'Muy Activo' }
+                  ]}
+                />
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-gray-900 border-yellow-400/20">
             <CardHeader>
-              <CardTitle className="text-white">Experiencia en Entrenamiento</CardTitle>
+              <CardTitle className="text-white flex items-center justify-between">
+                <span>Experiencia en Entrenamiento</span>
+                <button
+                  onClick={() => startEdit('experience', {
+                    nivel: currentUser.nivel,
+                    años_entrenando: currentUser.años_entrenando,
+                    metodologia_preferida: currentUser.metodologia_preferida,
+                    frecuencia_semanal: currentUser.frecuencia_semanal
+                  })}
+                  disabled={editingSection && editingSection !== 'experience'}
+                  className={`p-2 ${editingSection === 'experience' ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-400'} transition-colors`}
+                  title="Editar experiencia en entrenamiento"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  {isEditing ? (
+                  {editingSection === 'experience' ? (
                     <EditableField
                       label="Nivel Actual"
                       field="nivel"
@@ -729,111 +670,189 @@ const ProfileScreen = () => {
           </Card>
         </TabsContent>
 
+        {/* --- TAB COMPOSICIÓN CORPORAL --- */}
         <TabsContent value="body" className="space-y-6">
           <Card className="bg-gray-900 border-yellow-400/20">
             <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <Activity className="mr-2 text-yellow-400" />
-                Composición Corporal Detallada
+              <CardTitle className="text-white flex items-center justify-between">
+                <div className="flex items-center">
+                  <Activity className="mr-2 text-yellow-400" />
+                  Composición Corporal Detallada
+                </div>
+                <button
+                  onClick={() => startEdit('bodyComp', {
+                    grasa_corporal: currentUser.grasa_corporal,
+                    masa_muscular: currentUser.masa_muscular,
+                    agua_corporal: currentUser.agua_corporal,
+                    metabolismo_basal: currentUser.metabolismo_basal
+                  })}
+                  disabled={editingSection && editingSection !== 'bodyComp'}
+                  className={`p-2 ${editingSection === 'bodyComp' ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-400'} transition-colors`}
+                  title="Editar composición corporal"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-gray-400">Grasa Corporal</label>
-                  <p className="text-white font-semibold">
-                    {currentUser.grasa_corporal ? (
-                      <>
-                        {currentUser.grasa_corporal}%
-                        <span className="text-green-400 text-sm ml-1">(Saludable)</span>
-                      </>
-                    ) : 'No especificado'}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-gray-400">Masa Muscular</label>
-                  <p className="text-white font-semibold">{currentUser.masa_muscular ? `${currentUser.masa_muscular} kg` : 'No especificado'}</p>
-                </div>
-                <div>
-                  <label className="text-gray-400">Agua Corporal</label>
-                  <p className="text-white font-semibold">{currentUser.agua_corporal ? `${currentUser.agua_corporal}%` : 'No especificado'}</p>
-                </div>
-                <div>
-                  <label className="text-gray-400">Metabolismo Basal</label>
-                  <p className="text-white font-semibold">{currentUser.metabolismo_basal ? `${currentUser.metabolismo_basal} kcal` : 'No especificado'}</p>
-                </div>
+                <EditableField
+                  label="Grasa Corporal"
+                  field="grasa_corporal"
+                  value={currentUser.grasa_corporal}
+                  type="number"
+                  suffix="%"
+                />
+                <EditableField
+                  label="Masa Muscular"
+                  field="masa_muscular"
+                  value={currentUser.masa_muscular}
+                  type="number"
+                  suffix=" kg"
+                />
+                <EditableField
+                  label="Agua Corporal"
+                  field="agua_corporal"
+                  value={currentUser.agua_corporal}
+                  type="number"
+                  suffix="%"
+                />
+                <EditableField
+                  label="Metabolismo Basal"
+                  field="metabolismo_basal"
+                  value={currentUser.metabolismo_basal}
+                  type="number"
+                  suffix=" kcal"
+                />
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-gray-900 border-yellow-400/20">
             <CardHeader>
-              <CardTitle className="text-white">Medidas Corporales</CardTitle>
+              <CardTitle className="text-white flex items-center justify-between">
+                <span>Medidas Corporales</span>
+                <button
+                  onClick={() => startEdit('bodyMeasures', {
+                    cintura: currentUser.cintura,
+                    pecho: currentUser.pecho,
+                    brazos: currentUser.brazos,
+                    muslos: currentUser.muslos,
+                    cuello: currentUser.cuello,
+                    antebrazos: currentUser.antebrazos
+                  })}
+                  disabled={editingSection && editingSection !== 'bodyMeasures'}
+                  className={`p-2 ${editingSection === 'bodyMeasures' ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-400'} transition-colors`}
+                  title="Editar medidas corporales"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="text-gray-400">Cintura</label>
-                  <p className="text-white font-semibold">{currentUser.cintura ? `${currentUser.cintura} cm` : 'No especificado'}</p>
-                </div>
-                <div>
-                  <label className="text-gray-400">Pecho</label>
-                  <p className="text-white font-semibold">{currentUser.pecho ? `${currentUser.pecho} cm` : 'No especificado'}</p>
-                </div>
-                <div>
-                  <label className="text-gray-400">Brazos</label>
-                  <p className="text-white font-semibold">{currentUser.brazos ? `${currentUser.brazos} cm` : 'No especificado'}</p>
-                </div>
-                <div>
-                  <label className="text-gray-400">Muslos</label>
-                  <p className="text-white font-semibold">{currentUser.muslos ? `${currentUser.muslos} cm` : 'No especificado'}</p>
-                </div>
-                <div>
-                  <label className="text-gray-400">Cuello</label>
-                  <p className="text-white font-semibold">{currentUser.cuello ? `${currentUser.cuello} cm` : 'No especificado'}</p>
-                </div>
-                <div>
-                  <label className="text-gray-400">Antebrazos</label>
-                  <p className="text-white font-semibold">{currentUser.antebrazos ? `${currentUser.antebrazos} cm` : 'No especificado'}</p>
-                </div>
+                <EditableField
+                  label="Cintura"
+                  field="cintura"
+                  value={currentUser.cintura}
+                  type="number"
+                  suffix=" cm"
+                />
+                <EditableField
+                  label="Pecho"
+                  field="pecho"
+                  value={currentUser.pecho}
+                  type="number"
+                  suffix=" cm"
+                />
+                <EditableField
+                  label="Brazos"
+                  field="brazos"
+                  value={currentUser.brazos}
+                  type="number"
+                  suffix=" cm"
+                />
+                <EditableField
+                  label="Muslos"
+                  field="muslos"
+                  value={currentUser.muslos}
+                  type="number"
+                  suffix=" cm"
+                />
+                <EditableField
+                  label="Cuello"
+                  field="cuello"
+                  value={currentUser.cuello}
+                  type="number"
+                  suffix=" cm"
+                />
+                <EditableField
+                  label="Antebrazos"
+                  field="antebrazos"
+                  value={currentUser.antebrazos}
+                  type="number"
+                  suffix=" cm"
+                />
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
+        {/* --- TAB SALUD --- */}
         <TabsContent value="health" className="space-y-6">
           <Card className="bg-gray-900 border-yellow-400/20">
             <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <Heart className="mr-2 text-yellow-400" />
-                Historial Médico y Salud
+              <CardTitle className="text-white flex items-center justify-between">
+                <div className="flex items-center">
+                  <Heart className="mr-2 text-yellow-400" />
+                  Historial Médico y Salud
+                </div>
+                <button
+                  onClick={() => startEdit('health', {
+                    historial_medico: currentUser.historial_medico,
+                    limitaciones: currentUser.limitaciones,
+                    alergias: currentUser.alergias,
+                    medicamentos: currentUser.medicamentos
+                  })}
+                  disabled={editingSection && editingSection !== 'health'}
+                  className={`p-2 ${editingSection === 'health' ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-400'} transition-colors`}
+                  title="Editar historial médico"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-4">
-                <div>
-                  <label className="text-gray-400">Historial Médico</label>
-                  <p className="text-white font-semibold">{currentUser.historial_medico || 'Sin historial médico registrado'}</p>
-                </div>
-                <div>
-                  <label className="text-gray-400">Limitaciones</label>
-                  <p className="text-white font-semibold">{currentUser.limitaciones || 'Sin limitaciones registradas'}</p>
-                </div>
-                <div>
-                  <label className="text-gray-400">Alergias</label>
-                  <p className="text-white font-semibold">{currentUser.alergias || 'Sin alergias registradas'}</p>
-                </div>
-                <div>
-                  <label className="text-gray-400">Medicamentos</label>
-                  <p className="text-white font-semibold">{currentUser.medicamentos || 'Sin medicamentos registrados'}</p>
-                </div>
+                <EditableField
+                  label="Historial Médico"
+                  field="historial_medico"
+                  value={currentUser.historial_medico}
+                />
+                <EditableField
+                  label="Limitaciones"
+                  field="limitaciones"
+                  value={currentUser.limitaciones}
+                />
+                <EditableField
+                  label="Alergias"
+                  field="alergias"
+                  value={currentUser.alergias}
+                />
+                <EditableField
+                  label="Medicamentos"
+                  field="medicamentos"
+                  value={currentUser.medicamentos}
+                />
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-gray-900 border-yellow-400/20">
             <CardHeader>
-              <CardTitle className="text-white">Lesiones y Limitaciones</CardTitle>
+              <CardTitle className="text-white flex items-center justify-between">
+                <span>Lesiones y Limitaciones</span>
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3">
@@ -856,209 +875,132 @@ const ProfileScreen = () => {
           </Card>
         </TabsContent>
 
+        {/* --- TAB OBJETIVOS --- */}
         <TabsContent value="goals" className="space-y-6">
           <Card className="bg-gray-900 border-yellow-400/20">
             <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <Target className="mr-2 text-yellow-400" />
-                Objetivos y Metas
+              <CardTitle className="text-white flex items-center justify-between">
+                <div className="flex items-center">
+                  <Target className="mr-2 text-yellow-400" />
+                  Objetivos y Metas
+                </div>
+                <button
+                  onClick={() => startEdit('goals', {
+                    objetivo_principal: currentUser.objetivo_principal,
+                    meta_peso: currentUser.meta_peso,
+                    meta_grasa: currentUser.meta_grasa
+                  })}
+                  disabled={editingSection && editingSection !== 'goals'}
+                  className={`p-2 ${editingSection === 'goals' ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-400'} transition-colors`}
+                  title="Editar objetivos y metas"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-4">
-                <div>
-                  <label className="text-gray-400">Objetivo Principal</label>
-                  <p className="text-white font-semibold">{currentUser.objetivo_principal || 'No especificado'}</p>
-                </div>
-                <div>
-                  <label className="text-gray-400">Meta de Peso</label>
-                  <p className="text-white font-semibold">
-                    {currentUser.meta_peso ? `${currentUser.meta_peso} kg` : 'No especificado'}
-                    {currentUser.peso && currentUser.meta_peso && (
-                      <span className="text-gray-400 ml-2">
-                        ({currentUser.meta_peso > currentUser.peso ? '+' : ''}{(currentUser.meta_peso - currentUser.peso).toFixed(1)} kg)
-                      </span>
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-gray-400">Meta de Grasa Corporal</label>
-                  <p className="text-white font-semibold">
-                    {currentUser.meta_grasa ? `${currentUser.meta_grasa}%` : 'No especificado'}
-                    {currentUser.grasa_corporal && currentUser.meta_grasa && (
-                      <span className="text-gray-400 ml-2">
-                        ({currentUser.meta_grasa > currentUser.grasa_corporal ? '+' : ''}{(currentUser.meta_grasa - currentUser.grasa_corporal).toFixed(1)}%)
-                      </span>
-                    )}
-                  </p>
-                </div>
+                <EditableField
+                  label="Objetivo Principal"
+                  field="objetivo_principal"
+                  value={currentUser.objetivo_principal}
+                />
+                <EditableField
+                  label="Meta de Peso"
+                  field="meta_peso"
+                  value={currentUser.meta_peso}
+                  type="number"
+                  suffix=" kg"
+                />
+                <EditableField
+                  label="Meta de Grasa Corporal"
+                  field="meta_grasa"
+                  value={currentUser.meta_grasa}
+                  type="number"
+                  suffix="%"
+                />
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-gray-900 border-yellow-400/20">
             <CardHeader>
-              <CardTitle className="text-white">Preferencias de Entrenamiento</CardTitle>
+              <CardTitle className="text-white flex items-center justify-between">
+                <span>Preferencias de Entrenamiento</span>
+                <button
+                  onClick={() => startEdit('preferences', {
+                    enfoque: currentUser.enfoque,
+                    horario_preferido: currentUser.horario_preferido,
+                    comidas_diarias: currentUser.comidas_diarias,
+                    suplementacion: currentUser.suplementacion,
+                    alimentos_excluidos: currentUser.alimentos_excluidos
+                  })}
+                  disabled={editingSection && editingSection !== 'preferences'}
+                  className={`p-2 ${editingSection === 'preferences' ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-400'} transition-colors`}
+                  title="Editar preferencias de entrenamiento"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-gray-400">Enfoque Seleccionado</label>
-                  <p className="text-white">{currentUser.enfoque || 'No especificado'}</p>
-                </div>
-                <div>
-                  <label className="text-gray-400">Horario Preferido</label>
-                  <p className="text-white">{currentUser.horario_preferido || 'No especificado'}</p>
-                </div>
-                <div>
-                  <label className="text-gray-400">Comidas diarias</label>
-                  <p className="text-white">{currentUser.comidas_diarias ? `${currentUser.comidas_diarias} comidas` : 'No especificado'}</p>
-                </div>
-                <div>
-                  <label className="text-gray-400">Suplementación</label>
-                  <p className="text-white">{currentUser.suplementacion || 'No especificado'}</p>
-                </div>
+                <EditableField
+                  label="Enfoque Seleccionado"
+                  field="enfoque"
+                  value={currentUser.enfoque}
+                />
+                <EditableField
+                  label="Horario Preferido"
+                  field="horario_preferido"
+                  value={currentUser.horario_preferido}
+                />
+                <EditableField
+                  label="Comidas diarias"
+                  field="comidas_diarias"
+                  value={currentUser.comidas_diarias}
+                  type="number"
+                  suffix=" comidas"
+                />
+                <EditableField
+                  label="Suplementación"
+                  field="suplementacion"
+                  value={currentUser.suplementacion}
+                />
               </div>
 
-              <div>
-                <label className="text-gray-400">Alimentos excluidos</label>
-                <p className="text-white mt-2">{currentUser.alimentos_excluidos || 'Ninguno especificado'}</p>
+              <div className="mt-4">
+                <EditableField
+                  label="Alimentos excluidos"
+                  field="alimentos_excluidos"
+                  value={currentUser.alimentos_excluidos}
+                />
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="personalization" className="space-y-6">
+        {/* --- TAB CONFIGURACIÓN --- */}
+        <TabsContent value="settings" className="space-y-6">
           <Card className="bg-gray-900 border-yellow-400/20">
             <CardHeader>
               <CardTitle className="text-white flex items-center">
                 <Settings className="mr-2 text-yellow-400" />
-                Avatar y Personalización
+                Configuración de Cuenta
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Avatar Section */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-white">Avatar del Usuario</h3>
-                <div className="flex items-center space-x-6">
-                  {/* Current Avatar Display */}
-                  <div className="flex flex-col items-center space-y-2">
-                    <Avatar
-                      avatar={currentUser.avatar}
-                      iniciales={currentUser.iniciales}
-                      nombre={currentUser.nombre}
-                      size="xl"
-                      showBorder={true}
-                    />
-                    <p className="text-sm text-gray-400">Avatar Actual</p>
-                  </div>
-
-                  {/* Upload Options */}
-                  <div className="flex-1 space-y-3">
-                    <Button className="w-full bg-yellow-400 text-black hover:bg-yellow-300 flex items-center justify-center space-x-2">
-                      <Upload className="w-4 h-4" />
-                      <span>Subir Imagen Personal</span>
-                    </Button>
-
-                    {/* Gym Icons Selection */}
-                    <div className="space-y-2">
-                      <p className="text-sm text-gray-400">O elige un icono de gimnasio:</p>
-                      <div className="grid grid-cols-5 gap-2">
-                        {getAvailableGymIcons().slice(0, 10).map((iconData) => {
-                          const IconComponent = iconData.component;
-                          return (
-                            <button
-                              key={iconData.key}
-                              className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${
-                                currentUser.avatar === iconData.key
-                                  ? 'bg-yellow-400 text-black'
-                                  : 'bg-gray-700 hover:bg-yellow-400 hover:text-black'
-                              }`}
-                              onClick={() => {
-                                handleInputChange('avatar', iconData.key);
-                                handleSave();
-                              }}
-                              title={iconData.name}
-                            >
-                              <IconComponent className="w-6 h-6" />
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Divider */}
-              <div className="border-t border-gray-700"></div>
-
-              {/* Password Change Section */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-white flex items-center">
-                  <Key className="mr-2 text-yellow-400" />
-                  Cambiar Contraseña
-                </h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-gray-400 text-sm">Contraseña Actual</label>
-                    <input
-                      type="password"
-                      value={passwordData.currentPassword}
-                      onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
-                      className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:border-yellow-400 focus:outline-none"
-                      placeholder="Ingresa tu contraseña actual"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-gray-400 text-sm">Nueva Contraseña</label>
-                    <input
-                      type="password"
-                      value={passwordData.newPassword}
-                      onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
-                      className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:border-yellow-400 focus:outline-none"
-                      placeholder="Ingresa tu nueva contraseña"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-gray-400 text-sm">Confirmar Nueva Contraseña</label>
-                    <input
-                      type="password"
-                      value={passwordData.confirmPassword}
-                      onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
-                      className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:border-yellow-400 focus:outline-none"
-                      placeholder="Confirma tu nueva contraseña"
-                    />
-                  </div>
-
-                  {/* Error and Success Messages */}
-                  {passwordError && (
-                    <div className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg p-3">
-                      {passwordError}
-                    </div>
-                  )}
-                  {passwordSuccess && (
-                    <div className="text-green-400 text-sm bg-green-400/10 border border-green-400/20 rounded-lg p-3">
-                      {passwordSuccess}
-                    </div>
-                  )}
-
-                  <Button
-                    onClick={handlePasswordSubmit}
-                    className="bg-green-500 hover:bg-green-600 text-white flex items-center space-x-2"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>Actualizar Contraseña</span>
-                  </Button>
-                </div>
+                <h3 className="text-lg font-semibold text-yellow-400">Cambiar Contraseña</h3>
+                <p className="text-gray-400">Esta funcionalidad estará disponible próximamente.</p>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
     </div>
-  )
-}
+  );
+};
 
 // Enhanced Methodologies Screen
 const MethodologiesScreen = () => {
@@ -1363,7 +1305,7 @@ const MethodologiesScreen = () => {
       };
 
       // Llamar a la API de recomendación de metodologías
-      const response = await fetch('http://localhost:5000/api/recomendar-metodologia', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/recomendar-metodologia`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -3117,7 +3059,7 @@ const SettingsScreen = () => {
   return (
     <div className="min-h-screen bg-black text-white p-6 pb-24">
       <h1 className="text-3xl font-bold mb-6 text-yellow-400">Ajustes y Configuración</h1>
-      
+
       <div className="space-y-4">
         <Card className="bg-gray-900 border-yellow-400/20">
           <CardContent className="p-4">

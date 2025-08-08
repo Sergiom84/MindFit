@@ -66,8 +66,8 @@ echo   MindFit App iniciada correctamente!
 echo ========================================
 echo.
 echo 🚀 Backend API: http://localhost:5000
-echo 🌐 Frontend:    http://localhost:5173
-echo 🏥 Health Check: http://localhost:5000/health
+echo 🚀 Backend API: %VITE_API_URL%
+echo 🏥 Health Check: %VITE_API_URL%/health
 echo 🗄️ Base de datos: PostgreSQL localhost:5432
 echo.
 echo 📋 Usuario de prueba:

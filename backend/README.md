@@ -106,7 +106,7 @@ backend/
 ## 🌐 Despliegue
 
 El servidor está configurado para funcionar en:
-- **Desarrollo**: `http://localhost:5000`
+- **Desarrollo**: `VITE_API_URL` (por defecto `http://localhost:5000`)
 - **Producción**: Render.com (configurado en CORS)
 
 ## 📝 Logs

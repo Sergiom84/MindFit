@@ -82,7 +82,7 @@ const SpaceEvaluationModal = ({ isOpen, onClose }) => {
       const formData = new FormData()
       formData.append('imagen', selectedImage)
 
-      const response = await fetch('http://localhost:5000/api/evaluar-espacio-imagen', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/evaluar-espacio-imagen`, {
         method: 'POST',
         body: formData
       })
@@ -117,7 +117,7 @@ const SpaceEvaluationModal = ({ isOpen, onClose }) => {
     setError(null)
 
     try {
-      const response = await fetch('http://localhost:5000/api/evaluar-espacio-texto', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/evaluar-espacio-texto`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

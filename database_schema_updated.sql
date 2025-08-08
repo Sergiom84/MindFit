@@ -79,7 +79,7 @@ CREATE TRIGGER trigger_calculate_imc
 INSERT INTO users (
     nombre, apellido, email, password, edad, sexo, peso, altura, objetivo_principal
 ) VALUES (
-    'Test', 'User', 'test@example.com', 'password123', 25, 'masculino', 75.5, 175, 'mantener_forma'
+    'Test', 'User', 'test@example.com', '$2b$10$YwszKkIK29Clon.cozgLce727RideFQ83Y27PfUscTbUkukxwIAXK', 25, 'masculino', 75.5, 175, 'mantener_forma'
 );
 
 -- Verificar que el IMC se calculó correctamente

@@ -11,71 +11,13 @@ import {
   Lock,
   Loader2,
   AlertCircle,
-  UserPlus
+  UserPlus,
+  Eye,
+  EyeOff,
+  LogIn
 } from 'lucide-react';
 
-// DebugPanel con persistencia en localStorage
-function DebugPanel() {
-  const LS_KEY = 'mindfit-debug-log';
-  const getLogs = () => {
-    try {
-      return JSON.parse(localStorage.getItem(LS_KEY)) || [];
-    } catch {
-      return [];
-    }
-  };
-  const [logs, setLogs] = useState(getLogs());
 
-  // Guardar en localStorage
-  const saveLogs = (arr) => {
-    setLogs(arr);
-    try {
-      localStorage.setItem(LS_KEY, JSON.stringify(arr));
-    } catch {}
-  };
-
-  // Añadir log
-  const addLog = (text) => {
-    const msg = `[${new Date().toLocaleTimeString()}] ${text}`;
-    saveLogs([...logs, msg]);
-    // También a consola
-    console.log(`[DEBUG] ${msg}`);
-  };
-
-  // Limpiar logs
-  const clearLogs = () => {
-    saveLogs([]);
-  };
-
-  // Exportar logs
-  const exportLogs = () => {
-    const blob = new Blob([logs.join('\n')], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `mindfit-debug-${Date.now()}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // Exponer función global para debug rápido
-  window.debugLog = addLog;
-
-  return (
-    <div className="fixed right-0 top-0 z-50 w-80 h-screen bg-black/90 text-white border-l border-yellow-400 flex flex-col">
-      <div className="p-3 border-b border-yellow-400 flex gap-2 items-center">
-        <span className="text-yellow-400 font-bold">DEBUG PANEL</span>
-        <button onClick={() => addLog('Debug button pressed')} className="px-2 py-1 bg-yellow-500 text-black rounded">Debug</button>
-        <button onClick={clearLogs} className="px-2 py-1 bg-gray-600 rounded">Clear</button>
-        <button onClick={exportLogs} className="px-2 py-1 bg-green-600 rounded">Export</button>
-      </div>
-      <div className="flex-1 overflow-y-auto p-2 text-xs font-mono">
-        {logs.length === 0 && <div className="text-gray-500">No hay logs aún.</div>}
-        {logs.map((l, i) => <div key={i}>{l}</div>)}
-      </div>
-    </div>
-  );
-}
 
 const LoginPage = () => {
   const { login, isLoading } = useAuth();
@@ -83,32 +25,24 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  // Guardar trazas de eventos importantes en el debug panel y en localStorage
-  const logEvent = (msg) => {
-    if (window.debugLog) window.debugLog(msg);
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    logEvent('SUBMIT Login pulsado');
-
-    if (!email || !password) {
+       if (!email || !password) {
       setLoginError('Por favor completa todos los campos');
-      logEvent('Login fallido: campos vacíos');
-      return;
+       return;
     }
 
     setIsLoggingIn(true);
     setLoginError(null);
 
     try {
-      logEvent(`Intento de login con email: ${email}`);
       const result = await login(email, password);
 
       if (!result.success) {
-        setLoginError(result.error || 'Error al iniciar sesión');
         logEvent('Login fallido: ' + (result.error || 'desconocido'));
       } else {
         logEvent('Login exitoso');
@@ -127,23 +61,34 @@ const LoginPage = () => {
       <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
         <div className="max-w-4xl w-full">
           {/* Header */}
-          <div className="text-center mb-12">
-            <div className="flex items-center justify-center mb-6">
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center mb-4">
               <Brain className="w-16 h-16 text-yellow-400 mr-4" />
-              <h1 className="text-6xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-200 bg-clip-text text-transparent">
-                MindFit
-              </h1>
+              <h1 className="text-6xl font-extrabold text-yellow-400">MindFit IA</h1>
             </div>
-            <p className="text-2xl text-gray-300 mb-4">
-              Inteligencia Artificial para tu Entrenamiento
-            </p>
-            <p className="text-lg text-gray-400">
-              Selecciona tu perfil para acceder a tu experiencia personalizada
-            </p>
+            <p className="text-xl text-gray-300">Tu entrenador personal con inteligencia artificial</p>
           </div>
 
-          {/* Formulario de Login */}
-          <div className="max-w-md mx-auto">
+          {/* Contenedor principal con pestañas */}
+          <div className="max-w-2xl mx-auto bg-gray-900/40 border border-yellow-400/20 rounded-2xl p-4">
+            {/* Tabs superiores */}
+            <div className="flex items-center gap-3 mb-4">
+              <button
+                className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border border-yellow-400/20 bg-yellow-400 text-black"
+                disabled
+              >
+                <LogIn className="w-4 h-4" /> Iniciar Sesión
+              </button>
+              <button
+                onClick={() => (window.location.href = '/register')}
+                className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border border-yellow-400/20 text-gray-300 hover:text-yellow-300"
+              >
+                <UserPlus className="w-4 h-4" /> Registrarse
+              </button>
+            </div>
+
+            {/* Formulario de Login */}
+            <div className="max-w-md mx-auto">
             <Card className="bg-gray-900 border-yellow-400/20">
               <CardHeader className="text-center">
                 <CardTitle className="text-white text-2xl">Iniciar Sesión</CardTitle>
@@ -161,7 +106,6 @@ const LoginPage = () => {
                         value={email}
                         onChange={(e) => {
                           setEmail(e.target.value);
-                          logEvent('Input email cambiado: ' + e.target.value);
                         }}
                         placeholder="tu@email.com"
                         className="bg-gray-800 border-gray-600 text-white pl-10"
@@ -175,16 +119,23 @@ const LoginPage = () => {
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <Input
                         id="password"
-                        type="password"
+                        type={showPassword ? 'text' : 'password'}
                         value={password}
                         onChange={(e) => {
                           setPassword(e.target.value);
-                          logEvent('Input password cambiado');
                         }}
                         placeholder="Tu contraseña"
-                        className="bg-gray-800 border-gray-600 text-white pl-10"
+                        className="bg-gray-800 border-gray-600 text-white pl-10 pr-10"
                         required
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        className="absolute right-3 top-2.5 text-gray-400 hover:text-yellow-400"
+                        aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
                     </div>
                   </div>
 
@@ -192,8 +143,7 @@ const LoginPage = () => {
                     type="submit"
                     disabled={isLoggingIn || isLoading}
                     className="w-full bg-yellow-400 text-black hover:bg-yellow-300 disabled:opacity-50"
-                    onClick={() => logEvent('Botón INICIAR SESIÓN pulsado')}
-                  >
+                    >
                     {isLoggingIn || isLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -217,7 +167,6 @@ const LoginPage = () => {
                 <Button
                   variant="link"
                   onClick={() => {
-                    logEvent('Botón REGISTRO pulsado');
                     window.location.href = '/register';
                   }}
                   className="text-yellow-400 hover:text-yellow-300 p-0"
@@ -228,6 +177,9 @@ const LoginPage = () => {
               </p>
             </div>
           </div>
+
+	          </div>
+
 
           {/* Error de login */}
           {loginError && (
@@ -246,8 +198,7 @@ const LoginPage = () => {
           </div>
         </div>
       </div>
-      <DebugPanel />
-    </>
+      </>
   );
 };
 

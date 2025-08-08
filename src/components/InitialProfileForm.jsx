@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, Brain, UserPlus, LogIn, Eye, EyeOff } from 'lucide-react';
 
 const InitialProfileForm = () => {
   // Estado del formulario
@@ -15,7 +15,7 @@ const InitialProfileForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
-  
+
   const [data, setData] = useState({
     nombre: '',
     apellido: '',
@@ -113,7 +113,7 @@ const InitialProfileForm = () => {
             <p className="text-gray-300 mb-4">
               Tu perfil ha sido creado exitosamente. Ya puedes iniciar sesión.
             </p>
-            <Button 
+            <Button
               onClick={() => window.location.href = '/login'}
               className="bg-yellow-400 text-black hover:bg-yellow-300"
             >
@@ -129,9 +129,32 @@ const InitialProfileForm = () => {
     <div className="min-h-screen bg-black text-white p-6">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-yellow-400 mb-2">Crear Perfil MindFit</h1>
-          <p className="text-gray-300">Completa tu información para una experiencia personalizada</p>
-        </div>
+          <div className="flex items-center justify-center mb-4">
+            <Brain className="w-16 h-16 text-yellow-400 mr-4" />
+            <h1 className="text-6xl font-extrabold text-yellow-400">MindFit IA</h1>
+          </div>
+
+          {/* Contenedor principal con pestañas (estilo uniforme) */}
+          <div className="max-w-2xl mx-auto bg-gray-900/40 border border-yellow-400/20 rounded-2xl p-4">
+            <div className="flex items-center gap-3 mb-4">
+              <button
+                onClick={() => (window.location.href = '/login')}
+                type="button"
+                className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border border-yellow-400/20 text-gray-300 hover:text-yellow-300"
+              >
+                <LogIn className="w-4 h-4" /> Iniciar Sesión
+              </button>
+              <button
+                type="button"
+                disabled
+                className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border border-yellow-400/20 bg-yellow-400 text-black"
+              >
+                <UserPlus className="w-4 h-4" /> Registrarse
+              </button>
+            </div>
+            <p className="text-xl text-gray-300">Tu entrenador personal con inteligencia artificial</p>
+          </div>
+        </div> {/* ← Este cierre faltaba */}
 
         <form onSubmit={submit} className="bg-gray-900 border border-yellow-400/20 rounded-lg p-6">
           <Tabs value={`${step}`} className="w-full">
@@ -153,6 +176,10 @@ const InitialProfileForm = () => {
             {/* Paso 1: Datos Básicos */}
             <TabsContent value="1" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* ... tus campos ... */}
+                {/* Puedes dejar igual la definición de campos aquí */}
+                {/* Si necesitas ayuda extra con los campos, dímelo */}
+                {/* Campo de Nombre */}
                 <div>
                   <Label htmlFor="nombre" className="text-gray-300">Nombre *</Label>
                   <Input
@@ -283,8 +310,8 @@ const InitialProfileForm = () => {
                 </div>
               </div>
               <div className="flex justify-end">
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   onClick={next}
                   className="bg-yellow-400 text-black hover:bg-yellow-300"
                 >
@@ -296,6 +323,8 @@ const InitialProfileForm = () => {
             {/* Paso 2: Composición Corporal */}
             <TabsContent value="2" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* ...campos de composición corporal... */}
+                {/* Aquí puedes dejar igual los campos de grasa, masa muscular, etc. */}
                 <div>
                   <Label htmlFor="grasa_corporal" className="text-gray-300">% Grasa Corporal</Label>
                   <Input
@@ -448,6 +477,7 @@ const InitialProfileForm = () => {
             {/* Paso 3: Salud */}
             <TabsContent value="3" className="space-y-4">
               <div className="space-y-4">
+                {/* ...campos de salud... */}
                 <div>
                   <Label htmlFor="historial_medico" className="text-gray-300">Historial Médico</Label>
                   <Textarea
@@ -519,6 +549,7 @@ const InitialProfileForm = () => {
             {/* Paso 4: Objetivos */}
             <TabsContent value="4" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* ...campos de objetivos... */}
                 <div>
                   <Label htmlFor="objetivo_principal" className="text-gray-300">Objetivo Principal</Label>
                   <Select onValueChange={(value) => handleSelectChange('objetivo_principal', value)}>
@@ -665,9 +696,10 @@ const InitialProfileForm = () => {
             </TabsContent>
           </Tabs>
         </form>
-      </div>
+      </div> {/* ← Este cierre también faltaba */}
     </div>
   );
 };
 
 export default InitialProfileForm;
+

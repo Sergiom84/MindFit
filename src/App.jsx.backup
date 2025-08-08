@@ -1363,7 +1363,7 @@ const MethodologiesScreen = () => {
       };
 
       // Llamar a la API de recomendación de metodologías
-      const response = await fetch('http://localhost:5000/api/recomendar-metodologia', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/recomendar-metodologia`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

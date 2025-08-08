@@ -1,6 +1,10 @@
+/* eslint-env node */
+/* global process */
 // Script para verificar que toda la aplicación MindFit funciona correctamente
 
 import { testConnection, query } from './backend/db.js';
+
+const backendUrl = process.env.VITE_API_URL;
 
 async function verificarAplicacion() {
   console.log('🔄 Verificando aplicación MindFit...');
@@ -41,17 +45,21 @@ async function verificarAplicacion() {
 
     // 5. Verificar puertos
     console.log('5. 🌐 Verificando servicios...');
-    
-    try {
-      const backendResponse = await fetch('http://localhost:5000/health');
-      if (backendResponse.ok) {
-        const data = await backendResponse.json();
-        console.log('   ✅ Backend funcionando:', data.message);
-      } else {
-        console.log('   ❌ Backend no responde correctamente');
+
+    if (backendUrl) {
+      try {
+        const backendResponse = await fetch(`${backendUrl}/health`);
+        if (backendResponse.ok) {
+          const data = await backendResponse.json();
+          console.log('   ✅ Backend funcionando:', data.message);
+        } else {
+          console.log('   ❌ Backend no responde correctamente');
+        }
+      } catch (error) {
+        console.log('   ❌ Backend no está ejecutándose en', backendUrl);
       }
-    } catch (error) {
-      console.log('   ❌ Backend no está ejecutándose en puerto 5000');
+    } else {
+      console.log('   ❌ VITE_API_URL no está configurado');
     }
 
     try {
@@ -69,8 +77,7 @@ async function verificarAplicacion() {
     console.log('🎉 ¡Verificación completada!');
     console.log('');
     console.log('📋 Resumen de la configuración:');
-    console.log('   🗄️ Base de datos: PostgreSQL localhost:5432/mindfit');
-    console.log('   🚀 Backend: http://localhost:5000');
+    console.log(`   🚀 Backend: ${backendUrl || 'no configurado'}`);
     console.log('   🌐 Frontend: http://localhost:5173');
     console.log('   👤 Usuario prueba: test@example.com / password123');
     console.log('');
@@ -85,7 +92,7 @@ async function verificarAplicacion() {
     console.log('   3. Verificar credenciales: postgres/postgres');
     console.log('   4. Ejecutar: start-mindfit.bat');
   }
-  
+
   process.exit(0);
 }
 

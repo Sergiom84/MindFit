@@ -152,7 +152,19 @@ router.post('/login', async (req, res) => {
     const user = result.rows[0];
 
     // Verificar password
-    const isValidPassword = await bcrypt.compare(password, user.password);
+    let isValidPassword;
+    try {
+      isValidPassword = await bcrypt.compare(password, user.password);
+    } catch (compareError) {
+      console.error('🔴 Error al comparar contraseñas:', compareError);
+      if (compareError?.message && /invalid/i.test(compareError.message)) {
+        return res.status(401).json({
+          success: false,
+          error: 'Credenciales inválidas'
+        });
+      }
+      throw compareError;
+    }
 
     if (!isValidPassword) {
       console.log('🔴 Contraseña incorrecta para:', email);
@@ -177,6 +189,62 @@ router.post('/login', async (req, res) => {
       success: false,
       error: error.message || 'Error interno del servidor'
     });
+  }
+});
+
+// Actualizar perfil de usuario (parcial)
+router.patch('/users/:id', async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const data = req.body || {};
+
+    // Campos permitidos para actualización
+    const allowed = [
+      'nombre','apellido','edad','sexo','peso','altura','imc','nivel_actividad',
+      'nivel','años_entrenando','metodologia_preferida','frecuencia_semanal',
+      'grasa_corporal','masa_muscular','agua_corporal','metabolismo_basal',
+      'cintura','pecho','brazos','muslos','cuello','antebrazos',
+      'historial_medico','limitaciones','alergias','medicamentos',
+      'objetivo_principal','meta_peso','meta_grasa','enfoque','horario_preferido',
+      'comidas_diarias','suplementacion','alimentos_excluidos'
+    ];
+
+    const entries = Object.entries(data).filter(([k,v]) => allowed.includes(k));
+    if (entries.length === 0) {
+      return res.status(400).json({ success:false, error:'Sin campos válidos para actualizar' });
+    }
+
+    // Si vienen peso/altura y no envían imc, calcularlo
+    let patchData = Object.fromEntries(entries);
+    if ((patchData.peso || patchData.altura) && (patchData.peso != null && patchData.altura != null)) {
+      const alturaM = Number(patchData.altura) / 100;
+      if (alturaM > 0) patchData.imc = (Number(patchData.peso) / (alturaM * alturaM)).toFixed(1);
+    }
+
+    // Construir SET dinámico
+    const setClauses = [];
+    const values = [];
+    let idx = 1;
+    for (const [key, value] of Object.entries(patchData)) {
+      setClauses.push(`${key} = $${idx++}`);
+      values.push(value);
+    }
+    values.push(userId);
+
+    const sql = `UPDATE users SET ${setClauses.join(', ')}, updated_at = NOW() WHERE id = $${idx} RETURNING *`;
+    const result = await query(sql, values);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success:false, error:'Usuario no encontrado' });
+    }
+
+    const user = result.rows[0];
+    delete user.password;
+
+    res.json({ success:true, user });
+  } catch (error) {
+    console.error('Error actualizando usuario:', error);
+    res.status(500).json({ success:false, error: error.message || 'Error interno del servidor' });
   }
 });
 

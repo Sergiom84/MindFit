@@ -44,7 +44,7 @@ try {
 
 Write-Host ""
 Write-Host "🚀 Iniciando servidor en puerto 5000..." -ForegroundColor Green
-Write-Host "📍 Health check: http://localhost:5000/health" -ForegroundColor Cyan
+Write-Host "📍 Health check: $env:VITE_API_URL/health" -ForegroundColor Cyan
 Write-Host ""
 
 # Iniciar servidor

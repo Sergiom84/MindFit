@@ -28,16 +28,26 @@ export const UserProvider = ({ children }) => {
   const metodologiaActiva = getUserData('metodologiaActiva') || null;
 
   // Función para actualizar datos del usuario
-  const updateUserData = (newData) => {
+  const updateUserData = async (newData) => {
     if (!currentUser) return false;
 
-    // Actualizar datos básicos del usuario
-    const updatedUserData = {
-      ...currentUser,
-      ...newData
-    };
+    // Persistir en backend (PATCH)
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/users/${currentUser.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newData)
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'Error al actualizar');
 
-    return updateAuthUserData('', updatedUserData);
+      // Actualizar en AuthContext también
+      updateAuthUserData('', result.user);
+      return true;
+    } catch (e) {
+      console.error('Error actualizando usuario en backend:', e);
+      return false;
+    }
   };
 
   // Función para actualizar el panel IA
@@ -58,7 +68,7 @@ export const UserProvider = ({ children }) => {
     setIsLoading(true);
     
     try {
-      const response = await fetch('http://localhost:5000/api/activar-ia-adaptativa', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/activar-ia-adaptativa`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

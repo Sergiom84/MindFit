@@ -161,7 +161,7 @@ Asegúrate de tener configuradas las variables de entorno:
 ### Frontend (.env)
 ```env
 VITE_OPENAI_API_KEY=tu_api_key_aqui
-VITE_API_BASE_URL=http://localhost:5000
+VITE_API_URL=http://localhost:5000
 ```
 
 ### Backend (backend/.env)
