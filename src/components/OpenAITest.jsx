@@ -88,25 +88,12 @@ const OpenAITest = () => {
               <h3 className="text-white font-semibold mb-2">Configuración:</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">API Key:</span>
-                  <span className="text-white">
-                    {import.meta.env.VITE_OPENAI_API_KEY ? 
-                      `${import.meta.env.VITE_OPENAI_API_KEY.substring(0, 10)}...` : 
-                      'No configurada'
-                    }
-                  </span>
+                  <span className="text-gray-400">Modo:</span>
+                  <span className="text-white">Backend</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Prompt ID:</span>
-                  <span className="text-white text-xs">
-                    {import.meta.env.VITE_OPENAI_PROMPT_ID || 'No configurado'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Versión:</span>
-                  <span className="text-white">
-                    {import.meta.env.VITE_OPENAI_PROMPT_VERSION || 'No configurada'}
-                  </span>
+                  <span className="text-gray-400">Ruta:</span>
+                  <span className="text-white text-xs">/api/pose-feedback</span>
                 </div>
               </div>
             </div>

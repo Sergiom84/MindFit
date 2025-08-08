@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { useAuth } from './AuthContext';
 
 // Crear el contexto
@@ -15,7 +15,7 @@ export const useUserContext = () => {
 
 // Provider del contexto
 export const UserProvider = ({ children }) => {
-  const { currentUser, getUserData, updateUserData: updateAuthUserData } = useAuth();
+  const { currentUser, getUserData, updateUserData: updateAuthUserData, replaceUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   // Obtener datos dinámicos del usuario actual
@@ -28,8 +28,10 @@ export const UserProvider = ({ children }) => {
   const metodologiaActiva = getUserData('metodologiaActiva') || null;
 
   // Función para actualizar datos del usuario
-  const updateUserData = async (newData) => {
+  const updateUserProfile = async (newData) => {
     if (!currentUser) return false;
+
+    console.log('🔄 Actualizando usuario con datos:', newData);
 
     // Persistir en backend (PATCH)
     try {
@@ -39,14 +41,20 @@ export const UserProvider = ({ children }) => {
         body: JSON.stringify(newData)
       });
       const result = await response.json();
+
+      console.log('🔄 Respuesta del backend:', result);
+
       if (!response.ok || !result.success) throw new Error(result.error || 'Error al actualizar');
 
-      // Actualizar en AuthContext también
-      updateAuthUserData('', result.user);
-      return true;
+      // Actualizar cada campo individualmente en AuthContext
+  // Actualizar estado global con el usuario completo desde backend
+  replaceUser(result.user);
+
+      console.log('✅ Usuario actualizado correctamente');
+  return result.user;
     } catch (e) {
-      console.error('Error actualizando usuario en backend:', e);
-      return false;
+      console.error('❌ Error actualizando usuario en backend:', e);
+  return false;
     }
   };
 
@@ -203,7 +211,8 @@ export const UserProvider = ({ children }) => {
   const value = {
     // Datos del usuario actual (dinámicos)
     userData,
-    updateUserData,
+  updateUserData: updateUserProfile,
+  updateUserProfile,
 
     // Panel IA (dinámico)
     panelIA,

@@ -9,6 +9,8 @@ import fs from 'fs';
 import path from 'path';
 import iaAdaptativa from './routes/iaAdaptativa.js';
 import authRoutes from './routes/auth.js';
+import injuriesRoutes from './routes/injuries.js';
+import poseRoutes from './routes/pose.js';
 import { testConnection } from './db.js';
 
 dotenv.config();
@@ -74,6 +76,8 @@ app.use((req, res, next) => {
 // Rutas
 app.use('/api', iaAdaptativa);
 app.use('/api', authRoutes);
+app.use('/api', injuriesRoutes);
+app.use('/api', poseRoutes);
 
 // Crear directorio de uploads si no existe
 if (!fs.existsSync('uploads')) {

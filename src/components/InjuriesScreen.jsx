@@ -1,67 +1,168 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useUserContext } from '../contexts/UserContext';
 import { 
   Heart, 
   Activity, 
-  CheckCircle, 
-  AlertTriangle,
-  Shield,
-  TrendingUp
+  CheckCircle
 } from 'lucide-react';
+
+/**
+ * @typedef {Object} Injury
+ * @property {number} id
+ * @property {number} user_id
+ * @property {string} titulo
+ * @property {string | null=} zona
+ * @property {string | null=} tipo
+ * @property {('leve'|'moderada'|'grave'|string|null)=} gravedad
+ * @property {string | null=} fecha_inicio
+ * @property {string | null=} fecha_fin
+ * @property {string | null=} causa
+ * @property {string | null=} tratamiento
+ * @property {('activo'|'en recuperación'|'recuperado'|string)} estado
+ * @property {string | null=} notas
+ * @property {string=} created_at
+ * @property {string=} updated_at
+ */
+
+// Estados válidos para lesiones (alineado con API y BD)
+const ESTADOS = Object.freeze(['activo','en recuperación','recuperado']);
+
+// Helpers de normalización/visualización
+const s = (v = '') => String(v || '').toLowerCase();
+const isEstadoValido = (v) => ESTADOS.includes(s(v));
+const displayEstado = (v) => (isEstadoValido(v) ? v : '(desconocido)');
 
 const InjuriesScreen = () => {
   const [activeInjuryTab, setActiveInjuryTab] = useState('status');
   const { userData } = useUserContext();
-  
-  // Usar datos dinámicos del usuario actual
-  const lesionesUsuario = userData.lesiones || {};
+  /** @type {[Injury[], React.Dispatch<React.SetStateAction<Injury[]>>]} */
+  const [injuries, setInjuries] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [addOpen, setAddOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ titulo:'', zona:'', tipo:'', gravedad:'leve', fecha_inicio:'', causa:'', tratamiento:'', estado:'activo', notas:'' });
+  const [preventingId, setPreventingId] = useState(null);
+  const [prevention, setPrevention] = useState(null);
 
-  // Crear datos dinámicos basados en el usuario
-  const injuryData = {
-    currentStatus: {
-      active: lesionesUsuario.historial?.filter(l => l.estado === 'Activa').length || 0,
-      recovering: lesionesUsuario.historial?.filter(l => l.estado === 'En recuperación').length || 0,
-      riskFactors: lesionesUsuario.zonasVulnerables?.length || 0
-    },
-    history: lesionesUsuario.historial || [],
-    riskFactors: lesionesUsuario.zonasVulnerables?.map(zona => ({
-      factor: zona,
-      risk: lesionesUsuario.riesgoActual || 'Bajo',
-      impact: `Zona vulnerable identificada`,
-      prevention: `Ejercicios preventivos específicos`,
-      status: 'En seguimiento'
-    })) || [],
-    preventiveActions: lesionesUsuario.recomendaciones || []
+  // Evitar duplicar barras si VITE_API_URL viene con '/'
+  const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+
+  const fetchInjuries = async () => {
+    if (!userData?.id) return;
+    setLoading(true);
+    setError('');
+    try {
+      const r = await fetch(`${apiBase}/api/users/${userData.id}/injuries`);
+      const j = await r.json();
+      if (!r.ok || !j.success) throw new Error(j.error || 'Error');
+      // Mapeo defensivo al tipo Injury
+      const list = Array.isArray(j.injuries) ? j.injuries : [];
+      /** @type {Injury[]} */
+      const mapped = list.map((it) => ({
+        id: it.id,
+        user_id: it.user_id,
+        titulo: it.titulo,
+        zona: it.zona ?? null,
+        tipo: it.tipo ?? null,
+        gravedad: it.gravedad ?? null,
+        fecha_inicio: it.fecha_inicio ?? null,
+        fecha_fin: it.fecha_fin ?? null,
+        causa: it.causa ?? null,
+        tratamiento: it.tratamiento ?? null,
+        estado: typeof it.estado === 'string' ? it.estado : '',
+        notas: it.notas ?? null,
+        created_at: it.created_at,
+        updated_at: it.updated_at
+      }));
+      setInjuries(mapped);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchInjuries();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData?.id]);
+
+  const counts = useMemo(() => {
+    const active = injuries.filter(i => s(i.estado) === 'activo').length;
+    const recovering = injuries.filter(i => s(i.estado) === 'en recuperación').length;
+    return { active, recovering };
+  }, [injuries]);
+
+  const onSaveInjury = async () => {
+    if (!userData?.id || !form.titulo) return;
+    setSaving(true);
+    try {
+      const r = await fetch(`${apiBase}/api/users/${userData.id}/injuries`, {
+        method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(form)
+      });
+      const j = await r.json();
+      if (!r.ok || !j.success) throw new Error(j.error || 'Error al crear lesión');
+  setAddOpen(false);
+  setForm({ titulo:'', zona:'', tipo:'', gravedad:'leve', fecha_inicio:'', causa:'', tratamiento:'', estado:'activo', notas:'' });
+      fetchInjuries();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onRequestPrevention = async (injuryId) => {
+  setPreventingId(injuryId);
+  setPrevention(null);
+  setActiveInjuryTab('prevention');
+    try {
+      const r = await fetch(`${apiBase}/api/injuries/${injuryId}/prevention`, { method: 'POST' });
+      const j = await r.json();
+      if (!r.ok || !j.success) throw new Error(j.error || 'Error IA prevención');
+      setPrevention(j.prevention);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setPreventingId(null);
+    }
   };
 
   return (
     <div className="min-h-screen bg-black text-white p-6 pb-24">
-      <h1 className="text-3xl font-bold mb-6 text-yellow-400">
-        Prevención de Lesiones IA - {userData.nombre}
-      </h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold text-yellow-400">Prevención de Lesiones IA - {userData.nombre}</h1>
+      </div>
+      {error && (
+        <Alert className="mb-4 border-red-400 bg-red-400/10">
+          <AlertDescription className="text-red-300">{error}</AlertDescription>
+        </Alert>
+      )}
 
       {/* Información general del usuario */}
       <Card className="bg-gray-900 border-yellow-400/20 mb-6">
         <CardContent className="p-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div>
-              <p className="text-2xl font-bold text-green-400">{injuryData.currentStatus.active}</p>
+              <p className="text-2xl font-bold text-green-400">{counts.active}</p>
               <p className="text-gray-400 text-sm">Lesiones Activas</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-yellow-400">{injuryData.currentStatus.recovering}</p>
+              <p className="text-2xl font-bold text-yellow-400">{counts.recovering}</p>
               <p className="text-gray-400 text-sm">En Recuperación</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-blue-400">{injuryData.currentStatus.riskFactors}</p>
+              <p className="text-2xl font-bold text-blue-400">{injuries.length}</p>
               <p className="text-gray-400 text-sm">Zonas Vulnerables</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-purple-400 capitalize">{lesionesUsuario.riesgoActual || 'Bajo'}</p>
+              <p className="text-2xl font-bold text-purple-400 capitalize">Bajo</p>
               <p className="text-gray-400 text-sm">Riesgo Actual</p>
             </div>
           </div>
@@ -84,73 +185,64 @@ const InjuriesScreen = () => {
         <TabsContent value="status" className="space-y-6">
           <Card className="bg-gray-900 border-yellow-400/20">
             <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <Heart className="w-5 h-5 mr-2 text-yellow-400" />
-                Estado de Salud Actual
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-white flex items-center">
+                  <Heart className="w-5 h-5 mr-2 text-yellow-400" />
+                  Estado de Salud Actual
+                </CardTitle>
+                <Button size="sm" onClick={() => setAddOpen(true)}>+ Añadir lesión</Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="flex items-center space-x-2 mb-3">
-                <div className={`w-3 h-3 rounded-full ${
-                  injuryData.currentStatus.active === 0 ? 'bg-green-400' : 'bg-red-400'
-                }`}></div>
-                <span className="text-white">
-                  {injuryData.currentStatus.active === 0 
-                    ? 'Sin lesiones activas' 
-                    : `${injuryData.currentStatus.active} lesión(es) activa(s)`
-                  }
-                </span>
+                <div className={`w-3 h-3 rounded-full ${counts.active === 0 ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                <span className="text-white">{counts.active === 0 ? 'Sin lesiones activas' : `${counts.active} lesión(es) activa(s)`}</span>
               </div>
 
-              <Alert className={`${
-                injuryData.currentStatus.active === 0 
-                  ? 'border-green-400 bg-green-400/10' 
-                  : 'border-yellow-400 bg-yellow-400/10'
-              }`}>
-                <AlertDescription className={`${
-                  injuryData.currentStatus.active === 0 ? 'text-green-300' : 'text-yellow-300'
-                }`}>
+              <Alert className={`${counts.active === 0 ? 'border-green-400 bg-green-400/10' : 'border-yellow-400 bg-yellow-400/10'}`}>
+                <AlertDescription className={`${counts.active === 0 ? 'text-green-300' : 'text-yellow-300'}`}>
                   🤖 IA monitorea automáticamente tu feedback y ajusta la rutina preventivamente.
-                  {lesionesUsuario.riesgoActual && ` Riesgo actual: ${lesionesUsuario.riesgoActual}.`}
+                  {/* Riesgo actual: placeholder */}
                 </AlertDescription>
               </Alert>
               
               {/* Información específica del usuario */}
-              {lesionesUsuario.prevencion && (
+              {false && (
                 <div className="mt-4 p-3 bg-blue-400/10 rounded-lg border border-blue-400/20">
                   <h4 className="text-blue-400 font-semibold mb-2">Tu Plan Preventivo:</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                     <div>
                       <span className="text-gray-400">Calentamiento:</span>
-                      <span className="text-white ml-2">{lesionesUsuario.prevencion.calentamiento}</span>
+                      <span className="text-white ml-2">—</span>
                     </div>
                     <div>
                       <span className="text-gray-400">Estiramientos:</span>
-                      <span className="text-white ml-2">{lesionesUsuario.prevencion.estiramientos}</span>
+                      <span className="text-white ml-2">—</span>
                     </div>
                     <div>
                       <span className="text-gray-400">Descanso:</span>
-                      <span className="text-white ml-2">{lesionesUsuario.prevencion.descanso}</span>
+                      <span className="text-white ml-2">—</span>
                     </div>
                     <div>
                       <span className="text-gray-400">Hidratación:</span>
-                      <span className="text-white ml-2">{lesionesUsuario.prevencion.hidratacion}</span>
+                      <span className="text-white ml-2">—</span>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Zonas vulnerables */}
-              {lesionesUsuario.zonasVulnerables && lesionesUsuario.zonasVulnerables.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="text-white font-semibold mb-2">Zonas Vulnerables:</h4>
-                  <div className="space-y-2">
-                    {lesionesUsuario.zonasVulnerables.map((zona, idx) => (
-                      <div key={idx} className="p-2 bg-yellow-400/10 rounded border border-yellow-400/20">
-                        <p className="text-yellow-300 text-sm">{zona}</p>
+              {/* listado breve de lesiones */}
+              {injuries.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {injuries.slice(0,3).map((inj) => (
+                    <div key={inj.id} className="flex items-center justify-between p-2 bg-gray-800 rounded border border-gray-700">
+                      <div>
+                        <p className="text-white font-medium">{inj.titulo}</p>
+                        <p className="text-gray-400 text-xs">{inj.zona || '—'} • {displayEstado(inj.estado)}</p>
                       </div>
-                    ))}
-                  </div>
+                      <Button size="sm" variant="secondary" onClick={() => setActiveInjuryTab('history')}>Ver</Button>
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>
@@ -158,7 +250,7 @@ const InjuriesScreen = () => {
         </TabsContent>
 
         <TabsContent value="history" className="space-y-6">
-          {injuryData.history.length === 0 ? (
+          {injuries.length === 0 ? (
             <Card className="bg-gray-900 border-yellow-400/20">
               <CardContent className="text-center py-8">
                 <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
@@ -169,25 +261,23 @@ const InjuriesScreen = () => {
             </Card>
           ) : (
             <div className="space-y-4">
-              {injuryData.history.map((injury, idx) => (
-                <Card key={idx} className="bg-gray-900 border-yellow-400/20">
+              {injuries.map((injury) => (
+                <Card key={injury.id} className="bg-gray-900 border-yellow-400/20">
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="text-white">{injury.tipo}</CardTitle>
-                        <CardDescription className="text-gray-400">
-                          {injury.fecha} • {injury.duracion} • {injury.gravedad}
-                        </CardDescription>
+                        <CardTitle className="text-white">{injury.titulo}</CardTitle>
+                        <CardDescription className="text-gray-400">{injury.zona || '—'} • {injury.gravedad || '—'}</CardDescription>
                       </div>
                       <Badge
                         variant="outline"
-                        className={`${
-                          injury.estado === 'Recuperado completamente' || injury.estado === 'Recuperada' ? 'border-green-400 text-green-400' :
-                          injury.estado === 'En recuperación' ? 'border-yellow-400 text-yellow-400' :
+                        className={`$
+                          s(injury.estado) === 'recuperado' ? 'border-green-400 text-green-400' :
+                          s(injury.estado) === 'en recuperación' ? 'border-yellow-400 text-yellow-400' :
                           'border-red-400 text-red-400'
                         }`}
                       >
-                        {injury.estado}
+                        {displayEstado(injury.estado)}
                       </Badge>
                     </div>
                   </CardHeader>
@@ -198,21 +288,18 @@ const InjuriesScreen = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                           <div>
                             <span className="text-gray-400">Causa:</span>
-                            <span className="text-white ml-2">{injury.causa}</span>
+                            <span className="text-white ml-2">{injury.causa || '—'}</span>
                           </div>
                           <div>
                             <span className="text-gray-400">Tratamiento:</span>
-                            <span className="text-white ml-2">{injury.tratamiento}</span>
+                            <span className="text-white ml-2">{injury.tratamiento || '—'}</span>
                           </div>
                         </div>
                       </div>
-                      
-                      <div className="p-3 bg-blue-900/20 rounded">
-                        <h4 className="text-blue-400 font-semibold mb-1">Experiencia de Recuperación:</h4>
-                        <p className="text-blue-300 text-sm">
-                          Esta lesión {injury.gravedad?.toLowerCase()} fue tratada con {injury.tratamiento?.toLowerCase()} 
-                          y tuvo una duración de {injury.duracion}.
-                        </p>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="secondary" onClick={() => onRequestPrevention(injury.id)} disabled={preventingId===injury.id}>
+                          {preventingId===injury.id ? 'Generando...' : 'Prevención IA'}
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -231,52 +318,121 @@ const InjuriesScreen = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {injuryData.preventiveActions.length === 0 ? (
+              {preventingId ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-400">No hay recomendaciones preventivas específicas registradas.</p>
+                  <p className="text-gray-400">Generando plan de prevención con IA…</p>
+                </div>
+              ) : (!prevention) ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-400">Selecciona una lesión en Historial y pulsa "Prevención IA" para generar un plan.</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {injuryData.preventiveActions.map((action, idx) => (
-                    <div key={idx} className="flex items-center space-x-3 p-2 bg-gray-800 rounded">
-                      <CheckCircle className="w-5 h-5 text-green-400" />
-                      <span className="text-white">{action}</span>
+                <div className="space-y-3 text-sm">
+                  {prevention.calentamiento && (
+                    <div className="p-3 bg-blue-400/10 rounded border border-blue-400/20">
+                      <h4 className="text-blue-300 font-semibold mb-1">Calentamiento</h4>
+                      <p className="text-blue-200">{prevention.calentamiento}</p>
                     </div>
-                  ))}
+                  )}
+                  {Array.isArray(prevention.movilidad) && prevention.movilidad.length>0 && (
+                    <div className="p-3 bg-green-400/10 rounded border border-green-400/20">
+                      <h4 className="text-green-300 font-semibold mb-1">Movilidad</h4>
+                      <ul className="list-disc pl-5 text-green-200">
+                        {prevention.movilidad.map((m, i) => <li key={i}>{m}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {Array.isArray(prevention.fortalecimiento) && prevention.fortalecimiento.length>0 && (
+                    <div className="p-3 bg-yellow-400/10 rounded border border-yellow-400/20">
+                      <h4 className="text-yellow-300 font-semibold mb-1">Fortalecimiento</h4>
+                      <ul className="list-disc pl-5 text-yellow-200">
+                        {prevention.fortalecimiento.map((m, i) => <li key={i}>{m}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {Array.isArray(prevention.evitar) && prevention.evitar.length>0 && (
+                    <div className="p-3 bg-red-400/10 rounded border border-red-400/20">
+                      <h4 className="text-red-300 font-semibold mb-1">Evitar</h4>
+                      <ul className="list-disc pl-5 text-red-200">
+                        {prevention.evitar.map((m, i) => <li key={i}>{m}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {prevention.frecuencia && (
+                    <p className="text-gray-300">Frecuencia: {prevention.frecuencia}</p>
+                  )}
+                  {prevention.duracion_aprox && (
+                    <p className="text-gray-300">Duración aproximada: {prevention.duracion_aprox}</p>
+                  )}
+                  {Array.isArray(prevention.advertencias) && prevention.advertencias.length>0 && (
+                    <div className="p-3 bg-orange-400/10 rounded border border-orange-400/20">
+                      <h4 className="text-orange-300 font-semibold mb-1">Advertencias</h4>
+                      <ul className="list-disc pl-5 text-orange-200">
+                        {prevention.advertencias.map((m, i) => <li key={i}>{m}</li>)}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Ejercicios recomendados */}
-              {lesionesUsuario.ejerciciosRecomendados && lesionesUsuario.ejerciciosRecomendados.length > 0 && (
-                <div className="mt-6">
-                  <h4 className="text-white font-semibold mb-3">Ejercicios Recomendados:</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {lesionesUsuario.ejerciciosRecomendados.map((ejercicio, idx) => (
-                      <div key={idx} className="p-3 bg-green-400/10 rounded border border-green-400/20">
-                        <p className="text-green-300 text-sm">{ejercicio}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Ejercicios a evitar */}
-              {lesionesUsuario.ejerciciosEvitar && lesionesUsuario.ejerciciosEvitar.length > 0 && (
-                <div className="mt-6">
-                  <h4 className="text-white font-semibold mb-3">Ejercicios a Evitar:</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {lesionesUsuario.ejerciciosEvitar.map((ejercicio, idx) => (
-                      <div key={idx} className="p-3 bg-red-400/10 rounded border border-red-400/20">
-                        <p className="text-red-300 text-sm">{ejercicio}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="bg-gray-900 border-yellow-400/20 text-white">
+          <DialogHeader>
+            <DialogTitle>Nueva Lesión</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="text-gray-400 text-sm">Título</label>
+              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.titulo} onChange={e=>setForm(f=>({...f,titulo:e.target.value}))} />
+            </div>
+            <div>
+              <label className="text-gray-400 text-sm">Zona</label>
+              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.zona} onChange={e=>setForm(f=>({...f,zona:e.target.value}))} />
+            </div>
+            <div>
+              <label className="text-gray-400 text-sm">Tipo</label>
+              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.tipo} onChange={e=>setForm(f=>({...f,tipo:e.target.value}))} />
+            </div>
+            <div>
+              <label className="text-gray-400 text-sm">Gravedad</label>
+              <select className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.gravedad} onChange={e=>setForm(f=>({...f,gravedad:e.target.value}))}>
+                <option value="leve">Leve</option>
+                <option value="moderada">Moderada</option>
+                <option value="grave">Grave</option>
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-gray-400 text-sm">Causa</label>
+              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.causa} onChange={e=>setForm(f=>({...f,causa:e.target.value}))} />
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-gray-400 text-sm">Tratamiento</label>
+              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.tratamiento} onChange={e=>setForm(f=>({...f,tratamiento:e.target.value}))} />
+            </div>
+            <div>
+              <label className="text-gray-400 text-sm">Estado</label>
+              <select className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.estado} onChange={e=>setForm(f=>({...f,estado:e.target.value}))}>
+                <option value="activo">Activo</option>
+                <option value="en recuperación">En recuperación</option>
+                <option value="recuperado">Recuperado</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-gray-400 text-sm">Notas</label>
+              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.notas} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={()=>setAddOpen(false)}>Cancelar</Button>
+            <Button onClick={onSaveInjury} disabled={saving || !form.titulo}>{saving? 'Guardando...' : 'Guardar'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

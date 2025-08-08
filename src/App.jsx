@@ -404,6 +404,7 @@ const MethodologiesScreen = () => {
   const [showManualSelectionModal, setShowManualSelectionModal] = useState(false)
   const [pendingMethodology, setPendingMethodology] = useState(null)
   const [aiRecommendation, setAiRecommendation] = useState(null)
+  const [aiProcessing, setAiProcessing] = useState(false)
   const [methodologyProgress, setMethodologyProgress] = useState(0)
   const [startDate, setStartDate] = useState(null)
   const [endDate, setEndDate] = useState(null)
@@ -667,12 +668,15 @@ const MethodologiesScreen = () => {
     if (!currentUser) return;
 
     try {
+      setAiProcessing(true)
       // Simular llamada a la API de IA para recomendación
       const recommendation = await getAIMethodologyRecommendation(currentUser);
       setAiRecommendation(recommendation);
       setShowRecommendationModal(true);
     } catch (error) {
       console.error('Error obteniendo recomendación de IA:', error);
+    } finally {
+      setAiProcessing(false)
     }
   };
 
@@ -680,11 +684,21 @@ const MethodologiesScreen = () => {
   const getAIMethodologyRecommendation = async (user) => {
     try {
       // Preparar datos del usuario para la IA
+      const normalizedInjuries = (() => {
+        const v = user.limitaciones;
+        if (!v) return 'ninguna';
+        try {
+          const parsed = typeof v === 'string' ? JSON.parse(v) : v;
+          if (Array.isArray(parsed)) return parsed.map(i => i.titulo || i.zona || 'lesión').join(', ');
+        } catch (_) {}
+        return typeof v === 'string' ? v : 'ninguna';
+      })();
+
       const userAnalysis = {
         userName: user.nombre || 'Usuario',
         yearsTraining: user.años_entrenando || 0,
         currentLevel: user.nivel || 'principiante',
-        injuries: user.limitaciones || 'ninguna',
+        injuries: normalizedInjuries,
         goal: user.objetivo_principal || 'mantener forma',
         age: user.edad || 25,
         weight: user.peso || 70,
@@ -748,7 +762,7 @@ const MethodologiesScreen = () => {
         userName: user.nombre || 'Usuario',
         yearsTraining: user.años_entrenando || 0,
         currentLevel: user.nivel || 'principiante',
-        injuries: user.limitaciones || 'ninguna',
+        injuries: normalizedInjuries,
         goal: user.objetivo_principal || 'mantener forma',
         homeTraining: true
       };
@@ -936,13 +950,14 @@ const MethodologiesScreen = () => {
                   <Brain className="mr-2 text-yellow-400" />
                   Selección Automática (Recomendado)
                 </label>
-                {selectionMode === 'automatic' && (
+        {selectionMode === 'automatic' && (
                   <Button
-                    onClick={activateAI}
-                    className="bg-yellow-400 text-black hover:bg-yellow-300 flex items-center space-x-2"
+          onClick={activateAI}
+          disabled={aiProcessing}
+          className="bg-yellow-400 text-black hover:bg-yellow-300 flex items-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    <Zap className="w-4 h-4" />
-                    <span>Activar IA</span>
+          <Zap className={`w-4 h-4 ${aiProcessing ? 'animate-pulse' : ''}`} />
+          <span>{aiProcessing ? 'Procesando...' : 'Activar IA'}</span>
                   </Button>
                 )}
               </div>
@@ -1362,6 +1377,18 @@ const MethodologiesScreen = () => {
       )}
 
       {/* Modal de Recomendación de IA */}
+      {/* Procesando IA */}
+      {aiProcessing && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-yellow-400/30 rounded-lg p-6 text-center shadow-xl">
+            <div className="w-10 h-10 rounded-full border-2 border-yellow-400 border-t-transparent animate-spin mx-auto mb-3"></div>
+            <p className="text-white font-semibold">Analizando tu perfil con IA…</p>
+            <p className="text-gray-400 text-sm mt-1">Esto puede tardar unos segundos</p>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Recomendación de IA */}
       <Dialog open={showRecommendationModal} onOpenChange={setShowRecommendationModal}>
         <DialogContent className="max-w-2xl bg-gray-900 border-yellow-400/20">
           <DialogHeader>
@@ -1400,7 +1427,15 @@ const MethodologiesScreen = () => {
                     </div>
                     <div>
                       <span className="text-gray-400">Limitaciones:</span>
-                      <span className="text-white ml-2">{aiRecommendation.analysis.injuries}</span>
+                      <span className="ml-2 flex flex-wrap gap-2">
+                        {String(aiRecommendation.analysis.injuries || 'ninguna')
+                          .split(',')
+                          .map((it, i) => (
+                            <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-yellow-400/10 text-yellow-300 border border-yellow-400/30">
+                              {it.trim() || 'ninguna'}
+                            </span>
+                          ))}
+                      </span>
                     </div>
                   </div>
                 </CardContent>

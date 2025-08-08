@@ -1,10 +1,5 @@
 // API endpoint for analyzing user performance and suggesting difficulty adjustments
-import OpenAI from 'openai'
-
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true
-})
+// Refactor: use backend endpoint to avoid exposing OpenAI key in client
 
 export const analyzePerformance = async (exerciseData, userFeedback, userProfile, methodology) => {
   try {
@@ -51,23 +46,15 @@ Responde en formato JSON:
 }
 `
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: "Eres un entrenador personal experto en análisis de rendimiento deportivo y progresión de entrenamientos."
-        },
-        {
-          role: "user", 
-          content: prompt
-        }
-      ],
-      temperature: 0.3,
-      max_tokens: 500
+    const apiBase = import.meta.env.VITE_API_URL || ''
+    const r = await fetch(`${apiBase}/api/activar-ia-adaptativa`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ modo: 'ANALISIS_RENDIMIENTO', variablesPrompt: { prompt } })
     })
-
-    const analysis = JSON.parse(response.choices[0].message.content)
+    const j = await r.json()
+    const content = j?.respuestaIA ? JSON.stringify(j.respuestaIA) : '{"shouldAdjust":false,"recommendation":"maintain","confidence":0.5,"suggestions":{}}'
+    const analysis = JSON.parse(content)
     return analysis
 
   } catch (error) {

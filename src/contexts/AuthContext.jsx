@@ -206,6 +206,19 @@ export const AuthProvider = ({ children }) => {
     };
   };
 
+  // Reemplazar todo el usuario y persistir en localStorage
+  const replaceUser = (newUser) => {
+    try {
+      if (!newUser) return false;
+      setCurrentUser(newUser);
+      localStorage.setItem('mindfit_current_user', JSON.stringify(newUser));
+      return true;
+    } catch (error) {
+      console.error('Error reemplazando usuario:', error);
+      return false;
+    }
+  };
+
   // Valor del contexto que se proporcionará a los componentes hijos
   const contextValue = {
     // Estado
@@ -222,6 +235,7 @@ export const AuthProvider = ({ children }) => {
     getUserData,
     updateUserData,
     getCurrentUserInfo,
+  replaceUser,
     
     // Datos de acceso rápido (para compatibilidad con componentes existentes)
     userData: currentUser,

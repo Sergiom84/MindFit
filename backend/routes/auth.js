@@ -4,6 +4,37 @@ import { query } from '../db.js';
 
 const router = express.Router();
 
+// Helpers para normalizar/castear "limitaciones"
+const normalizeLimitacionesOut = (value) => {
+  try {
+    if (value == null) return [];
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'object') return value;
+    const s = String(value).trim();
+    if (!s) return [];
+    try {
+      const parsed = JSON.parse(s);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && typeof parsed === 'object') return [parsed];
+    } catch (_) {
+      // no-op
+    }
+    return [{ titulo: s }];
+  } catch {
+    return [];
+  }
+};
+
+const prepareLimitacionesIn = (value) => {
+  if (value == null) return null;
+  if (typeof value === 'string') return value;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+};
+
 // Registro de usuario
 router.post('/register', async (req, res) => {
   try {
@@ -88,7 +119,7 @@ router.post('/register', async (req, res) => {
       parseOrNull(data.cuello), // DECIMAL
       parseOrNull(data.antebrazos), // DECIMAL
       data.historial_medico,
-      data.limitaciones,
+  prepareLimitacionesIn(data.limitaciones),
       data.alergias,
       data.medicamentos,
       data.objetivo_principal,
@@ -176,6 +207,8 @@ router.post('/login', async (req, res) => {
 
     // Remover password del objeto usuario
     delete user.password;
+  // Normalizar limitaciones a JSON (array/objeto)
+  user.limitaciones = normalizeLimitacionesOut(user.limitaciones);
 
     res.json({
       success: true,
@@ -209,7 +242,7 @@ router.patch('/users/:id', async (req, res) => {
       'comidas_diarias','suplementacion','alimentos_excluidos'
     ];
 
-    const entries = Object.entries(data).filter(([k,v]) => allowed.includes(k));
+    const entries = Object.entries(data).filter(([k]) => allowed.includes(k));
     if (entries.length === 0) {
       return res.status(400).json({ success:false, error:'Sin campos válidos para actualizar' });
     }
@@ -225,7 +258,8 @@ router.patch('/users/:id', async (req, res) => {
     const setClauses = [];
     const values = [];
     let idx = 1;
-    for (const [key, value] of Object.entries(patchData)) {
+    for (const [key, valueRaw] of Object.entries(patchData)) {
+      const value = key === 'limitaciones' ? prepareLimitacionesIn(valueRaw) : valueRaw;
       setClauses.push(`${key} = $${idx++}`);
       values.push(value);
     }
@@ -240,6 +274,7 @@ router.patch('/users/:id', async (req, res) => {
 
     const user = result.rows[0];
     delete user.password;
+  user.limitaciones = normalizeLimitacionesOut(user.limitaciones);
 
     res.json({ success:true, user });
   } catch (error) {

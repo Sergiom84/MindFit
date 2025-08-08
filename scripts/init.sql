@@ -48,7 +48,28 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-Insertar usuario de prueba
+-- Crear tabla injuries (lesiones) si no existe
+CREATE TABLE IF NOT EXISTS injuries (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    titulo TEXT NOT NULL,
+    zona TEXT,
+    tipo TEXT,
+    gravedad TEXT,
+    fecha_inicio TIMESTAMP,
+    fecha_fin TIMESTAMP,
+    causa TEXT,
+    tratamiento TEXT,
+    estado TEXT DEFAULT 'activo' CHECK (estado IN ('activo', 'en recuperación', 'recuperado')),
+    notas TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_injuries_user ON injuries(user_id);
+CREATE INDEX IF NOT EXISTS idx_injuries_estado ON injuries(estado);
+
+-- Insertar usuario de prueba
 -- Nota: el hash de la contraseña fue generado previamente con bcrypt
 INSERT INTO users (nombre, apellido, email, password)
 VALUES ('Test', 'User', 'test@example.com', '$2b$10$NAJZ2eTBc55cf4/l61.CsOhVXNH1Mzers9p63tbA4IC1/tzwanh/q');

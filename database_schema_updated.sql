@@ -48,6 +48,26 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabla de lesiones (injuries)
+CREATE TABLE IF NOT EXISTS injuries (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    titulo TEXT NOT NULL,
+    zona TEXT,
+    tipo TEXT,
+    gravedad TEXT,
+    fecha_inicio TIMESTAMP,
+    fecha_fin TIMESTAMP,
+    causa TEXT,
+    tratamiento TEXT,
+    estado TEXT DEFAULT 'activo' CHECK (estado IN ('activo', 'en recuperación', 'recuperado')),
+    notas TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_injuries_user ON injuries(user_id);
+CREATE INDEX IF NOT EXISTS idx_injuries_estado ON injuries(estado);
+
 -- Crear función para calcular IMC automáticamente
 CREATE OR REPLACE FUNCTION calculate_imc()
 RETURNS TRIGGER AS $$

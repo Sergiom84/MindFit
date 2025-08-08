@@ -1,52 +1,26 @@
 // API para manejo de feedback de postura con GPT-4o
 // Integración con OpenAI API (usando fetch para compatibilidad con build)
 
-// Función para llamar a OpenAI usando fetch (compatible con build)
+// Funciones antiguas apuntaban a OpenAI directo; ahora usamos backend
 async function callOpenAI(messages, options = {}) {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+  const apiBase = import.meta.env.VITE_API_URL || '';
+  const response = await fetch(`${apiBase}/api/pose-feedback`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'gpt-4o',
-      messages: messages,
-      temperature: options.temperature || 0.7,
-      max_tokens: options.max_tokens || 600,
-      ...options
+      metrics: { ejercicio: 'general', erroresDetectados: [], ...options.metrics },
+      userVariables: options.userVariables || {}
     })
   });
-
-  if (!response.ok) {
-    throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
-  }
-
-  return await response.json();
+  if (!response.ok) throw new Error(`Backend error: ${response.status}`);
+  const data = await response.json();
+  return { choices: [{ message: { content: data.feedback } }] };
 }
 
 // Función para llamar a OpenAI con prompt personalizado
 async function callOpenAIWithPrompt(promptId, version, variables) {
-  const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
-    },
-    body: JSON.stringify({
-      prompt: {
-        id: promptId,
-        version: version
-      },
-      variables: variables
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error(`OpenAI Prompt API error: ${response.status} ${response.statusText}`);
-  }
-
-  return await response.json();
+  // Redirigimos también a /api/pose-feedback para unificar
+  return callOpenAI([], { metrics: {}, userVariables: variables });
 }
 
 // Clase de respaldo para simulación (si no hay API key)
@@ -141,8 +115,7 @@ class MockOpenAI {
 export async function getPoseFeedback(metrics, userVariables) {
   try {
     // Verificar si tenemos API key real
-    const hasRealApiKey = import.meta.env.VITE_OPENAI_API_KEY &&
-                         import.meta.env.VITE_OPENAI_API_KEY.startsWith('sk-');
+  const hasRealApiKey = true; // usamos backend, no exponemos key en cliente
 
     // Preparar variables para el prompt
     const promptVariables = {
@@ -177,11 +150,7 @@ export async function getPoseFeedback(metrics, userVariables) {
           tempo_excentrico: metrics.tempoEcc || 'N/A'
         };
 
-        completion = await callOpenAIWithPrompt(
-          import.meta.env.VITE_OPENAI_PROMPT_ID || "pmpt_688fd23d27448193b5bfbb2c4ef9548103c68f1f6b84e824",
-          parseInt(import.meta.env.VITE_OPENAI_PROMPT_VERSION) || 2,
-          promptVariablesForAPI
-        );
+  completion = await callOpenAIWithPrompt('hidden', 1, promptVariablesForAPI);
 
         console.log('✅ Respuesta recibida de OpenAI con prompt personalizado');
 
@@ -213,18 +182,14 @@ export async function getPoseFeedback(metrics, userVariables) {
           }
         ];
 
-        completion = await callOpenAI(messages, {
-          temperature: 0.7,
-          max_tokens: 600
-        });
+  completion = await callOpenAI(messages, { metrics, userVariables });
 
         console.log('✅ Respuesta recibida de OpenAI con chat.completions');
       }
     } else {
       // Usar simulación si no hay API key
-      console.log('🔄 Usando simulación (no hay API key configurada)');
-      const mockOpenAI = new MockOpenAI({ apiKey: 'mock-key' });
-      completion = await mockOpenAI.createCompletion({ variables: promptVariables });
+  // Con backend, siempre intentamos IA; como fallback, generamos respuesta básica
+  completion = { choices: [{ message: { content: generateFallbackFeedback(metrics, userVariables) } }] };
     }
 
     return {
