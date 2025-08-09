@@ -7,11 +7,16 @@ import multer from 'multer';
 import OpenAI from 'openai';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import iaAdaptativa from './routes/iaAdaptativa.js';
 import authRoutes from './routes/auth.js';
 import injuriesRoutes from './routes/injuries.js';
 import poseRoutes from './routes/pose.js';
 import { testConnection } from './db.js';
+
+// Para obtener __dirname en ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -84,6 +89,28 @@ console.log('✅ injuriesRoutes registrado');
 app.use('/api', poseRoutes);
 console.log('✅ poseRoutes registrado');
 
+// Servir archivos estáticos del frontend (después de las rutas API)
+const distPath = path.join(__dirname, '..', 'dist');
+if (fs.existsSync(distPath)) {
+  console.log('📁 Sirviendo archivos estáticos desde:', distPath);
+  app.use(express.static(distPath));
+
+  // Manejar rutas del frontend (SPA)
+  app.get('*', (req, res) => {
+    // Solo servir index.html para rutas que no sean de API
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/health') && !req.path.startsWith('/debug')) {
+      res.sendFile(path.join(distPath, 'index.html'));
+    } else {
+      res.status(404).json({
+        success: false,
+        error: 'Endpoint no encontrado'
+      });
+    }
+  });
+} else {
+  console.log('⚠️ Directorio dist no encontrado. Solo funcionará como API.');
+}
+
 // Crear directorio de uploads si no existe
 if (!fs.existsSync('uploads')) {
   fs.mkdirSync('uploads');
@@ -152,13 +179,7 @@ app.use((error, req, res, next) => {
   });
 });
 
-// Manejo de rutas no encontradas
-app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    error: 'Endpoint no encontrado'
-  });
-});
+// El manejo de rutas no encontradas ahora se hace en el middleware del frontend
 
 // Verificar que la API key esté configurada
 if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'tu_api_key_de_openai_aqui') {
