@@ -4,7 +4,7 @@ import { query } from '../db.js';
 
 const router = express.Router();
 
-// Helpers para normalizar/castear "limitaciones"
+// Normalizar salida de limitaciones (al leer de la DB)
 const normalizeLimitacionesOut = (value) => {
   try {
     if (value == null) return [];
@@ -16,18 +16,29 @@ const normalizeLimitacionesOut = (value) => {
       const parsed = JSON.parse(s);
       if (Array.isArray(parsed)) return parsed;
       if (parsed && typeof parsed === 'object') return [parsed];
-    } catch (_) {
-      // no-op
-    }
+    } catch (_) {}
     return [{ titulo: s }];
   } catch {
     return [];
   }
 };
 
+// Normalizar entrada para columnas JSONB genéricas
+const prepareJSONBIn = (value) => {
+  if (value === '' || value === undefined || value === null) return null;
+  if (typeof value === 'string') {
+    try { return JSON.parse(value); } catch { return null; }
+  }
+  return value;
+};
+
+// Normalizar entrada para columna JSONB "limitaciones"
 const prepareLimitacionesIn = (value) => {
-  if (value == null) return null;
-  if (typeof value === 'string') return value;
+  if (value === '' || value === undefined || value === null) return null;
+  if (typeof value === 'string') {
+    try { return JSON.stringify(JSON.parse(value)); }
+    catch { return JSON.stringify([value]); }
+  }
   try {
     return JSON.stringify(value);
   } catch {
@@ -35,7 +46,12 @@ const prepareLimitacionesIn = (value) => {
   }
 };
 
-// Registro de usuario
+// Auxiliar para campos numéricos
+const parseOrNull = v => (v === "" || v === undefined ? null : isNaN(Number(v)) ? null : Number(v));
+
+/**
+ * REGISTRO DE USUARIO
+ */
 router.post('/register', async (req, res) => {
   try {
     const data = req.body;
@@ -47,10 +63,7 @@ router.post('/register', async (req, res) => {
     }
 
     // Verificar si el email ya existe
-    const existingUser = await query(
-      'SELECT id FROM users WHERE email = $1',
-      [data.email]
-    );
+    const existingUser = await query('SELECT id FROM users WHERE email = $1', [data.email]);
     if (existingUser.rows.length > 0) {
       return res.status(400).json({
         success: false,
@@ -64,17 +77,14 @@ router.post('/register', async (req, res) => {
     // Generar iniciales
     const iniciales = (data.nombre.charAt(0) + data.apellido.charAt(0)).toUpperCase();
 
-    // Calcular IMC si se proporcionan peso y altura
+    // Calcular IMC si hay peso y altura
     let imc = null;
     if (data.peso && data.altura) {
       const alturaEnMetros = data.altura / 100;
       imc = (data.peso / (alturaEnMetros * alturaEnMetros)).toFixed(1);
     }
 
-    // Función auxiliar para números
-    const parseOrNull = v => (v === "" || v === undefined ? null : isNaN(Number(v)) ? null : Number(v));
-
-    // Insertar usuario en la base de datos
+    // Insertar usuario
     const insertText = `
       INSERT INTO users(
         nombre, apellido, email, password, iniciales, nivel, edad, sexo, peso, altura, imc,
@@ -98,43 +108,41 @@ router.post('/register', async (req, res) => {
     const values = [
       data.nombre, data.apellido, data.email, hashedPassword, iniciales,
       data.nivel || 'principiante',
-      parseOrNull(data.edad), // INT
+      parseOrNull(data.edad),
       data.sexo,
-      parseOrNull(data.peso), // DECIMAL
-      parseOrNull(data.altura), // DECIMAL
+      parseOrNull(data.peso),
+      parseOrNull(data.altura),
       imc,
       data.nivel_actividad,
       data.experiencia,
-      parseOrNull(data.años_entrenando), // INT
+      parseOrNull(data.años_entrenando),
       data.metodologia_preferida,
-      parseOrNull(data.frecuencia_semanal), // INT
-      parseOrNull(data.grasa_corporal), // DECIMAL
-      parseOrNull(data.masa_muscular), // DECIMAL
-      parseOrNull(data.agua_corporal), // DECIMAL
-      parseOrNull(data.metabolismo_basal), // INT
-      parseOrNull(data.cintura), // DECIMAL
-      parseOrNull(data.pecho), // DECIMAL
-      parseOrNull(data.brazos), // DECIMAL
-      parseOrNull(data.muslos), // DECIMAL
-      parseOrNull(data.cuello), // DECIMAL
-      parseOrNull(data.antebrazos), // DECIMAL
-      data.historial_medico,
-  prepareLimitacionesIn(data.limitaciones),
-      data.alergias,
-      data.medicamentos,
+      parseOrNull(data.frecuencia_semanal),
+      parseOrNull(data.grasa_corporal),
+      parseOrNull(data.masa_muscular),
+      parseOrNull(data.agua_corporal),
+      parseOrNull(data.metabolismo_basal),
+      parseOrNull(data.cintura),
+      parseOrNull(data.pecho),
+      parseOrNull(data.brazos),
+      parseOrNull(data.muslos),
+      parseOrNull(data.cuello),
+      parseOrNull(data.antebrazos),
+      prepareJSONBIn(data.historial_medico),
+      prepareLimitacionesIn(data.limitaciones),
+      prepareJSONBIn(data.alergias),
+      prepareJSONBIn(data.medicamentos),
       data.objetivo_principal,
-      parseOrNull(data.meta_peso), // DECIMAL
-      parseOrNull(data.meta_grasa), // DECIMAL
+      parseOrNull(data.meta_peso),
+      parseOrNull(data.meta_grasa),
       data.enfoque,
       data.horario_preferido,
-      parseOrNull(data.comidas_diarias), // INT
-      data.suplementacion,
-      data.alimentos_excluidos
+      parseOrNull(data.comidas_diarias),
+      prepareJSONBIn(data.suplementacion),
+      prepareJSONBIn(data.alimentos_excluidos)
     ];
 
     const result = await query(insertText, values);
-
-    // Retornar usuario creado (sin password)
     const newUser = result.rows[0];
 
     res.status(201).json({
@@ -152,7 +160,9 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login de usuario
+/**
+ * LOGIN DE USUARIO
+ */
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -165,11 +175,7 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Buscar usuario por email
-    const result = await query(
-      'SELECT * FROM users WHERE email = $1',
-      [email]
-    );
+    const result = await query('SELECT * FROM users WHERE email = $1', [email]);
     console.log('🟢 Resultado SQL:', result.rows);
 
     if (result.rows.length === 0) {
@@ -181,22 +187,7 @@ router.post('/login', async (req, res) => {
     }
 
     const user = result.rows[0];
-
-    // Verificar password
-    let isValidPassword;
-    try {
-      isValidPassword = await bcrypt.compare(password, user.password);
-    } catch (compareError) {
-      console.error('🔴 Error al comparar contraseñas:', compareError);
-      if (compareError?.message && /invalid/i.test(compareError.message)) {
-        return res.status(401).json({
-          success: false,
-          error: 'Credenciales inválidas'
-        });
-      }
-      throw compareError;
-    }
-
+    const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       console.log('🔴 Contraseña incorrecta para:', email);
       return res.status(401).json({
@@ -205,15 +196,13 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Remover password del objeto usuario
     delete user.password;
-  // Normalizar limitaciones a JSON (array/objeto)
-  user.limitaciones = normalizeLimitacionesOut(user.limitaciones);
+    user.limitaciones = normalizeLimitacionesOut(user.limitaciones);
 
     res.json({
       success: true,
       message: 'Login exitoso',
-      user: user
+      user
     });
 
   } catch (error) {
@@ -225,13 +214,14 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Actualizar perfil de usuario (parcial)
+/**
+ * ACTUALIZAR PERFIL (PATCH)
+ */
 router.patch('/users/:id', async (req, res) => {
   try {
     const userId = req.params.id;
     const data = req.body || {};
 
-    // Campos permitidos para actualización
     const allowed = [
       'nombre','apellido','edad','sexo','peso','altura','imc','nivel_actividad',
       'nivel','años_entrenando','metodologia_preferida','frecuencia_semanal',
@@ -247,19 +237,38 @@ router.patch('/users/:id', async (req, res) => {
       return res.status(400).json({ success:false, error:'Sin campos válidos para actualizar' });
     }
 
-    // Si vienen peso/altura y no envían imc, calcularlo
+    // Si vienen peso/altura recalcular IMC
     let patchData = Object.fromEntries(entries);
     if ((patchData.peso || patchData.altura) && (patchData.peso != null && patchData.altura != null)) {
       const alturaM = Number(patchData.altura) / 100;
       if (alturaM > 0) patchData.imc = (Number(patchData.peso) / (alturaM * alturaM)).toFixed(1);
     }
 
-    // Construir SET dinámico
+    // Construir SET dinámico con normalización
     const setClauses = [];
     const values = [];
     let idx = 1;
     for (const [key, valueRaw] of Object.entries(patchData)) {
-      const value = key === 'limitaciones' ? prepareLimitacionesIn(valueRaw) : valueRaw;
+      let value = valueRaw;
+
+      // Normalizar numéricos
+      if (['edad','peso','altura','años_entrenando','frecuencia_semanal',
+           'grasa_corporal','masa_muscular','agua_corporal','metabolismo_basal',
+           'cintura','pecho','brazos','muslos','cuello','antebrazos',
+           'meta_peso','meta_grasa','comidas_diarias'].includes(key)) {
+        value = parseOrNull(valueRaw);
+      }
+
+      // Normalizar JSONB
+      if (['historial_medico','alergias','medicamentos','suplementacion','alimentos_excluidos'].includes(key)) {
+        value = prepareJSONBIn(valueRaw);
+      }
+
+      // Normalizar limitaciones
+      if (key === 'limitaciones') {
+        value = prepareLimitacionesIn(valueRaw);
+      }
+
       setClauses.push(`${key} = $${idx++}`);
       values.push(value);
     }
@@ -274,7 +283,7 @@ router.patch('/users/:id', async (req, res) => {
 
     const user = result.rows[0];
     delete user.password;
-  user.limitaciones = normalizeLimitacionesOut(user.limitaciones);
+    user.limitaciones = normalizeLimitacionesOut(user.limitaciones);
 
     res.json({ success:true, user });
   } catch (error) {
