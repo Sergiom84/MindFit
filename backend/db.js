@@ -5,24 +5,52 @@ dotenv.config();
 
 const { Pool } = pg;
 
+// Función para obtener configuración de base de datos según el entorno
+const getDatabaseConfig = () => {
+  const dbEnvironment = process.env.DB_ENVIRONMENT || 'local';
+
+  if (dbEnvironment === 'render') {
+    return {
+      user: process.env.RENDER_PGUSER,
+      host: process.env.RENDER_PGHOST,
+      database: process.env.RENDER_PGDATABASE,
+      password: process.env.RENDER_PGPASSWORD,
+      port: process.env.RENDER_PGPORT || 5432,
+      ssl: {
+        rejectUnauthorized: false // Render requiere SSL
+      }
+    };
+  }
+
+  // Configuración local por defecto
+  return {
+    user: process.env.PGUSER || 'postgres',
+    host: process.env.PGHOST || 'localhost',
+    database: process.env.PGDATABASE || 'mindfit',
+    password: process.env.PGPASSWORD || 'postgres',
+    port: process.env.PGPORT || 5432,
+  };
+};
+
 // Configuración de la base de datos
-const pool = new Pool({
-  user: process.env.PGUSER || 'postgres',
-  host: process.env.PGHOST || 'localhost',
-  database: process.env.PGDATABASE || 'mindfit',
-  password: process.env.PGPASSWORD || 'postgres',
-  port: process.env.PGPORT || 5432,
-});
+const dbConfig = getDatabaseConfig();
+const pool = new Pool(dbConfig);
 
 // Función para probar la conexión
 export const testConnection = async () => {
   try {
     const client = await pool.connect();
-    console.log('✅ Conexión a PostgreSQL establecida correctamente');
+    const dbEnvironment = process.env.DB_ENVIRONMENT || 'local';
+    const dbInfo = dbEnvironment === 'render' ?
+      `${process.env.RENDER_PGHOST}/${process.env.RENDER_PGDATABASE}` :
+      `${process.env.PGHOST || 'localhost'}/${process.env.PGDATABASE || 'mindfit'}`;
+
+    console.log(`✅ Conexión a PostgreSQL establecida correctamente (${dbEnvironment}: ${dbInfo})`);
     client.release();
     return true;
   } catch (error) {
-    console.error('❌ Error conectando a PostgreSQL:', error.message);
+    const dbEnvironment = process.env.DB_ENVIRONMENT || 'local';
+    console.error(`❌ Error conectando a PostgreSQL (${dbEnvironment}):`, error.message);
     return false;
   }
 };

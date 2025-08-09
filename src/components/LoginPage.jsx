@@ -43,13 +43,25 @@ const LoginPage = () => {
       const result = await login(email, password);
 
       if (!result.success) {
-        logEvent('Login fallido: ' + (result.error || 'desconocido'));
+        console.log('Login fallido: ' + (result.error || 'desconocido'));
+        // Usar debugLog si está disponible
+        if (window.debugLog) {
+          window.debugLog('Login fallido: ' + (result.error || 'desconocido'));
+        }
       } else {
-        logEvent('Login exitoso');
+        console.log('Login exitoso');
+        // Usar debugLog si está disponible
+        if (window.debugLog) {
+          window.debugLog('Login exitoso');
+        }
       }
     } catch (error) {
       setLoginError('Error de conexión. Inténtalo de nuevo.');
-      logEvent('Login fallido: Error de conexión');
+      console.log('Login fallido: Error de conexión');
+      // Usar debugLog si está disponible
+      if (window.debugLog) {
+        window.debugLog('Login fallido: Error de conexión');
+      }
       console.error('Error en login:', error);
     } finally {
       setIsLoggingIn(false);
@@ -109,6 +121,7 @@ const LoginPage = () => {
                         }}
                         placeholder="tu@email.com"
                         className="bg-gray-800 border-gray-600 text-white pl-10"
+                        autoComplete="email"
                         required
                       />
                     </div>
@@ -126,6 +139,7 @@ const LoginPage = () => {
                         }}
                         placeholder="Tu contraseña"
                         className="bg-gray-800 border-gray-600 text-white pl-10 pr-10"
+                        autoComplete="current-password"
                         required
                       />
                       <button

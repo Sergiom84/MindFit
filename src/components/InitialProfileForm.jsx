@@ -189,6 +189,7 @@ const InitialProfileForm = () => {
                     onChange={handleChange}
                     placeholder="Tu nombre"
                     className="bg-gray-800 border-gray-600 text-white"
+                    autoComplete="given-name"
                     required
                   />
                 </div>
@@ -200,6 +201,7 @@ const InitialProfileForm = () => {
                     value={data.apellido}
                     onChange={handleChange}
                     placeholder="Tu apellido"
+                    autoComplete="family-name"
                     className="bg-gray-800 border-gray-600 text-white"
                     required
                   />
@@ -214,6 +216,7 @@ const InitialProfileForm = () => {
                     onChange={handleChange}
                     placeholder="tu@email.com"
                     className="bg-gray-800 border-gray-600 text-white"
+                    autoComplete="email"
                     required
                   />
                 </div>
@@ -227,6 +230,7 @@ const InitialProfileForm = () => {
                     onChange={handleChange}
                     placeholder="Contraseña segura"
                     className="bg-gray-800 border-gray-600 text-white"
+                    autoComplete="new-password"
                     required
                   />
                 </div>
