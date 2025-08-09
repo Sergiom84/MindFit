@@ -12,6 +12,7 @@ import iaAdaptativa from './routes/iaAdaptativa.js';
 import authRoutes from './routes/auth.js';
 import injuriesRoutes from './routes/injuries.js';
 import poseRoutes from './routes/pose.js';
+import homeTrainingRoutes from './routes/homeTraining.js';
 import { testConnection } from './db.js';
 
 // Para obtener __dirname en ES modules
@@ -88,6 +89,8 @@ app.use('/api', injuriesRoutes);
 console.log('✅ injuriesRoutes registrado');
 app.use('/api', poseRoutes);
 console.log('✅ poseRoutes registrado');
+app.use('/api/home-training', homeTrainingRoutes);
+console.log('✅ homeTrainingRoutes registrado');
 
 // Servir archivos estáticos del frontend (después de las rutas API)
 const distPath = path.join(__dirname, '..', 'dist');

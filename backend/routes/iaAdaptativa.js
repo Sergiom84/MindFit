@@ -468,6 +468,7 @@ Responde en formato JSON:
         entrenamiento: entrenamientoGenerado,
         equipamiento: equipamiento,
         tipoEntrenamiento: tipoEntrenamiento,
+        shouldCreateProgram: true, // Indicar que se debe crear programa
         timestamp: new Date().toISOString()
       });
     } else {

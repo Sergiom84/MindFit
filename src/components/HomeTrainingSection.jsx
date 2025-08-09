@@ -17,8 +17,12 @@ import {
   Smartphone,
   Wifi,
   Calendar,
-  TrendingUp
+  TrendingUp,
+  Circle,
+  AlertTriangle,
+  Heart
 } from 'lucide-react'
+import { Progress } from '@/components/ui/progress'
 
 const HomeTrainingSection = () => {
   const [selectedEquipment, setSelectedEquipment] = useState('minimal')
@@ -28,6 +32,13 @@ const HomeTrainingSection = () => {
   const [generatedWorkout, setGeneratedWorkout] = useState(null)
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
   const [isExerciseModalOpen, setIsExerciseModalOpen] = useState(false)
+  const [activeProgram, setActiveProgram] = useState(null)
+  const [weeklyCalendar, setWeeklyCalendar] = useState([])
+  const [homeTrainingStats, setHomeTrainingStats] = useState({
+    rutinasCompletadas: 0,
+    tiempoTotalEntrenamiento: '0h 0m',
+    duracionSesion: '30 min'
+  })
   const { entrenamientoCasa, userData, progreso } = useUserContext()
 
   // Determinar equipamiento inicial basado en el usuario
@@ -43,6 +54,59 @@ const HomeTrainingSection = () => {
       }
     }
   }, [entrenamientoCasa.equipoDisponible]);
+
+  // Cargar programa activo y estadísticas al iniciar
+  useEffect(() => {
+    if (userData.id) {
+      loadActiveProgram();
+      loadHomeTrainingStats();
+    }
+  }, [userData.id]);
+
+  const loadActiveProgram = async () => {
+    try {
+      const response = await fetch(`/api/home-training/active-program/${userData.id}`);
+      const data = await response.json();
+
+      if (data.success && data.program) {
+        setActiveProgram(data.program);
+        generateWeeklyCalendar(data.program);
+      }
+    } catch (error) {
+      console.error('Error cargando programa activo:', error);
+    }
+  };
+
+  const loadHomeTrainingStats = async () => {
+    try {
+      const response = await fetch(`/api/home-training/stats/${userData.id}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setHomeTrainingStats(data.stats);
+      }
+    } catch (error) {
+      console.error('Error cargando estadísticas:', error);
+    }
+  };
+
+  const generateWeeklyCalendar = (program) => {
+    const calendar = program.dias.map(day => ({
+      id: day.dia_semana.toLowerCase(),
+      dayName: day.dia_semana.charAt(0).toUpperCase() + day.dia_semana.slice(1),
+      dayNumber: new Date(day.fecha).getDate(),
+      date: day.fecha,
+      isToday: new Date(day.fecha).toDateString() === new Date().toDateString(),
+      exercises: JSON.parse(day.ejercicios_asignados || '[]'),
+      exerciseCount: day.es_descanso ? 0 : JSON.parse(day.ejercicios_asignados || '[]').length,
+      completed: day.ejercicios_completados,
+      total: day.es_descanso ? 0 : JSON.parse(day.ejercicios_asignados || '[]').length,
+      status: day.es_descanso ? 'rest' : day.estado,
+      isRest: day.es_descanso
+    }));
+
+    setWeeklyCalendar(calendar);
+  };
 
   // Función para generar entrenamiento con IA
   const generateWorkout = async () => {
@@ -83,13 +147,49 @@ const HomeTrainingSection = () => {
       const data = await response.json();
       setGeneratedWorkout(data.entrenamiento);
       setCurrentExerciseIndex(0);
-      // No abrir modal, mostrar en la página
+
+      // Crear programa en la base de datos si se indica
+      if (data.shouldCreateProgram && data.entrenamiento) {
+        await createProgramInDatabase(data.entrenamiento);
+      }
 
     } catch (error) {
       console.error('Error generando entrenamiento:', error);
       alert('Error al generar entrenamiento. Por favor, inténtalo de nuevo.');
     } finally {
       setIsGeneratingWorkout(false);
+    }
+  };
+
+  const createProgramInDatabase = async (entrenamiento) => {
+    try {
+      const response = await fetch('/api/home-training/create-program', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userData.id,
+          titulo: entrenamiento.titulo,
+          descripcion: entrenamiento.descripcion,
+          equipamiento: selectedEquipment,
+          tipoEntrenamiento: selectedTrainingType,
+          duracionTotal: entrenamiento.duracionTotal,
+          frecuencia: entrenamiento.frecuencia,
+          enfoque: entrenamiento.enfoque,
+          ejercicios: entrenamiento.ejercicios
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Recargar programa activo
+        await loadActiveProgram();
+        console.log('Programa creado exitosamente');
+      }
+    } catch (error) {
+      console.error('Error creando programa:', error);
     }
   };
 
@@ -100,20 +200,93 @@ const HomeTrainingSection = () => {
     }
   };
 
-  const nextExercise = () => {
+  const nextExercise = async () => {
     if (currentExerciseIndex < generatedWorkout.ejercicios.length - 1) {
       setCurrentExerciseIndex(currentExerciseIndex + 1);
     } else {
       // Entrenamiento completado
       setIsExerciseModalOpen(false);
+
+      // Registrar progreso si es parte de un programa activo
+      if (activeProgram) {
+        await completeWorkoutDay();
+      }
+
       setGeneratedWorkout(null);
       alert('¡Entrenamiento completado! ¡Excelente trabajo!');
+    }
+  };
+
+  const completeWorkoutDay = async () => {
+    try {
+      // Encontrar el día actual en el calendario
+      const today = new Date().toDateString();
+      const currentDay = weeklyCalendar.find(day =>
+        new Date(day.date).toDateString() === today
+      );
+
+      if (currentDay && currentDay.status !== 'completado') {
+        // Calcular duración estimada (30 segundos por ejercicio + descansos)
+        const duracionEstimada = generatedWorkout.ejercicios.reduce((total, ejercicio) => {
+          const tiempoEjercicio = ejercicio.tipo === 'tiempo' ? ejercicio.duracion : 30;
+          return total + tiempoEjercicio + ejercicio.descanso;
+        }, 0) / 60; // Convertir a minutos
+
+        const response = await fetch('/api/home-training/complete-day', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            dayId: currentDay.id,
+            userId: userData.id,
+            duracionMinutos: Math.round(duracionEstimada),
+            ejerciciosCompletados: generatedWorkout.ejercicios.length,
+            ejerciciosTotales: generatedWorkout.ejercicios.length
+          })
+        });
+
+        if (response.ok) {
+          // Recargar programa activo y estadísticas
+          await loadActiveProgram();
+          await loadHomeTrainingStats();
+        }
+      }
+    } catch (error) {
+      console.error('Error completando día:', error);
     }
   };
 
   const closeExerciseModal = () => {
     setIsExerciseModalOpen(false);
     setCurrentExerciseIndex(0);
+  };
+
+  const handleDayClick = (day) => {
+    if (day.isRest) {
+      alert('Este es un día de descanso. ¡Disfruta tu recuperación!');
+      return;
+    }
+
+    if (day.status === 'completado') {
+      alert('Ya has completado este día. ¡Excelente trabajo!');
+      return;
+    }
+
+    // Obtener ejercicios para este día
+    const ejerciciosDelDia = activeProgram.ejercicios.filter((_, idx) =>
+      day.exercises.includes(idx + 1)
+    );
+
+    if (ejerciciosDelDia.length > 0) {
+      // Configurar entrenamiento para este día específico
+      setGeneratedWorkout({
+        ...activeProgram,
+        ejercicios: ejerciciosDelDia
+      });
+      setCurrentExerciseIndex(0);
+      setIsExerciseModalOpen(true);
+    }
   };
 
   const equipmentLevels = {
@@ -380,6 +553,124 @@ const HomeTrainingSection = () => {
           </Card>
         )}
 
+        {/* Programa Activo y Calendario Semanal */}
+        {activeProgram && (
+          <Card className="bg-gray-900 border-yellow-400/20 mb-8">
+            <CardHeader>
+              <CardTitle className="text-white text-xl flex items-center">
+                <Calendar className="w-5 h-5 mr-2 text-yellow-400" />
+                {activeProgram.titulo} - Semana Actual
+              </CardTitle>
+              <CardDescription className="text-gray-400">
+                {activeProgram.descripcion}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Barra de Progreso */}
+              <div className="mb-6">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-white font-semibold">Progreso del Programa</span>
+                  <span className="text-yellow-400 font-semibold">{activeProgram.progreso_porcentaje}%</span>
+                </div>
+                <div className="flex justify-between text-sm text-gray-400 mb-2">
+                  <span>Inicio: {new Date(activeProgram.fecha_inicio).toLocaleDateString()}</span>
+                  <span>Fin: {new Date(activeProgram.fecha_fin).toLocaleDateString()}</span>
+                </div>
+                <Progress
+                  value={activeProgram.progreso_porcentaje}
+                  className="h-3 bg-gray-700"
+                />
+              </div>
+
+              {/* Calendario Semanal */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {weeklyCalendar.map((day) => {
+                  const getStatusIcon = (status) => {
+                    switch (status) {
+                      case 'completado':
+                        return <CheckCircle className="w-5 h-5 text-green-400" />
+                      case 'en_progreso':
+                        return <Clock className="w-5 h-5 text-blue-400" />
+                      case 'pendiente':
+                        return <Circle className="w-5 h-5 text-gray-400" />
+                      case 'perdido':
+                        return <AlertTriangle className="w-5 h-5 text-red-400" />
+                      case 'rest':
+                        return <Heart className="w-5 h-5 text-purple-400" />
+                      default:
+                        return <Circle className="w-5 h-5 text-gray-400" />
+                    }
+                  };
+
+                  const getStatusColor = (status) => {
+                    switch (status) {
+                      case 'completado':
+                        return 'bg-green-900/30 border-green-400/50'
+                      case 'en_progreso':
+                        return 'bg-blue-900/30 border-blue-400/50'
+                      case 'pendiente':
+                        return 'bg-gray-900 border-gray-600'
+                      case 'perdido':
+                        return 'bg-red-900/30 border-red-400/50'
+                      case 'rest':
+                        return 'bg-purple-900/30 border-purple-400/50'
+                      default:
+                        return 'bg-gray-900 border-gray-600'
+                    }
+                  };
+
+                  return (
+                    <Card
+                      key={day.id}
+                      className={`${getStatusColor(day.status)} border transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer transform ${
+                        day.isToday ? 'ring-2 ring-yellow-400 shadow-yellow-400/20' : ''
+                      }`}
+                      onClick={() => handleDayClick(day)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <h3 className="text-white font-semibold text-lg">{day.dayName}</h3>
+                            <p className="text-gray-400 text-sm">{day.dayNumber}</p>
+                          </div>
+                          {getStatusIcon(day.status)}
+                        </div>
+
+                        {/* Exercise Count and Progress */}
+                        {!day.isRest && (
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-400">{day.exerciseCount} ejercicios</span>
+                              <span className="text-yellow-400 font-medium">
+                                {day.completed}/{day.total} completados
+                              </span>
+                            </div>
+
+                            {/* Progress Bar */}
+                            <div className="w-full bg-gray-700 rounded-full h-2">
+                              <div
+                                className="bg-yellow-400 h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${day.total > 0 ? (day.completed / day.total) * 100 : 0}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        )}
+
+                        {day.isRest && (
+                          <div className="text-center py-2">
+                            <p className="text-purple-300 text-sm">Día de descanso</p>
+                            <p className="text-gray-500 text-xs">Recuperación activa</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Estadísticas Personales del Usuario */}
         <Card className="bg-gray-900 border-yellow-400/20 mb-8">
           <CardHeader>
@@ -391,11 +682,11 @@ const HomeTrainingSection = () => {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-400">{entrenamientoCasa.rutinasCompletadas || 0}</div>
+                <div className="text-2xl font-bold text-green-400">{homeTrainingStats.rutinasCompletadas}</div>
                 <div className="text-sm text-gray-400">Rutinas Completadas</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-400">{entrenamientoCasa.tiempoTotalEntrenamiento || '0h'}</div>
+                <div className="text-2xl font-bold text-blue-400">{homeTrainingStats.tiempoTotalEntrenamiento}</div>
                 <div className="text-sm text-gray-400">Tiempo Total</div>
               </div>
               <div className="text-center">
@@ -403,7 +694,7 @@ const HomeTrainingSection = () => {
                 <div className="text-sm text-gray-400">Nivel Actual</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-purple-400">{entrenamientoCasa.duracionSesion || '30 min'}</div>
+                <div className="text-2xl font-bold text-purple-400">{homeTrainingStats.duracionSesion}</div>
                 <div className="text-sm text-gray-400">Duración Sesión</div>
               </div>
             </div>
