@@ -7,6 +7,16 @@ const { Pool } = pg;
 
 // Función para obtener configuración de base de datos según el entorno
 const getDatabaseConfig = () => {
+  // Si existe DATABASE_URL (Render), usarla directamente
+  if (process.env.DATABASE_URL) {
+    return {
+      connectionString: process.env.DATABASE_URL,
+      ssl: {
+        rejectUnauthorized: false // Render requiere SSL
+      }
+    };
+  }
+
   const dbEnvironment = process.env.DB_ENVIRONMENT || 'local';
 
   if (dbEnvironment === 'render') {
@@ -40,17 +50,22 @@ const pool = new Pool(dbConfig);
 export const testConnection = async () => {
   try {
     const client = await pool.connect();
-    const dbEnvironment = process.env.DB_ENVIRONMENT || 'local';
-    const dbInfo = dbEnvironment === 'render' ?
-      `${process.env.RENDER_PGHOST}/${process.env.RENDER_PGDATABASE}` :
-      `${process.env.PGHOST || 'localhost'}/${process.env.PGDATABASE || 'mindfit'}`;
 
-    console.log(`✅ Conexión a PostgreSQL establecida correctamente (${dbEnvironment}: ${dbInfo})`);
+    let dbInfo = 'local: localhost/mindfit';
+
+    if (process.env.DATABASE_URL) {
+      // Extraer info de DATABASE_URL para mostrar
+      const url = new URL(process.env.DATABASE_URL);
+      dbInfo = `render: ${url.hostname}/${url.pathname.slice(1)}`;
+    } else if (process.env.DB_ENVIRONMENT === 'render') {
+      dbInfo = `render: ${process.env.RENDER_PGHOST}/${process.env.RENDER_PGDATABASE}`;
+    }
+
+    console.log(`✅ Conexión a PostgreSQL establecida correctamente (${dbInfo})`);
     client.release();
     return true;
   } catch (error) {
-    const dbEnvironment = process.env.DB_ENVIRONMENT || 'local';
-    console.error(`❌ Error conectando a PostgreSQL (${dbEnvironment}):`, error.message);
+    console.error(`❌ Error conectando a PostgreSQL:`, error.message);
     return false;
   }
 };
