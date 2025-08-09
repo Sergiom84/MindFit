@@ -91,21 +91,82 @@ const HomeTrainingSection = () => {
   };
 
   const generateWeeklyCalendar = (program) => {
-    const calendar = program.dias.map(day => ({
-      id: day.dia_semana.toLowerCase(),
-      dayName: day.dia_semana.charAt(0).toUpperCase() + day.dia_semana.slice(1),
-      dayNumber: new Date(day.fecha).getDate(),
-      date: day.fecha,
-      isToday: new Date(day.fecha).toDateString() === new Date().toDateString(),
-      exercises: JSON.parse(day.ejercicios_asignados || '[]'),
-      exerciseCount: day.es_descanso ? 0 : JSON.parse(day.ejercicios_asignados || '[]').length,
-      completed: day.ejercicios_completados,
-      total: day.es_descanso ? 0 : JSON.parse(day.ejercicios_asignados || '[]').length,
-      status: day.es_descanso ? 'rest' : day.estado,
-      isRest: day.es_descanso
-    }));
+    if (program && program.dias) {
+      // Usar datos de la base de datos si están disponibles
+      const calendar = program.dias.map(day => ({
+        id: day.dia_semana.toLowerCase(),
+        dayName: day.dia_semana.charAt(0).toUpperCase() + day.dia_semana.slice(1),
+        dayNumber: new Date(day.fecha).getDate(),
+        date: day.fecha,
+        isToday: new Date(day.fecha).toDateString() === new Date().toDateString(),
+        exercises: JSON.parse(day.ejercicios_asignados || '[]'),
+        exerciseCount: day.es_descanso ? 0 : JSON.parse(day.ejercicios_asignados || '[]').length,
+        completed: day.ejercicios_completados,
+        total: day.es_descanso ? 0 : JSON.parse(day.ejercicios_asignados || '[]').length,
+        status: day.es_descanso ? 'rest' : day.estado,
+        isRest: day.es_descanso
+      }));
+      setWeeklyCalendar(calendar);
+    } else if (generatedWorkout) {
+      // Crear calendario de ejemplo si no hay datos de BD
+      generateMockWeeklyCalendar();
+    }
+  };
+
+  const generateMockWeeklyCalendar = () => {
+    const today = new Date();
+    const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    const dayIds = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+
+    const calendar = dayNames.map((dayName, index) => {
+      const date = new Date(today);
+      date.setDate(today.getDate() - today.getDay() + 1 + index); // Lunes de esta semana + index
+
+      const isToday = date.toDateString() === today.toDateString();
+      const isRest = index === 6; // Domingo descanso
+      const isPast = date < today && !isToday;
+      const isFuture = date > today;
+
+      let status = 'pendiente';
+      let completed = 0;
+      let total = generatedWorkout?.ejercicios?.length || 5;
+
+      if (isRest) {
+        status = 'rest';
+        total = 0;
+      } else if (isPast) {
+        status = Math.random() > 0.3 ? 'completado' : 'perdido';
+        completed = status === 'completado' ? total : Math.floor(total * 0.6);
+      } else if (isToday) {
+        status = 'en_progreso';
+        completed = Math.floor(total * 0.3);
+      }
+
+      return {
+        id: dayIds[index],
+        dayName: dayName,
+        dayNumber: date.getDate(),
+        date: date.toISOString().split('T')[0],
+        isToday: isToday,
+        exercises: isRest ? [] : Array.from({length: total}, (_, i) => i + 1),
+        exerciseCount: isRest ? 0 : total,
+        completed: completed,
+        total: total,
+        status: status,
+        isRest: isRest
+      };
+    });
 
     setWeeklyCalendar(calendar);
+  };
+
+  const calculateMockProgress = () => {
+    if (weeklyCalendar.length === 0) return 0;
+
+    const completedDays = weeklyCalendar.filter(day => day.status === 'completado').length;
+    const totalWorkoutDays = weeklyCalendar.filter(day => !day.isRest).length;
+
+    return totalWorkoutDays > 0 ? Math.round((completedDays / totalWorkoutDays) * 100) : 0;
   };
 
   // Función para generar entrenamiento con IA
@@ -151,6 +212,9 @@ const HomeTrainingSection = () => {
       // Crear programa en la base de datos si se indica
       if (data.shouldCreateProgram && data.entrenamiento) {
         await createProgramInDatabase(data.entrenamiento);
+      } else {
+        // Si no se puede crear en BD, generar calendario mock
+        generateMockWeeklyCalendar();
       }
 
     } catch (error) {
@@ -226,30 +290,53 @@ const HomeTrainingSection = () => {
       );
 
       if (currentDay && currentDay.status !== 'completado') {
-        // Calcular duración estimada (30 segundos por ejercicio + descansos)
-        const duracionEstimada = generatedWorkout.ejercicios.reduce((total, ejercicio) => {
-          const tiempoEjercicio = ejercicio.tipo === 'tiempo' ? ejercicio.duracion : 30;
-          return total + tiempoEjercicio + ejercicio.descanso;
-        }, 0) / 60; // Convertir a minutos
+        if (activeProgram) {
+          // Si hay programa activo, usar API
+          const duracionEstimada = generatedWorkout.ejercicios.reduce((total, ejercicio) => {
+            const tiempoEjercicio = ejercicio.tipo === 'tiempo' ? ejercicio.duracion : 30;
+            return total + tiempoEjercicio + ejercicio.descanso;
+          }, 0) / 60;
 
-        const response = await fetch('/api/home-training/complete-day', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            dayId: currentDay.id,
-            userId: userData.id,
-            duracionMinutos: Math.round(duracionEstimada),
-            ejerciciosCompletados: generatedWorkout.ejercicios.length,
-            ejerciciosTotales: generatedWorkout.ejercicios.length
-          })
-        });
+          const response = await fetch('/api/home-training/complete-day', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              dayId: currentDay.id,
+              userId: userData.id,
+              duracionMinutos: Math.round(duracionEstimada),
+              ejerciciosCompletados: generatedWorkout.ejercicios.length,
+              ejerciciosTotales: generatedWorkout.ejercicios.length
+            })
+          });
 
-        if (response.ok) {
-          // Recargar programa activo y estadísticas
-          await loadActiveProgram();
-          await loadHomeTrainingStats();
+          if (response.ok) {
+            await loadActiveProgram();
+            await loadHomeTrainingStats();
+          }
+        } else {
+          // Actualizar calendario mock localmente
+          const updatedCalendar = weeklyCalendar.map(day => {
+            if (day.id === currentDay.id) {
+              return {
+                ...day,
+                status: 'completado',
+                completed: day.total
+              };
+            }
+            return day;
+          });
+
+          setWeeklyCalendar(updatedCalendar);
+
+          // Actualizar estadísticas mock
+          const completedSessions = updatedCalendar.filter(d => d.status === 'completado').length;
+          setHomeTrainingStats(prev => ({
+            ...prev,
+            rutinasCompletadas: completedSessions,
+            tiempoTotalEntrenamiento: `${completedSessions * 30}m`
+          }));
         }
       }
     } catch (error) {
@@ -273,19 +360,34 @@ const HomeTrainingSection = () => {
       return;
     }
 
+    if (day.status === 'perdido') {
+      alert('Este día ya pasó. ¡Enfócate en los días siguientes!');
+      return;
+    }
+
     // Obtener ejercicios para este día
-    const ejerciciosDelDia = activeProgram.ejercicios.filter((_, idx) =>
-      day.exercises.includes(idx + 1)
-    );
+    let ejerciciosDelDia = [];
+
+    if (activeProgram && activeProgram.ejercicios) {
+      // Usar ejercicios de la base de datos
+      ejerciciosDelDia = activeProgram.ejercicios.filter((_, idx) =>
+        day.exercises.includes(idx + 1)
+      );
+    } else if (generatedWorkout && generatedWorkout.ejercicios) {
+      // Usar ejercicios del entrenamiento generado
+      ejerciciosDelDia = generatedWorkout.ejercicios;
+    }
 
     if (ejerciciosDelDia.length > 0) {
       // Configurar entrenamiento para este día específico
       setGeneratedWorkout({
-        ...activeProgram,
+        ...(activeProgram || generatedWorkout),
         ejercicios: ejerciciosDelDia
       });
       setCurrentExerciseIndex(0);
       setIsExerciseModalOpen(true);
+    } else {
+      alert('No hay ejercicios disponibles para este día.');
     }
   };
 
@@ -554,15 +656,15 @@ const HomeTrainingSection = () => {
         )}
 
         {/* Programa Activo y Calendario Semanal */}
-        {activeProgram && (
+        {(activeProgram || (generatedWorkout && weeklyCalendar.length > 0)) && (
           <Card className="bg-gray-900 border-yellow-400/20 mb-8">
             <CardHeader>
               <CardTitle className="text-white text-xl flex items-center">
                 <Calendar className="w-5 h-5 mr-2 text-yellow-400" />
-                {activeProgram.titulo} - Semana Actual
+                {activeProgram?.titulo || generatedWorkout?.titulo || 'Entrenamiento Personalizado'} - Semana Actual
               </CardTitle>
               <CardDescription className="text-gray-400">
-                {activeProgram.descripcion}
+                {activeProgram?.descripcion || generatedWorkout?.descripcion || 'Tu programa de entrenamiento semanal'}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -570,14 +672,16 @@ const HomeTrainingSection = () => {
               <div className="mb-6">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-white font-semibold">Progreso del Programa</span>
-                  <span className="text-yellow-400 font-semibold">{activeProgram.progreso_porcentaje}%</span>
+                  <span className="text-yellow-400 font-semibold">
+                    {activeProgram?.progreso_porcentaje || calculateMockProgress()}%
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-400 mb-2">
-                  <span>Inicio: {new Date(activeProgram.fecha_inicio).toLocaleDateString()}</span>
-                  <span>Fin: {new Date(activeProgram.fecha_fin).toLocaleDateString()}</span>
+                  <span>Inicio: {activeProgram ? new Date(activeProgram.fecha_inicio).toLocaleDateString() : new Date().toLocaleDateString()}</span>
+                  <span>Fin: {activeProgram ? new Date(activeProgram.fecha_fin).toLocaleDateString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}</span>
                 </div>
                 <Progress
-                  value={activeProgram.progreso_porcentaje}
+                  value={activeProgram?.progreso_porcentaje || calculateMockProgress()}
                   className="h-3 bg-gray-700"
                 />
               </div>
@@ -605,17 +709,17 @@ const HomeTrainingSection = () => {
                   const getStatusColor = (status) => {
                     switch (status) {
                       case 'completado':
-                        return 'bg-green-900/30 border-green-400/50'
+                        return 'border-green-400/50 bg-green-900/20'
                       case 'en_progreso':
-                        return 'bg-blue-900/30 border-blue-400/50'
+                        return 'border-blue-400/50 bg-blue-900/20'
                       case 'pendiente':
-                        return 'bg-gray-900 border-gray-600'
+                        return 'border-gray-600 bg-gray-800'
                       case 'perdido':
-                        return 'bg-red-900/30 border-red-400/50'
+                        return 'border-red-400/50 bg-red-900/20'
                       case 'rest':
-                        return 'bg-purple-900/30 border-purple-400/50'
+                        return 'border-purple-400/50 bg-purple-900/20'
                       default:
-                        return 'bg-gray-900 border-gray-600'
+                        return 'border-gray-600 bg-gray-800'
                     }
                   };
 
@@ -624,20 +728,48 @@ const HomeTrainingSection = () => {
                       key={day.id}
                       className={`${getStatusColor(day.status)} border transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer transform ${
                         day.isToday ? 'ring-2 ring-yellow-400 shadow-yellow-400/20' : ''
-                      }`}
+                      } ${day.status === 'completado' ? 'animate-pulse-once' : ''}`}
                       onClick={() => handleDayClick(day)}
+                      style={{
+                        animationDelay: `${day.id === 'lunes' ? 0 : day.id === 'martes' ? 100 : day.id === 'miercoles' ? 200 : day.id === 'jueves' ? 300 : day.id === 'viernes' ? 400 : day.id === 'sabado' ? 500 : 600}ms`
+                      }}
                     >
                       <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex justify-between items-start mb-3">
                           <div>
-                            <h3 className="text-white font-semibold text-lg">{day.dayName}</h3>
-                            <p className="text-gray-400 text-sm">{day.dayNumber}</p>
+                            <h3 className="text-white font-semibold">
+                              {day.dayName} {day.dayNumber}
+                              {day.isToday && (
+                                <Badge className="ml-2 bg-yellow-400 text-black text-xs">Hoy</Badge>
+                              )}
+                            </h3>
+                            <p className="text-gray-400 text-sm">
+                              {day.isRest ? 'Descanso' : `${day.exerciseCount} ejercicios`}
+                            </p>
                           </div>
-                          {getStatusIcon(day.status)}
+                          <div className="flex flex-col items-end">
+                            {getStatusIcon(day.status)}
+                          </div>
                         </div>
 
+                        {/* Exercise List Preview */}
+                        {!day.isRest && (activeProgram || generatedWorkout) && (
+                          <div className="space-y-1 mb-3">
+                            {(activeProgram?.ejercicios || generatedWorkout?.ejercicios || []).slice(0, 3).map((exercise, idx) => (
+                              <p key={idx} className="text-gray-300 text-sm">
+                                {exercise.nombre}
+                              </p>
+                            ))}
+                            {(activeProgram?.ejercicios || generatedWorkout?.ejercicios || []).length > 3 && (
+                              <p className="text-gray-500 text-xs">
+                                +{(activeProgram?.ejercicios || generatedWorkout?.ejercicios || []).length - 3} más...
+                              </p>
+                            )}
+                          </div>
+                        )}
+
                         {/* Exercise Count and Progress */}
-                        {!day.isRest && (
+                        {day.status !== 'rest' && !day.isRest && (
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm">
                               <span className="text-gray-400">{day.exerciseCount} ejercicios</span>
@@ -656,7 +788,7 @@ const HomeTrainingSection = () => {
                           </div>
                         )}
 
-                        {day.isRest && (
+                        {(day.status === 'rest' || day.isRest) && (
                           <div className="text-center py-2">
                             <p className="text-purple-300 text-sm">Día de descanso</p>
                             <p className="text-gray-500 text-xs">Recuperación activa</p>
