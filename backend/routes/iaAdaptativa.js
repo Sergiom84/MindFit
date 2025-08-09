@@ -263,17 +263,21 @@ router.get('/datos-usuario-ejemplo', (req, res) => {
 // Endpoint para recomendación de metodología
 router.post('/recomendar-metodologia', async (req, res) => {
   try {
-    const { userData, availableMethodologies } = req.body;
+    const { userData, availableMethodologies, equipamiento, tipoEntrenamiento, equipoDisponible, estiloEntrenamiento, datosUsuario } = req.body;
 
-    // Validar que se recibieron los datos necesarios
-    if (!userData || !availableMethodologies) {
+    // Validar que se recibieron los datos necesarios (soporte para ambos formatos)
+    if ((!userData || !availableMethodologies) && (!equipamiento || !tipoEntrenamiento)) {
       return res.status(400).json({
         success: false,
-        error: 'Faltan datos requeridos: userData y availableMethodologies'
+        error: 'Faltan datos requeridos: userData y availableMethodologies O equipamiento y tipoEntrenamiento'
       });
     }
 
-    console.log('Procesando recomendación de metodología para:', userData.userName);
+    // Determinar si es el formato nuevo (entrenamiento en casa) o el formato original
+    const isHomeTrainingRequest = equipamiento && tipoEntrenamiento;
+
+    console.log('Procesando recomendación de metodología para:',
+      isHomeTrainingRequest ? datosUsuario?.nombre : userData?.userName);
 
     // Verificar si OpenAI está disponible
     if (!openai) {
@@ -283,8 +287,42 @@ router.post('/recomendar-metodologia', async (req, res) => {
       });
     }
 
-    // Crear prompt específico para recomendación de metodología
-    const methodologyPrompt = `Eres un entrenador personal experto con IA avanzada especializado en seleccionar la metodología de entrenamiento perfecta para cada usuario.
+    // Crear prompt específico según el tipo de solicitud
+    let methodologyPrompt;
+
+    if (isHomeTrainingRequest) {
+      // Prompt específico para entrenamiento en casa
+      methodologyPrompt = `Eres un entrenador personal experto especializado en entrenamientos en casa. Tu tarea es crear un entrenamiento personalizado y detallado.
+
+INFORMACIÓN DEL USUARIO:
+- Nombre: ${datosUsuario?.nombre || 'Usuario'}
+- Nivel: ${datosUsuario?.nivel || 'intermedio'}
+- Objetivos: ${datosUsuario?.objetivos || 'mantener forma'}
+- Limitaciones: ${datosUsuario?.limitaciones?.length > 0 ? datosUsuario.limitaciones.join(', ') : 'Ninguna'}
+
+EQUIPAMIENTO SELECCIONADO: ${equipamiento}
+- Equipos disponibles: ${equipoDisponible?.join(', ') || 'peso corporal'}
+
+TIPO DE ENTRENAMIENTO: ${tipoEntrenamiento}
+- Estilo: ${estiloEntrenamiento?.name || 'Funcional'}
+- Descripción: ${estiloEntrenamiento?.description || 'Movimientos naturales'}
+- Duración: ${estiloEntrenamiento?.duration || '30-45 min'}
+- Frecuencia: ${estiloEntrenamiento?.frequency || '4-5 días/semana'}
+- Enfoque: ${estiloEntrenamiento?.focus || 'Fuerza funcional'}
+
+INSTRUCCIONES:
+1. Crea un entrenamiento COMPLETO y DETALLADO
+2. Incluye calentamiento, ejercicios principales y enfriamiento
+3. Especifica series, repeticiones y descansos
+4. Adapta los ejercicios al equipamiento disponible
+5. Considera las limitaciones del usuario
+6. Proporciona variaciones para diferentes niveles
+7. Incluye consejos de técnica y seguridad
+
+Responde ÚNICAMENTE con el texto del entrenamiento, sin formato JSON. Estructura el entrenamiento de forma clara y profesional.`;
+    } else {
+      // Prompt original para recomendación de metodología
+      methodologyPrompt = `Eres un entrenador personal experto con IA avanzada especializado en seleccionar la metodología de entrenamiento perfecta para cada usuario.
 
 DATOS DEL USUARIO:
 - Nombre: ${userData.userName}
@@ -370,7 +408,19 @@ Responde en formato JSON:
     const contenido = response.choices[0].message.content.trim();
     console.log('Respuesta de OpenAI para metodología:', contenido);
 
-    // Intentar parsear la respuesta JSON
+    if (isHomeTrainingRequest) {
+      // Para entrenamientos en casa, devolver directamente el contenido
+      res.json({
+        success: true,
+        recomendacion: contenido,
+        equipamiento: equipamiento,
+        tipoEntrenamiento: tipoEntrenamiento,
+        timestamp: new Date().toISOString()
+      });
+      return;
+    }
+
+    // Para el formato original, intentar parsear la respuesta JSON
     let recomendacion;
     try {
       recomendacion = JSON.parse(contenido);

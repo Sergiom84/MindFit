@@ -40,13 +40,20 @@ Una aplicación de entrenamiento personal impulsada por IA que adapta rutinas, n
 
 ## 🛠️ Tecnologías Utilizadas
 
-- **Frontend**: React 18 + Vite
-- **UI Components**: Radix UI + Tailwind CSS
+- **Frontend**: React 19.1.0 + Vite 6.3.5
+- **Backend**: Express.js 4.18.2 + Node.js
+- **Base de Datos**: PostgreSQL con driver pg 8.16.3
+- **UI Components**: Radix UI + Tailwind CSS 4.1.7
 - **IA**: OpenAI GPT-4o con prompts personalizados
+- **Autenticación**: bcryptjs (hash de contraseñas)
 - **Análisis de Video**: MediaPipe (Pose Detection)
 - **Gestión de Estado**: React Context
-- **Routing**: React Router DOM
-- **Iconos**: Lucide React
+- **Routing**: React Router DOM 7.6.1
+- **Forms**: React Hook Form 7.56.3 + Zod validation
+- **Animations**: Framer Motion 12.15.0
+- **Charts**: Recharts 2.15.3
+- **Iconos**: Lucide React 0.510.0
+- **Despliegue**: Render (aplicación web completa)
 
 ## 📋 Requisitos Previos
 

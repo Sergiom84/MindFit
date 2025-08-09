@@ -21,7 +21,11 @@ import {
 
 const HomeTrainingSection = () => {
   const [selectedEquipment, setSelectedEquipment] = useState('minimal')
+  const [selectedTrainingType, setSelectedTrainingType] = useState('functional')
   const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false)
+  const [isGeneratingWorkout, setIsGeneratingWorkout] = useState(false)
+  const [generatedWorkout, setGeneratedWorkout] = useState(null)
+  const [isWorkoutModalOpen, setIsWorkoutModalOpen] = useState(false)
   const { entrenamientoCasa, userData, progreso } = useUserContext()
 
   // Determinar equipamiento inicial basado en el usuario
@@ -37,6 +41,54 @@ const HomeTrainingSection = () => {
       }
     }
   }, [entrenamientoCasa.equipoDisponible]);
+
+  // Función para generar entrenamiento con IA
+  const generateWorkout = async () => {
+    setIsGeneratingWorkout(true);
+
+    try {
+      const equipmentLevel = equipmentLevels[selectedEquipment];
+      const trainingStyle = trainingStyles.find((style, index) => {
+        if (selectedTrainingType === 'functional') return index === 0;
+        if (selectedTrainingType === 'hiit') return index === 1;
+        if (selectedTrainingType === 'strength') return index === 2;
+        return false;
+      });
+
+      const response = await fetch('/api/recomendar-metodologia', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          equipamiento: selectedEquipment,
+          tipoEntrenamiento: selectedTrainingType,
+          equipoDisponible: equipmentLevel.equipment,
+          estiloEntrenamiento: trainingStyle,
+          datosUsuario: {
+            nombre: userData.nombre,
+            nivel: userData.nivel || 'intermedio',
+            objetivos: userData.objetivo_principal || 'mantener_forma',
+            limitaciones: userData.limitaciones || []
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al generar entrenamiento');
+      }
+
+      const data = await response.json();
+      setGeneratedWorkout(data.recomendacion);
+      setIsWorkoutModalOpen(true);
+
+    } catch (error) {
+      console.error('Error generando entrenamiento:', error);
+      alert('Error al generar entrenamiento. Por favor, inténtalo de nuevo.');
+    } finally {
+      setIsGeneratingWorkout(false);
+    }
+  };
 
   const equipmentLevels = {
     minimal: {
@@ -188,7 +240,7 @@ const HomeTrainingSection = () => {
         </div>
 
         {/* Estilos de Entrenamiento */}
-        <Tabs defaultValue="functional" className="mb-8">
+        <Tabs value={selectedTrainingType} onValueChange={setSelectedTrainingType} className="mb-8">
           <TabsList className="grid w-full grid-cols-3 bg-gray-900">
             <TabsTrigger value="functional">Funcional</TabsTrigger>
             <TabsTrigger value="hiit">HIIT</TabsTrigger>
@@ -237,6 +289,40 @@ const HomeTrainingSection = () => {
             </TabsContent>
           ))}
         </Tabs>
+
+        {/* Botón para Generar Entrenamiento con IA */}
+        <div className="text-center mb-8">
+          <div className="bg-gray-900 border border-yellow-400/20 rounded-lg p-6">
+            <h3 className="text-white text-xl font-semibold mb-4">
+              Generar Entrenamiento Personalizado
+            </h3>
+            <p className="text-gray-400 mb-6">
+              Basado en tu equipamiento: <span className="text-yellow-400 font-semibold">
+                {equipmentLevels[selectedEquipment].name}
+              </span> y tipo de entrenamiento: <span className="text-yellow-400 font-semibold">
+                {selectedTrainingType === 'functional' ? 'Funcional' :
+                 selectedTrainingType === 'hiit' ? 'HIIT' : 'Fuerza'}
+              </span>
+            </p>
+            <Button
+              onClick={generateWorkout}
+              disabled={isGeneratingWorkout}
+              className="bg-yellow-400 text-black hover:bg-yellow-300 px-8 py-3 text-lg font-semibold"
+            >
+              {isGeneratingWorkout ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black mr-2"></div>
+                  Generando...
+                </>
+              ) : (
+                <>
+                  <Target className="w-5 h-5 mr-2" />
+                  Generar Mi Entrenamiento
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
 
         {/* Estadísticas Personales del Usuario */}
         <Card className="bg-gray-900 border-yellow-400/20 mb-8">
@@ -360,6 +446,73 @@ const HomeTrainingSection = () => {
           isOpen={isEvaluationModalOpen}
           onClose={() => setIsEvaluationModalOpen(false)}
         />
+
+        {/* Modal de Entrenamiento Generado */}
+        {isWorkoutModalOpen && generatedWorkout && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-900 border border-yellow-400/20 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-white mb-2">
+                      {selectedTrainingType === 'functional' ? 'Funcional en Casa' :
+                       selectedTrainingType === 'hiit' ? 'HIIT Doméstico' : 'Fuerza en Casa'}
+                    </h2>
+                    <p className="text-gray-400">
+                      Entrenamiento personalizado con {equipmentLevels[selectedEquipment].name.toLowerCase()}
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => setIsWorkoutModalOpen(false)}
+                    variant="outline"
+                    className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                  >
+                    ✕
+                  </Button>
+                </div>
+
+                {/* Información del entrenamiento */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="text-center bg-gray-800 rounded-lg p-4">
+                    <Clock className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
+                    <div className="text-white font-semibold">30-45 min</div>
+                    <div className="text-gray-400 text-sm">Duración</div>
+                  </div>
+                  <div className="text-center bg-gray-800 rounded-lg p-4">
+                    <Calendar className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
+                    <div className="text-white font-semibold">4-5 días/semana</div>
+                    <div className="text-gray-400 text-sm">Frecuencia</div>
+                  </div>
+                  <div className="text-center bg-gray-800 rounded-lg p-4">
+                    <Target className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
+                    <div className="text-white font-semibold">Fuerza funcional y movilidad</div>
+                    <div className="text-gray-400 text-sm">Enfoque</div>
+                  </div>
+                </div>
+
+                {/* Contenido del entrenamiento generado por IA */}
+                <div className="bg-gray-800 rounded-lg p-6">
+                  <h3 className="text-white font-semibold mb-4 flex items-center">
+                    <Play className="w-5 h-5 mr-2 text-green-400" />
+                    Ejercicios Principales:
+                  </h3>
+                  <div className="text-gray-300 whitespace-pre-wrap leading-relaxed">
+                    {generatedWorkout}
+                  </div>
+                </div>
+
+                <div className="mt-6 flex justify-center">
+                  <Button
+                    onClick={() => setIsWorkoutModalOpen(false)}
+                    className="bg-yellow-400 text-black hover:bg-yellow-300 px-8 py-2"
+                  >
+                    Cerrar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
