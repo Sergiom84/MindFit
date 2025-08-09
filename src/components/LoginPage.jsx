@@ -70,48 +70,48 @@ const LoginPage = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-        <div className="max-w-4xl w-full">
+      <div className="login-container min-h-screen bg-black text-white flex items-center justify-center p-4">
+        <div className="max-w-5xl w-full">
           {/* Header */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <div className="flex items-center justify-center mb-4">
               <Brain className="w-16 h-16 text-yellow-400 mr-4" />
-              <h1 className="text-6xl font-extrabold text-yellow-400">MindFit IA</h1>
+              <h1 className="text-5xl font-extrabold text-yellow-400">MindFit IA</h1>
             </div>
-            <p className="text-xl text-gray-300">Tu entrenador personal con inteligencia artificial</p>
+            <p className="text-lg text-gray-300 font-medium">Tu entrenador personal con inteligencia artificial</p>
           </div>
 
           {/* Contenedor principal con pestañas */}
-          <div className="max-w-2xl mx-auto bg-gray-900/40 border border-yellow-400/20 rounded-2xl p-4">
+          <div className="max-w-3xl mx-auto login-modal login-glass-effect rounded-3xl p-6">
             {/* Tabs superiores */}
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-4 mb-6">
               <button
-                className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border border-yellow-400/20 bg-yellow-400 text-black"
+                className="login-tab-active flex-1 flex items-center justify-center gap-3 py-2.5 px-6 rounded-xl border border-yellow-400/20"
                 disabled
               >
                 <LogIn className="w-4 h-4" /> Iniciar Sesión
               </button>
               <button
                 onClick={() => (window.location.href = '/register')}
-                className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border border-yellow-400/20 text-gray-300 hover:text-yellow-300"
+                className="login-tab-inactive flex-1 flex items-center justify-center gap-3 py-2.5 px-6 rounded-xl border border-yellow-400/20 hover:bg-yellow-400/10"
               >
                 <UserPlus className="w-4 h-4" /> Registrarse
               </button>
             </div>
 
             {/* Formulario de Login */}
-            <div className="max-w-md mx-auto">
-            <Card className="bg-gray-900 border-yellow-400/20">
-              <CardHeader className="text-center">
-                <CardTitle className="text-white text-2xl">Iniciar Sesión</CardTitle>
-                <p className="text-gray-400">Accede a tu cuenta MindFit</p>
+            <div className="mx-auto px-8">
+            <Card className="login-card bg-gray-900 border-yellow-400/20">
+              <CardHeader className="text-center pb-4">
+                <CardTitle className="login-header-title text-white text-2xl">Iniciar Sesión</CardTitle>
+                <p className="login-subtitle text-gray-400">Accede a tu cuenta MindFit</p>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-12 pb-6">
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <Label htmlFor="email" className="text-gray-300">Email</Label>
+                    <Label htmlFor="email" className="login-form-label text-gray-300">Email</Label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Mail className="login-input-icon absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
                       <Input
                         id="email"
                         type="email"
@@ -120,16 +120,16 @@ const LoginPage = () => {
                           setEmail(e.target.value);
                         }}
                         placeholder="tu@email.com"
-                        className="bg-gray-800 border-gray-600 text-white pl-10"
+                        className="login-input bg-gray-800 border-gray-600 text-white pl-12"
                         autoComplete="email"
                         required
                       />
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="password" className="text-gray-300">Contraseña</Label>
+                    <Label htmlFor="password" className="login-form-label text-gray-300">Contraseña</Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Lock className="login-input-icon absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
                       <Input
                         id="password"
                         type={showPassword ? 'text' : 'password'}
@@ -138,14 +138,14 @@ const LoginPage = () => {
                           setPassword(e.target.value);
                         }}
                         placeholder="Tu contraseña"
-                        className="bg-gray-800 border-gray-600 text-white pl-10 pr-10"
+                        className="login-input bg-gray-800 border-gray-600 text-white pl-12 pr-12"
                         autoComplete="current-password"
                         required
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword((v) => !v)}
-                        className="absolute right-3 top-2.5 text-gray-400 hover:text-yellow-400"
+                        className="login-toggle-password absolute right-3 top-3 text-gray-400 hover:text-yellow-400"
                         aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -156,7 +156,7 @@ const LoginPage = () => {
                   <Button
                     type="submit"
                     disabled={isLoggingIn || isLoading}
-                    className="w-full bg-yellow-400 text-black hover:bg-yellow-300 disabled:opacity-50"
+                    className="login-button w-full bg-yellow-400 text-black hover:bg-yellow-300 disabled:opacity-50 mt-6"
                     >
                     {isLoggingIn || isLoading ? (
                       <>
@@ -176,16 +176,16 @@ const LoginPage = () => {
 
             {/* Enlace a registro */}
             <div className="text-center mt-6">
-              <p className="text-gray-400">
+              <p className="text-gray-400 text-base">
                 ¿No tienes cuenta?{' '}
                 <Button
                   variant="link"
                   onClick={() => {
                     window.location.href = '/register';
                   }}
-                  className="text-yellow-400 hover:text-yellow-300 p-0"
+                  className="login-link text-yellow-400 hover:text-yellow-300 p-0 text-base"
                 >
-                  <UserPlus className="w-4 h-4 mr-1" />
+                  <UserPlus className="w-4 h-4 mr-2" />
                   Crear cuenta
                 </Button>
               </p>
@@ -197,7 +197,7 @@ const LoginPage = () => {
 
           {/* Error de login */}
           {loginError && (
-            <Alert className="border-red-400 bg-red-400/10 mb-6">
+            <Alert className="login-error border-red-400 bg-red-400/10 mb-4 max-w-3xl mx-auto">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-red-300">
                 <strong>Error:</strong> {loginError}
@@ -206,9 +206,9 @@ const LoginPage = () => {
           )}
 
           {/* Footer */}
-          <div className="text-center mt-12 text-gray-500 text-sm">
-            <p>MindFit App - Tu entrenador personal inteligente</p>
-            <p className="mt-2">Datos seguros y privados</p>
+          <div className="text-center mt-8 text-gray-500 text-sm">
+            <p className="font-medium">MindFit App - Tu entrenador personal inteligente</p>
+            <p className="mt-1">Datos seguros y privados</p>
           </div>
         </div>
       </div>
