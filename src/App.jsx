@@ -41,6 +41,7 @@ import {
   Music,
   CheckCircle,
   XCircle,
+  X,
   Brain,
   Smartphone,
   ImageIcon,
@@ -408,6 +409,7 @@ const MethodologiesScreen = () => {
   const [methodologyProgress, setMethodologyProgress] = useState(0)
   const [startDate, setStartDate] = useState(null)
   const [endDate, setEndDate] = useState(null)
+  const [activeMethodologyFromDB, setActiveMethodologyFromDB] = useState(null)
   const { currentUser } = useAuth()
   const { metodologiaActiva, setMetodologiaActiva, updateMetodologiaProgress, completarEntrenamiento } = useUserContext()
 
@@ -814,7 +816,7 @@ const MethodologiesScreen = () => {
   };
 
   // Función unificada para seleccionar metodología
-  const selectMethodology = (methodology, source) => {
+  const selectMethodology = async (methodology, source) => {
     setSelectedMethodology(methodology);
 
     // Establecer el modo de selección
@@ -850,11 +852,175 @@ const MethodologiesScreen = () => {
 
     // Guardar en el contexto global
     setMetodologiaActiva(methodology, start.toISOString(), end.toISOString());
+
+    // Guardar en base de datos
+    await saveMethodologyToDatabase(methodology, source, start, end, durationWeeks);
+  };
+
+  // Función para guardar metodología en base de datos
+  const saveMethodologyToDatabase = async (methodology, selectionMode, startDate, endDate, durationWeeks) => {
+    if (!currentUser) return;
+
+    try {
+      const methodologyData = {
+        user_id: currentUser.id,
+        methodology_name: methodology.name,
+        methodology_description: methodology.description,
+        methodology_icon: methodology.icon?.name || 'Dumbbell',
+        methodology_version: methodology.version || 'adapted',
+        selection_mode: selectionMode === 'ai' ? 'automatic' : selectionMode,
+        program_duration: methodology.programDuration,
+        difficulty_level: methodology.difficulty || 'intermediate',
+        fecha_inicio: startDate.toISOString().split('T')[0],
+        fecha_fin: endDate.toISOString().split('T')[0],
+        methodology_data: JSON.stringify({
+          frequency: methodology.frequency,
+          focus: methodology.focus,
+          equipment: methodology.equipment,
+          originalData: methodology
+        }),
+        ai_recommendation_data: selectionMode === 'automatic' && aiRecommendation ?
+          JSON.stringify(aiRecommendation) : '{}'
+      };
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/methodologies`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(methodologyData)
+      });
+
+      if (response.ok) {
+        const savedMethodology = await response.json();
+        console.log('✅ Metodología guardada en BD:', savedMethodology);
+
+        // Crear semanas del programa
+        await createWeeklyProgression(savedMethodology.id, durationWeeks, startDate);
+      } else {
+        console.error('❌ Error al guardar metodología:', await response.text());
+      }
+    } catch (error) {
+      console.error('❌ Error al guardar metodología:', error);
+    }
+  };
+
+  // Función para crear progresión semanal
+  const createWeeklyProgression = async (methodologyId, durationWeeks, startDate) => {
+    try {
+      const weeks = [];
+      for (let i = 1; i <= durationWeeks; i++) {
+        const weekStart = new Date(startDate);
+        weekStart.setDate(startDate.getDate() + ((i - 1) * 7));
+
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+
+        weeks.push({
+          methodology_id: methodologyId,
+          semana_numero: i,
+          fecha_inicio_semana: weekStart.toISOString().split('T')[0],
+          fecha_fin_semana: weekEnd.toISOString().split('T')[0],
+          entrenamientos_totales: 3 // valor por defecto, se puede ajustar según la metodología
+        });
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/methodologies/weeks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ weeks })
+      });
+
+      if (response.ok) {
+        console.log('✅ Semanas creadas correctamente');
+      } else {
+        console.error('❌ Error al crear semanas:', await response.text());
+      }
+    } catch (error) {
+      console.error('❌ Error al crear semanas:', error);
+    }
+  };
+
+  // Función para cargar metodología activa desde base de datos
+  const loadActiveMethodology = async () => {
+    if (!currentUser) return;
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/methodologies/active/${currentUser.id}`);
+
+      if (response.ok) {
+        const activeMethodology = await response.json();
+        if (activeMethodology) {
+          setActiveMethodologyFromDB(activeMethodology);
+
+          // Reconstruir el objeto metodología desde los datos guardados
+          const methodologyData = JSON.parse(activeMethodology.methodology_data || '{}');
+          const reconstructedMethodology = {
+            name: activeMethodology.methodology_name,
+            description: activeMethodology.methodology_description,
+            programDuration: activeMethodology.program_duration,
+            difficulty: activeMethodology.difficulty_level,
+            version: activeMethodology.methodology_version,
+            ...methodologyData.originalData
+          };
+
+          setSelectedMethodology(reconstructedMethodology);
+          setSelectionMode(activeMethodology.selection_mode);
+          setStartDate(new Date(activeMethodology.fecha_inicio));
+          setEndDate(new Date(activeMethodology.fecha_fin));
+          setMethodologyProgress(activeMethodology.progreso_porcentaje);
+
+          console.log('✅ Metodología activa cargada desde BD:', activeMethodology);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error al cargar metodología activa:', error);
+    }
+  };
+
+  // Función para cancelar metodología activa
+  const cancelActiveMethodology = async () => {
+    if (!activeMethodologyFromDB) return;
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/methodologies/${activeMethodologyFromDB.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          estado: 'cancelado',
+          cancelled_at: new Date().toISOString()
+        })
+      });
+
+      if (response.ok) {
+        // Limpiar estado local
+        setSelectedMethodology(null);
+        setActiveMethodologyFromDB(null);
+        setMethodologyProgress(0);
+        setStartDate(null);
+        setEndDate(null);
+
+        console.log('✅ Metodología cancelada correctamente');
+      }
+    } catch (error) {
+      console.error('❌ Error al cancelar metodología:', error);
+    }
   };
 
   const toggleMethodExpansion = (index) => {
     setExpandedMethod(expandedMethod === index ? null : index)
   }
+
+  // Cargar metodología activa al iniciar
+  useEffect(() => {
+    if (currentUser && !selectedMethodology) {
+      loadActiveMethodology();
+    }
+  }, [currentUser]);
 
   // Función para calcular progreso basado en entrenamientos completados
   const calculateProgress = () => {
@@ -1020,6 +1186,15 @@ const MethodologiesScreen = () => {
                     Manual
                   </Badge>
                 )}
+                <Button
+                  onClick={cancelActiveMethodology}
+                  variant="outline"
+                  size="sm"
+                  className="border-red-400/40 text-red-400 hover:bg-red-400/10 hover:border-red-400"
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Cancelar
+                </Button>
               </div>
             </div>
 
