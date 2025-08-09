@@ -7,15 +7,11 @@ import SpaceEvaluationModal from './SpaceEvaluationModal'
 import WorkoutExerciseModal from './WorkoutExerciseModal'
 import { useUserContext } from '@/contexts/UserContext'
 import {
-  Home,
   Dumbbell,
   Target,
   Clock,
-  Users,
   CheckCircle,
   Play,
-  Smartphone,
-  Wifi,
   Calendar,
   TrendingUp,
   Circle,
@@ -457,28 +453,7 @@ const HomeTrainingSection = () => {
     }
   ]
 
-  const adaptationFeatures = [
-    {
-      title: 'Análisis del Espacio',
-      description: 'La IA evalúa tu espacio disponible y adapta los ejercicios',
-      icon: <Home className="w-5 h-5 text-blue-400" />
-    },
-    {
-      title: 'Progresión Inteligente',
-      description: 'Aumenta la dificultad sin necesidad de más equipamiento',
-      icon: <TrendingUp className="w-5 h-5 text-green-400" />
-    },
-    {
-      title: 'Rutinas Flexibles',
-      description: 'Se adapta a tu horario y tiempo disponible',
-      icon: <Clock className="w-5 h-5 text-yellow-400" />
-    },
-    {
-      title: 'Sin Conexión',
-      description: 'Funciona completamente offline una vez descargado',
-      icon: <Wifi className="w-5 h-5 text-purple-400" />
-    }
-  ]
+
 
   return (
     <div className="min-h-screen bg-black text-white p-6 pb-24">
@@ -859,57 +834,9 @@ const HomeTrainingSection = () => {
           </CardContent>
         </Card>
 
-        {/* Características de Adaptación */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {adaptationFeatures.map((feature, index) => (
-            <Card key={index} className="bg-gray-900 border-yellow-400/20">
-              <CardContent className="p-6">
-                <div className="flex items-start space-x-3">
-                  {feature.icon}
-                  <div>
-                    <h3 className="text-white font-semibold mb-2">{feature.title}</h3>
-                    <p className="text-gray-400 text-sm">{feature.description}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
 
-        {/* Plan de Progresión */}
-        <Card className="bg-gray-900 border-yellow-400/20 mb-8">
-          <CardHeader>
-            <CardTitle className="text-white">Plan de Progresión Inteligente</CardTitle>
-            <CardDescription className="text-gray-400">
-              Cómo la IA adapta tu entrenamiento sin necesidad de más equipamiento
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-black font-bold">1</div>
-                <div>
-                  <h4 className="text-white font-semibold">Semanas 1-2: Adaptación</h4>
-                  <p className="text-gray-400 text-sm">Aprendizaje de movimientos básicos y evaluación de capacidades</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-black font-bold">2</div>
-                <div>
-                  <h4 className="text-white font-semibold">Semanas 3-6: Progresión</h4>
-                  <p className="text-gray-400 text-sm">Aumento de repeticiones, series y variaciones más complejas</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-black font-bold">3</div>
-                <div>
-                  <h4 className="text-white font-semibold">Semanas 7+: Especialización</h4>
-                  <p className="text-gray-400 text-sm">Técnicas avanzadas, tempo controlado y periodización</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+
+
 
         <div className="text-center">
           <Button
