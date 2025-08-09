@@ -74,10 +74,15 @@ app.use((req, res, next) => {
 });
 
 // Rutas
+console.log('📋 Registrando rutas...');
 app.use('/api', iaAdaptativa);
+console.log('✅ iaAdaptativa registrado');
 app.use('/api', authRoutes);
+console.log('✅ authRoutes registrado');
 app.use('/api', injuriesRoutes);
+console.log('✅ injuriesRoutes registrado');
 app.use('/api', poseRoutes);
+console.log('✅ poseRoutes registrado');
 
 // Crear directorio de uploads si no existe
 if (!fs.existsSync('uploads')) {
@@ -89,6 +94,35 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     message: 'Backend MindFit funcionando correctamente',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Endpoint para debug de rutas
+app.get('/debug/routes', (req, res) => {
+  const routes = [];
+  app._router.stack.forEach((middleware) => {
+    if (middleware.route) {
+      routes.push({
+        path: middleware.route.path,
+        methods: Object.keys(middleware.route.methods)
+      });
+    } else if (middleware.name === 'router') {
+      middleware.handle.stack.forEach((handler) => {
+        if (handler.route) {
+          routes.push({
+            path: handler.route.path,
+            methods: Object.keys(handler.route.methods)
+          });
+        }
+      });
+    }
+  });
+
+  res.json({
+    status: 'ok',
+    message: 'Rutas registradas',
+    routes: routes,
     timestamp: new Date().toISOString()
   });
 });
