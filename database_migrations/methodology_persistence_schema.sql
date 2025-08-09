@@ -31,12 +31,7 @@ CREATE TABLE IF NOT EXISTS user_selected_methodologies (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP,
-    cancelled_at TIMESTAMP,
-    
-    -- Constraint: solo una metodología activa por usuario (comentado por compatibilidad)
-    -- CONSTRAINT unique_active_methodology_per_user
-    --     EXCLUDE (user_id WITH =)
-    --     WHERE (estado = 'activo')
+    cancelled_at TIMESTAMP
 );
 
 -- 2. TABLA: Progreso semanal de metodologías
@@ -126,92 +121,8 @@ CREATE INDEX IF NOT EXISTS idx_methodology_sessions_user ON methodology_training
 CREATE INDEX IF NOT EXISTS idx_methodology_sessions_methodology ON methodology_training_sessions(methodology_id);
 CREATE INDEX IF NOT EXISTS idx_methodology_sessions_fecha ON methodology_training_sessions(fecha_sesion);
 
--- 5. FUNCIÓN para actualizar progreso de metodología automáticamente
-CREATE OR REPLACE FUNCTION update_methodology_progress()
-RETURNS TRIGGER AS $$
-BEGIN
-    -- Actualizar progreso de la semana cuando se completa una sesión
-    IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
-        UPDATE methodology_weekly_progress 
-        SET porcentaje_completado = (
-            SELECT ROUND(
-                (COUNT(*)::float / entrenamientos_totales::float) * 100
-            )
-            FROM methodology_training_sessions mts
-            WHERE mts.week_id = NEW.week_id
-        ),
-        tiempo_total_minutos = (
-            SELECT COALESCE(SUM(duracion_minutos), 0)
-            FROM methodology_training_sessions mts
-            WHERE mts.week_id = NEW.week_id
-        ),
-        updated_at = CURRENT_TIMESTAMP
-        WHERE id = NEW.week_id;
-        
-        -- Marcar semana como completada si se alcanza 100%
-        UPDATE methodology_weekly_progress 
-        SET estado = 'completada',
-            completed_at = CURRENT_TIMESTAMP
-        WHERE id = NEW.week_id 
-        AND porcentaje_completado = 100
-        AND estado != 'completada';
-        
-        -- Actualizar progreso general de la metodología
-        UPDATE user_selected_methodologies 
-        SET progreso_porcentaje = (
-            SELECT ROUND(
-                (COUNT(*) FILTER (WHERE estado = 'completada')::float / COUNT(*)::float) * 100
-            )
-            FROM methodology_weekly_progress 
-            WHERE methodology_id = (
-                SELECT methodology_id FROM methodology_weekly_progress WHERE id = NEW.week_id
-            )
-        ),
-        updated_at = CURRENT_TIMESTAMP
-        WHERE id = (
-            SELECT methodology_id FROM methodology_weekly_progress WHERE id = NEW.week_id
-        );
-        
-        -- Marcar metodología como completada si todas las semanas están completadas
-        UPDATE user_selected_methodologies 
-        SET estado = 'completado',
-            completed_at = CURRENT_TIMESTAMP
-        WHERE progreso_porcentaje = 100
-        AND estado = 'activo';
-    END IF;
-    
-    RETURN COALESCE(NEW, OLD);
-END;
-$$ LANGUAGE plpgsql;
-
--- 6. TRIGGER para actualizar progreso automáticamente
-DROP TRIGGER IF EXISTS trigger_update_methodology_progress ON methodology_training_sessions;
-CREATE TRIGGER trigger_update_methodology_progress
-    AFTER INSERT OR UPDATE ON methodology_training_sessions
-    FOR EACH ROW
-    EXECUTE FUNCTION update_methodology_progress();
-
--- 7. FUNCIÓN para actualizar timestamp automáticamente
-CREATE OR REPLACE FUNCTION update_methodology_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- 8. TRIGGERS para updated_at automático
-DROP TRIGGER IF EXISTS trigger_methodology_updated_at ON user_selected_methodologies;
-CREATE TRIGGER trigger_methodology_updated_at
-    BEFORE UPDATE ON user_selected_methodologies
-    FOR EACH ROW
-    EXECUTE FUNCTION update_methodology_updated_at();
-
-DROP TRIGGER IF EXISTS trigger_weekly_progress_updated_at ON methodology_weekly_progress;
-CREATE TRIGGER trigger_weekly_progress_updated_at
-    BEFORE UPDATE ON methodology_weekly_progress
-    FOR EACH ROW
-    EXECUTE FUNCTION update_methodology_updated_at();
+-- 5. NOTA: Funciones y triggers están en archivo separado
+-- Para evitar errores, ejecutar después: methodology_functions_triggers.sql
 
 -- =====================================================
 -- CONSULTAS DE VERIFICACIÓN
