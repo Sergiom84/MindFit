@@ -378,6 +378,7 @@ Responde en formato JSON:
     "Cualquier advertencia o consideración especial"
   ]
 }`;
+    }
 
     // Llamada a OpenAI
     let response;
@@ -391,7 +392,9 @@ Responde en formato JSON:
           },
           {
             role: "user",
-            content: `Por favor, recomienda la mejor metodología de entrenamiento para ${userData.userName} basándote en toda la información proporcionada.`
+            content: `Por favor, ${isHomeTrainingRequest ?
+              `genera un entrenamiento personalizado para ${datosUsuario?.nombre || 'el usuario'}` :
+              `recomienda la mejor metodología de entrenamiento para ${userData?.userName || 'el usuario'} basándote en toda la información proporcionada`}.`
           }
         ],
         temperature: 0.7,
@@ -417,41 +420,42 @@ Responde en formato JSON:
         tipoEntrenamiento: tipoEntrenamiento,
         timestamp: new Date().toISOString()
       });
-      return;
+    } else {
+      // Para el formato original, intentar parsear la respuesta JSON
+      let recomendacion;
+      try {
+        recomendacion = JSON.parse(contenido);
+      } catch (parseError) {
+        console.error('Error parseando respuesta JSON:', parseError);
+        // Fallback si no se puede parsear
+        recomendacion = {
+          recommendedMethodology: "Entrenamiento en Casa",
+          reason: `Basándome en tu perfil, ${userData.userName}, recomiendo comenzar con entrenamiento en casa para establecer una base sólida.`,
+          confidence: 75,
+          keyFactors: ["Flexibilidad de horarios", "Adaptabilidad", "Progresión gradual"],
+          alternatives: [],
+          warnings: ["Consulta con un profesional si tienes dudas"]
+        };
+      }
+
+      // Validar que la metodología recomendada existe
+      if (availableMethodologies) {
+        const methodologyExists = availableMethodologies.some(m =>
+          m.name.toLowerCase() === recomendacion.recommendedMethodology.toLowerCase()
+        );
+
+        if (!methodologyExists) {
+          recomendacion.recommendedMethodology = "Entrenamiento en Casa";
+          recomendacion.reason = `He ajustado la recomendación a una metodología disponible. ${recomendacion.reason}`;
+        }
+      }
+
+      res.json({
+        success: true,
+        ...recomendacion,
+        timestamp: new Date().toISOString()
+      });
     }
-
-    // Para el formato original, intentar parsear la respuesta JSON
-    let recomendacion;
-    try {
-      recomendacion = JSON.parse(contenido);
-    } catch (parseError) {
-      console.error('Error parseando respuesta JSON:', parseError);
-      // Fallback si no se puede parsear
-      recomendacion = {
-        recommendedMethodology: "Entrenamiento en Casa",
-        reason: `Basándome en tu perfil, ${userData.userName}, recomiendo comenzar con entrenamiento en casa para establecer una base sólida.`,
-        confidence: 75,
-        keyFactors: ["Flexibilidad de horarios", "Adaptabilidad", "Progresión gradual"],
-        alternatives: [],
-        warnings: ["Consulta con un profesional si tienes dudas"]
-      };
-    }
-
-    // Validar que la metodología recomendada existe
-    const methodologyExists = availableMethodologies.some(m =>
-      m.name.toLowerCase() === recomendacion.recommendedMethodology.toLowerCase()
-    );
-
-    if (!methodologyExists) {
-      recomendacion.recommendedMethodology = "Entrenamiento en Casa";
-      recomendacion.reason = `He ajustado la recomendación a una metodología disponible. ${recomendacion.reason}`;
-    }
-
-    res.json({
-      success: true,
-      ...recomendacion,
-      timestamp: new Date().toISOString()
-    });
 
   } catch (error) {
     console.error('Error en recomendación de metodología:', error);
