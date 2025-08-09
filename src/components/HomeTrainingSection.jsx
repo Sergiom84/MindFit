@@ -26,7 +26,6 @@ const HomeTrainingSection = () => {
   const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false)
   const [isGeneratingWorkout, setIsGeneratingWorkout] = useState(false)
   const [generatedWorkout, setGeneratedWorkout] = useState(null)
-  const [isWorkoutModalOpen, setIsWorkoutModalOpen] = useState(false)
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
   const [isExerciseModalOpen, setIsExerciseModalOpen] = useState(false)
   const { entrenamientoCasa, userData, progreso } = useUserContext()
@@ -84,7 +83,7 @@ const HomeTrainingSection = () => {
       const data = await response.json();
       setGeneratedWorkout(data.entrenamiento);
       setCurrentExerciseIndex(0);
-      setIsWorkoutModalOpen(true);
+      // No abrir modal, mostrar en la página
 
     } catch (error) {
       console.error('Error generando entrenamiento:', error);
@@ -97,7 +96,6 @@ const HomeTrainingSection = () => {
   const startWorkout = () => {
     if (generatedWorkout && generatedWorkout.ejercicios && generatedWorkout.ejercicios.length > 0) {
       setCurrentExerciseIndex(0);
-      setIsWorkoutModalOpen(false);
       setIsExerciseModalOpen(true);
     }
   };
@@ -274,48 +272,6 @@ const HomeTrainingSection = () => {
             <TabsTrigger value="hiit">HIIT</TabsTrigger>
             <TabsTrigger value="strength">Fuerza</TabsTrigger>
           </TabsList>
-          
-          {trainingStyles.map((style, index) => (
-            <TabsContent key={index} value={index === 0 ? 'functional' : index === 1 ? 'hiit' : 'strength'}>
-              <Card className="bg-gray-900 border-yellow-400/20">
-                <CardHeader>
-                  <CardTitle className="text-white">{style.name}</CardTitle>
-                  <CardDescription className="text-gray-400">{style.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div className="text-center">
-                      <Clock className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
-                      <div className="text-white font-semibold">{style.duration}</div>
-                      <div className="text-gray-400 text-sm">Duración</div>
-                    </div>
-                    <div className="text-center">
-                      <Calendar className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
-                      <div className="text-white font-semibold">{style.frequency}</div>
-                      <div className="text-gray-400 text-sm">Frecuencia</div>
-                    </div>
-                    <div className="text-center">
-                      <Target className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
-                      <div className="text-white font-semibold">{style.focus}</div>
-                      <div className="text-gray-400 text-sm">Enfoque</div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-white font-semibold mb-3">Ejercicios Principales:</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {style.exercises.map((exercise, idx) => (
-                        <div key={idx} className="flex items-center space-x-2">
-                          <Play className="w-4 h-4 text-green-400" />
-                          <span className="text-gray-300">{exercise}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          ))}
         </Tabs>
 
         {/* Botón para Generar Entrenamiento con IA */}
@@ -351,6 +307,78 @@ const HomeTrainingSection = () => {
             </Button>
           </div>
         </div>
+
+        {/* Entrenamiento Generado */}
+        {generatedWorkout && (
+          <Card className="bg-gray-900 border-yellow-400/20 mb-8">
+            <CardHeader>
+              <CardTitle className="text-white text-xl">
+                {generatedWorkout.titulo || 'Entrenamiento Personalizado'}
+              </CardTitle>
+              <CardDescription className="text-gray-400">
+                {generatedWorkout.descripcion || 'Entrenamiento adaptado a tu equipamiento'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Información del entrenamiento */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="text-center bg-gray-800 rounded-lg p-4">
+                  <Clock className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
+                  <div className="text-white font-semibold">{generatedWorkout.duracionTotal || '30-45 min'}</div>
+                  <div className="text-gray-400 text-sm">Duración</div>
+                </div>
+                <div className="text-center bg-gray-800 rounded-lg p-4">
+                  <Calendar className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
+                  <div className="text-white font-semibold">{generatedWorkout.frecuencia || '4-5 días/semana'}</div>
+                  <div className="text-gray-400 text-sm">Frecuencia</div>
+                </div>
+                <div className="text-center bg-gray-800 rounded-lg p-4">
+                  <Target className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
+                  <div className="text-white font-semibold">{generatedWorkout.enfoque || 'Fuerza funcional y movilidad'}</div>
+                  <div className="text-gray-400 text-sm">Enfoque</div>
+                </div>
+              </div>
+
+              {/* Lista de ejercicios */}
+              <div className="mb-6">
+                <h3 className="text-white font-semibold mb-4 flex items-center">
+                  <Play className="w-5 h-5 mr-2 text-green-400" />
+                  Ejercicios Principales:
+                </h3>
+                <div className="space-y-3">
+                  {generatedWorkout.ejercicios && generatedWorkout.ejercicios.map((ejercicio, idx) => (
+                    <div key={idx} className="flex items-center justify-between bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-black font-bold">
+                          {idx + 1}
+                        </div>
+                        <div>
+                          <h4 className="text-white font-semibold">{ejercicio.nombre}</h4>
+                          <p className="text-gray-400 text-sm">
+                            {ejercicio.series} series × {ejercicio.tipo === 'tiempo' ? `${ejercicio.duracion}s` : `${ejercicio.repeticiones} reps`}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-yellow-400 border-yellow-400">
+                        {ejercicio.descanso}s descanso
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-center">
+                <Button
+                  onClick={startWorkout}
+                  className="bg-yellow-400 text-black hover:bg-yellow-300 px-8 py-3 text-lg font-semibold"
+                >
+                  <Play className="w-5 h-5 mr-2" />
+                  Comenzar Entrenamiento
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Estadísticas Personales del Usuario */}
         <Card className="bg-gray-900 border-yellow-400/20 mb-8">
@@ -475,96 +503,7 @@ const HomeTrainingSection = () => {
           onClose={() => setIsEvaluationModalOpen(false)}
         />
 
-        {/* Modal de Resumen del Entrenamiento */}
-        {isWorkoutModalOpen && generatedWorkout && (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 border border-yellow-400/20 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-6">
-                  <div>
-                    <h2 className="text-2xl font-bold text-white mb-2">
-                      {generatedWorkout.titulo || 'Entrenamiento Personalizado'}
-                    </h2>
-                    <p className="text-gray-400">
-                      {generatedWorkout.descripcion || 'Entrenamiento adaptado a tu equipamiento'}
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => setIsWorkoutModalOpen(false)}
-                    variant="outline"
-                    className="border-gray-600 text-gray-300 hover:bg-gray-800"
-                  >
-                    ✕
-                  </Button>
-                </div>
 
-                {/* Información del entrenamiento */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="text-center bg-gray-800 rounded-lg p-4">
-                    <Clock className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
-                    <div className="text-white font-semibold">{generatedWorkout.duracionTotal || '30-45 min'}</div>
-                    <div className="text-gray-400 text-sm">Duración</div>
-                  </div>
-                  <div className="text-center bg-gray-800 rounded-lg p-4">
-                    <Calendar className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
-                    <div className="text-white font-semibold">{generatedWorkout.frecuencia || '4-5 días/semana'}</div>
-                    <div className="text-gray-400 text-sm">Frecuencia</div>
-                  </div>
-                  <div className="text-center bg-gray-800 rounded-lg p-4">
-                    <Target className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
-                    <div className="text-white font-semibold">{generatedWorkout.enfoque || 'Fuerza funcional y movilidad'}</div>
-                    <div className="text-gray-400 text-sm">Enfoque</div>
-                  </div>
-                </div>
-
-                {/* Lista de ejercicios */}
-                <div className="bg-gray-800 rounded-lg p-6 mb-6">
-                  <h3 className="text-white font-semibold mb-4 flex items-center">
-                    <Play className="w-5 h-5 mr-2 text-green-400" />
-                    Ejercicios Principales:
-                  </h3>
-                  <div className="space-y-3">
-                    {generatedWorkout.ejercicios && generatedWorkout.ejercicios.map((ejercicio, idx) => (
-                      <div key={idx} className="flex items-center justify-between bg-gray-700 rounded-lg p-3">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-black font-bold">
-                            {idx + 1}
-                          </div>
-                          <div>
-                            <h4 className="text-white font-semibold">{ejercicio.nombre}</h4>
-                            <p className="text-gray-400 text-sm">
-                              {ejercicio.series} series × {ejercicio.tipo === 'tiempo' ? `${ejercicio.duracion}s` : `${ejercicio.repeticiones} reps`}
-                            </p>
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="text-yellow-400 border-yellow-400">
-                          {ejercicio.descanso}s descanso
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex justify-center space-x-4">
-                  <Button
-                    onClick={() => setIsWorkoutModalOpen(false)}
-                    variant="outline"
-                    className="border-gray-600 text-gray-300 hover:bg-gray-800 px-6 py-2"
-                  >
-                    Cerrar
-                  </Button>
-                  <Button
-                    onClick={startWorkout}
-                    className="bg-yellow-400 text-black hover:bg-yellow-300 px-8 py-2"
-                  >
-                    <Play className="w-5 h-5 mr-2" />
-                    Comenzar Entrenamiento
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Modal de Ejercicio Individual */}
         <WorkoutExerciseModal
