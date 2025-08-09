@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import SpaceEvaluationModal from './SpaceEvaluationModal'
+import WorkoutExerciseModal from './WorkoutExerciseModal'
 import { useUserContext } from '@/contexts/UserContext'
 import {
   Home,
@@ -26,6 +27,8 @@ const HomeTrainingSection = () => {
   const [isGeneratingWorkout, setIsGeneratingWorkout] = useState(false)
   const [generatedWorkout, setGeneratedWorkout] = useState(null)
   const [isWorkoutModalOpen, setIsWorkoutModalOpen] = useState(false)
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
+  const [isExerciseModalOpen, setIsExerciseModalOpen] = useState(false)
   const { entrenamientoCasa, userData, progreso } = useUserContext()
 
   // Determinar equipamiento inicial basado en el usuario
@@ -79,7 +82,8 @@ const HomeTrainingSection = () => {
       }
 
       const data = await response.json();
-      setGeneratedWorkout(data.recomendacion);
+      setGeneratedWorkout(data.entrenamiento);
+      setCurrentExerciseIndex(0);
       setIsWorkoutModalOpen(true);
 
     } catch (error) {
@@ -88,6 +92,30 @@ const HomeTrainingSection = () => {
     } finally {
       setIsGeneratingWorkout(false);
     }
+  };
+
+  const startWorkout = () => {
+    if (generatedWorkout && generatedWorkout.ejercicios && generatedWorkout.ejercicios.length > 0) {
+      setCurrentExerciseIndex(0);
+      setIsWorkoutModalOpen(false);
+      setIsExerciseModalOpen(true);
+    }
+  };
+
+  const nextExercise = () => {
+    if (currentExerciseIndex < generatedWorkout.ejercicios.length - 1) {
+      setCurrentExerciseIndex(currentExerciseIndex + 1);
+    } else {
+      // Entrenamiento completado
+      setIsExerciseModalOpen(false);
+      setGeneratedWorkout(null);
+      alert('¡Entrenamiento completado! ¡Excelente trabajo!');
+    }
+  };
+
+  const closeExerciseModal = () => {
+    setIsExerciseModalOpen(false);
+    setCurrentExerciseIndex(0);
   };
 
   const equipmentLevels = {
@@ -447,7 +475,7 @@ const HomeTrainingSection = () => {
           onClose={() => setIsEvaluationModalOpen(false)}
         />
 
-        {/* Modal de Entrenamiento Generado */}
+        {/* Modal de Resumen del Entrenamiento */}
         {isWorkoutModalOpen && generatedWorkout && (
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
             <div className="bg-gray-900 border border-yellow-400/20 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -455,11 +483,10 @@ const HomeTrainingSection = () => {
                 <div className="flex justify-between items-start mb-6">
                   <div>
                     <h2 className="text-2xl font-bold text-white mb-2">
-                      {selectedTrainingType === 'functional' ? 'Funcional en Casa' :
-                       selectedTrainingType === 'hiit' ? 'HIIT Doméstico' : 'Fuerza en Casa'}
+                      {generatedWorkout.titulo || 'Entrenamiento Personalizado'}
                     </h2>
                     <p className="text-gray-400">
-                      Entrenamiento personalizado con {equipmentLevels[selectedEquipment].name.toLowerCase()}
+                      {generatedWorkout.descripcion || 'Entrenamiento adaptado a tu equipamiento'}
                     </p>
                   </div>
                   <Button
@@ -475,44 +502,79 @@ const HomeTrainingSection = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   <div className="text-center bg-gray-800 rounded-lg p-4">
                     <Clock className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
-                    <div className="text-white font-semibold">30-45 min</div>
+                    <div className="text-white font-semibold">{generatedWorkout.duracionTotal || '30-45 min'}</div>
                     <div className="text-gray-400 text-sm">Duración</div>
                   </div>
                   <div className="text-center bg-gray-800 rounded-lg p-4">
                     <Calendar className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
-                    <div className="text-white font-semibold">4-5 días/semana</div>
+                    <div className="text-white font-semibold">{generatedWorkout.frecuencia || '4-5 días/semana'}</div>
                     <div className="text-gray-400 text-sm">Frecuencia</div>
                   </div>
                   <div className="text-center bg-gray-800 rounded-lg p-4">
                     <Target className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
-                    <div className="text-white font-semibold">Fuerza funcional y movilidad</div>
+                    <div className="text-white font-semibold">{generatedWorkout.enfoque || 'Fuerza funcional y movilidad'}</div>
                     <div className="text-gray-400 text-sm">Enfoque</div>
                   </div>
                 </div>
 
-                {/* Contenido del entrenamiento generado por IA */}
-                <div className="bg-gray-800 rounded-lg p-6">
+                {/* Lista de ejercicios */}
+                <div className="bg-gray-800 rounded-lg p-6 mb-6">
                   <h3 className="text-white font-semibold mb-4 flex items-center">
                     <Play className="w-5 h-5 mr-2 text-green-400" />
                     Ejercicios Principales:
                   </h3>
-                  <div className="text-gray-300 whitespace-pre-wrap leading-relaxed">
-                    {generatedWorkout}
+                  <div className="space-y-3">
+                    {generatedWorkout.ejercicios && generatedWorkout.ejercicios.map((ejercicio, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-gray-700 rounded-lg p-3">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-black font-bold">
+                            {idx + 1}
+                          </div>
+                          <div>
+                            <h4 className="text-white font-semibold">{ejercicio.nombre}</h4>
+                            <p className="text-gray-400 text-sm">
+                              {ejercicio.series} series × {ejercicio.tipo === 'tiempo' ? `${ejercicio.duracion}s` : `${ejercicio.repeticiones} reps`}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-yellow-400 border-yellow-400">
+                          {ejercicio.descanso}s descanso
+                        </Badge>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                <div className="mt-6 flex justify-center">
+                <div className="flex justify-center space-x-4">
                   <Button
                     onClick={() => setIsWorkoutModalOpen(false)}
-                    className="bg-yellow-400 text-black hover:bg-yellow-300 px-8 py-2"
+                    variant="outline"
+                    className="border-gray-600 text-gray-300 hover:bg-gray-800 px-6 py-2"
                   >
                     Cerrar
+                  </Button>
+                  <Button
+                    onClick={startWorkout}
+                    className="bg-yellow-400 text-black hover:bg-yellow-300 px-8 py-2"
+                  >
+                    <Play className="w-5 h-5 mr-2" />
+                    Comenzar Entrenamiento
                   </Button>
                 </div>
               </div>
             </div>
           </div>
         )}
+
+        {/* Modal de Ejercicio Individual */}
+        <WorkoutExerciseModal
+          exercise={generatedWorkout?.ejercicios?.[currentExerciseIndex]}
+          exerciseIndex={currentExerciseIndex}
+          totalExercises={generatedWorkout?.ejercicios?.length || 0}
+          onNext={nextExercise}
+          onClose={closeExerciseModal}
+          isOpen={isExerciseModalOpen}
+        />
       </div>
     </div>
   )

@@ -311,15 +311,38 @@ TIPO DE ENTRENAMIENTO: ${tipoEntrenamiento}
 - Enfoque: ${estiloEntrenamiento?.focus || 'Fuerza funcional'}
 
 INSTRUCCIONES:
-1. Crea un entrenamiento COMPLETO y DETALLADO
-2. Incluye calentamiento, ejercicios principales y enfriamiento
-3. Especifica series, repeticiones y descansos
-4. Adapta los ejercicios al equipamiento disponible
-5. Considera las limitaciones del usuario
-6. Proporciona variaciones para diferentes niveles
-7. Incluye consejos de técnica y seguridad
+Crea un entrenamiento estructurado en formato JSON con la siguiente estructura:
 
-Responde ÚNICAMENTE con el texto del entrenamiento, sin formato JSON. Estructura el entrenamiento de forma clara y profesional.`;
+{
+  "titulo": "Nombre del entrenamiento",
+  "descripcion": "Descripción breve",
+  "duracionTotal": "30-45 min",
+  "frecuencia": "4-5 días/semana",
+  "enfoque": "Fuerza funcional y movilidad",
+  "ejercicios": [
+    {
+      "nombre": "Sentadillas con peso corporal",
+      "descripcion": "Descripción detallada de la técnica",
+      "series": 3,
+      "repeticiones": "12-15",
+      "duracion": 45,
+      "descanso": 60,
+      "tipo": "repeticiones",
+      "consejos": ["Mantén la espalda recta", "Baja hasta 90 grados"]
+    },
+    {
+      "nombre": "Plancha",
+      "descripcion": "Mantén posición de plancha",
+      "series": 3,
+      "duracion": 30,
+      "descanso": 45,
+      "tipo": "tiempo",
+      "consejos": ["Mantén el core activado", "Línea recta del cuerpo"]
+    }
+  ]
+}
+
+IMPORTANTE: Responde ÚNICAMENTE en formato JSON válido. Incluye 6-8 ejercicios variados.`;
     } else {
       // Prompt original para recomendación de metodología
       methodologyPrompt = `Eres un entrenador personal experto con IA avanzada especializado en seleccionar la metodología de entrenamiento perfecta para cada usuario.
@@ -412,10 +435,37 @@ Responde en formato JSON:
     console.log('Respuesta de OpenAI para metodología:', contenido);
 
     if (isHomeTrainingRequest) {
-      // Para entrenamientos en casa, devolver directamente el contenido
+      // Para entrenamientos en casa, parsear el JSON del entrenamiento
+      let entrenamientoGenerado;
+      try {
+        entrenamientoGenerado = JSON.parse(contenido);
+      } catch (parseError) {
+        console.error('Error parseando entrenamiento JSON:', parseError);
+        // Fallback si no se puede parsear
+        entrenamientoGenerado = {
+          titulo: `${tipoEntrenamiento === 'functional' ? 'Funcional' : tipoEntrenamiento === 'hiit' ? 'HIIT' : 'Fuerza'} en Casa`,
+          descripcion: "Entrenamiento personalizado adaptado a tu equipamiento",
+          duracionTotal: "30-45 min",
+          frecuencia: "4-5 días/semana",
+          enfoque: "Fuerza funcional y movilidad",
+          ejercicios: [
+            {
+              nombre: "Sentadillas con peso corporal",
+              descripcion: "Ejercicio básico para piernas y glúteos",
+              series: 3,
+              repeticiones: "12-15",
+              duracion: 45,
+              descanso: 60,
+              tipo: "repeticiones",
+              consejos: ["Mantén la espalda recta", "Baja hasta 90 grados"]
+            }
+          ]
+        };
+      }
+
       res.json({
         success: true,
-        recomendacion: contenido,
+        entrenamiento: entrenamientoGenerado,
         equipamiento: equipamiento,
         tipoEntrenamiento: tipoEntrenamiento,
         timestamp: new Date().toISOString()
