@@ -16,7 +16,7 @@ const UserProfile = () => {
   };
 
   return (
-    <div className="fixed top-4 right-4 z-50">
+    <div className="fixed top-4 right-4 z-40">
       <div className="relative">
         {/* Avatar y nombre clickeable */}
         <div 

@@ -305,7 +305,7 @@ const ProfileScreen = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-6 pb-24">
+    <div className="min-h-screen bg-black text-white p-6 pt-20 pb-24">
       {/* Cabecera */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-yellow-400">Perfil de Usuario</h1>
@@ -313,12 +313,12 @@ const ProfileScreen = () => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 bg-gray-800 mb-6">
-          <TabsTrigger value="basic">Básicos</TabsTrigger>
-          <TabsTrigger value="body">Composición</TabsTrigger>
-          <TabsTrigger value="health">Salud</TabsTrigger>
-          <TabsTrigger value="goals">Objetivos</TabsTrigger>
-          <TabsTrigger value="settings">Configuración</TabsTrigger>
+        <TabsList className="w-full bg-gray-800 mb-6 overflow-x-auto whitespace-nowrap rounded-lg no-scrollbar">
+          <TabsTrigger value="basic" className="px-4 shrink-0">Básicos</TabsTrigger>
+          <TabsTrigger value="body" className="px-4 shrink-0">Composición</TabsTrigger>
+          <TabsTrigger value="health" className="px-4 shrink-0">Salud</TabsTrigger>
+          <TabsTrigger value="goals" className="px-4 shrink-0">Objetivos</TabsTrigger>
+          <TabsTrigger value="settings" className="px-4 shrink-0">Configuración</TabsTrigger>
         </TabsList>
 
         {/* DATOS BÁSICOS */}
@@ -377,7 +377,7 @@ const ProfileScreen = () => {
                 </CardHeader>
 
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <EditableField
                       label="Nombre"
                       field="nombre"
@@ -396,7 +396,7 @@ const ProfileScreen = () => {
                     />
                     <div>
                       <label className="text-gray-400">Email</label>
-                      <p className="text-white font-semibold">
+                      <p className="text-white font-semibold break-all">
                         {userProfile.email || currentUser?.email}
                       </p>
                       {isEditing && (
@@ -544,7 +544,7 @@ const ProfileScreen = () => {
                 </CardHeader>
 
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {isEditing ? (
                       <EditableField
                         label="Nivel Actual"
@@ -696,7 +696,7 @@ const ProfileScreen = () => {
                 </CardHeader>
 
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <EditableField
                       label="Grasa Corporal"
                       field="grasa_corporal"
@@ -796,7 +796,7 @@ const ProfileScreen = () => {
                 </CardHeader>
 
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <EditableField
                       label="Cintura"
                       field="cintura"
@@ -1141,7 +1141,7 @@ const ProfileScreen = () => {
                 </CardHeader>
 
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <EditableField
                       label="Enfoque Seleccionado"
                       field="enfoque"
