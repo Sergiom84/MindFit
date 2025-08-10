@@ -391,21 +391,21 @@ const HomeTrainingSection = () => {
   const equipmentLevels = {
     minimal: {
       name: 'Equipamiento Mínimo',
-      icon: <Home className="w-5 h-5" />,
+      icon: <Home className="w-5 h-5 sm:w-6 sm:h-6" />,
       equipment: ['Peso corporal', 'Toallas', 'Silla/Sofá', 'Pared'],
       workouts: ['Flexiones variadas', 'Sentadillas', 'Plancha', 'Burpees'],
       color: 'border-green-400'
     },
     basic: {
       name: 'Equipamiento Básico',
-      icon: <Dumbbell className="w-5 h-5" />,
+      icon: <Dumbbell className="w-5 h-5 sm:w-6 sm:h-6" />,
       equipment: ['Mancuernas ajustables', 'Bandas elásticas', 'Esterilla', 'Banco/Step'],
       workouts: ['Press de pecho', 'Remo con banda', 'Peso muerto', 'Curl bíceps'],
       color: 'border-yellow-400'
     },
     advanced: {
       name: 'Equipamiento Avanzado',
-      icon: <Target className="w-5 h-5" />,
+      icon: <Target className="w-5 h-5 sm:w-6 sm:h-6" />,
       equipment: ['Barra dominadas', 'Kettlebells', 'TRX', 'Discos olímpicos'],
       workouts: ['Dominadas', 'Swing kettlebell', 'Sentadilla goblet', 'Turkish get-up'],
       color: 'border-red-400'
@@ -460,7 +460,7 @@ const HomeTrainingSection = () => {
     <div className="min-h-screen bg-black text-white p-6 pb-24">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-yellow-400 to-yellow-200 bg-clip-text text-transparent">
+          <h1 className="font-bold mb-4 bg-gradient-to-r from-yellow-400 to-yellow-200 bg-clip-text text-transparent" style={{ fontSize: 'clamp(1.5rem, 3.5vw, 2.25rem)' }}>
             Entrenamiento en Casa
           </h1>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto">
