@@ -52,7 +52,7 @@ const InjuriesScreen = () => {
   const [prevention, setPrevention] = useState(null);
 
   // Evitar duplicar barras si VITE_API_URL viene con '/'
-  const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+  const apiBase = ''; // usar proxy de Vite en desarrollo
 
   const fetchInjuries = async () => {
     if (!userData?.id) return;

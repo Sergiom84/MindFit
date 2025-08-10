@@ -3,8 +3,7 @@
 
 // Funciones antiguas apuntaban a OpenAI directo; ahora usamos backend
 async function callOpenAI(messages, options = {}) {
-  const apiBase = import.meta.env.VITE_API_URL || '';
-  const response = await fetch(`${apiBase}/api/pose-feedback`, {
+  const response = await fetch(`/api/pose-feedback`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

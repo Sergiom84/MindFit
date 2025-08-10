@@ -69,8 +69,7 @@ export const generateNutritionPlan = async (userProfile) => {
       Responde únicamente con el JSON válido, sin texto adicional.
     `;
 
-    const apiBase = import.meta.env.VITE_API_URL || '';
-    const r = await fetch(`${apiBase}/api/activar-ia-adaptativa`, {
+    const r = await fetch(`/api/activar-ia-adaptativa`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ modo: 'PLAN_NUTRICION', variablesPrompt: { userProfile, prompt } })

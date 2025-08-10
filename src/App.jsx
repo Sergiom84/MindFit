@@ -714,7 +714,7 @@ const MethodologiesScreen = () => {
       };
 
       // Llamar a la API de recomendación de metodologías
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/recomendar-metodologia`, {
+      const response = await fetch(`/api/recomendar-metodologia`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -883,7 +883,7 @@ const MethodologiesScreen = () => {
           JSON.stringify(aiRecommendation) : '{}'
       };
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/methodologies`, {
+      const response = await fetch(`/api/methodologies`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -925,7 +925,7 @@ const MethodologiesScreen = () => {
         });
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/methodologies/weeks`, {
+      const response = await fetch(`/api/methodologies/weeks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -948,7 +948,7 @@ const MethodologiesScreen = () => {
     if (!currentUser) return;
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/methodologies/active/${currentUser.id}`);
+      const response = await fetch(`/api/methodologies/active/${currentUser.id}`);
 
       if (response.ok) {
         const activeMethodology = await response.json();
@@ -985,7 +985,7 @@ const MethodologiesScreen = () => {
     if (!activeMethodologyFromDB) return;
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/methodologies/${activeMethodologyFromDB.id}`, {
+      const response = await fetch(`/api/methodologies/${activeMethodologyFromDB.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

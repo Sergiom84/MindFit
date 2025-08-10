@@ -35,7 +35,7 @@ export const UserProvider = ({ children }) => {
 
     // Persistir en backend (PATCH)
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/users/${currentUser.id}`, {
+      const response = await fetch(`/api/users/${currentUser.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newData)
@@ -76,7 +76,7 @@ export const UserProvider = ({ children }) => {
     setIsLoading(true);
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/activar-ia-adaptativa`, {
+      const response = await fetch(`/api/activar-ia-adaptativa`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

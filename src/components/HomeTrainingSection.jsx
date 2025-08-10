@@ -16,7 +16,8 @@ import {
   TrendingUp,
   Circle,
   AlertTriangle,
-  Heart
+  Heart,
+  Home
 } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
 

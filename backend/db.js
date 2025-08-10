@@ -1,3 +1,4 @@
+// db.js
 import pg from 'pg';
 import dotenv from 'dotenv';
 
@@ -5,78 +6,95 @@ dotenv.config();
 
 const { Pool } = pg;
 
-// Función para obtener configuración de base de datos según el entorno
+/** Decide configuración según variables de entorno */
 const getDatabaseConfig = () => {
-  // Si existe DATABASE_URL (Render), usarla directamente
+  // 1) Si hay DATABASE_URL (Render) la usamos directamente
   if (process.env.DATABASE_URL) {
     return {
       connectionString: process.env.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false // Render requiere SSL
-      }
+      ssl: { rejectUnauthorized: false },
+      application_name: 'mindfit-backend-render',
     };
   }
 
-  const dbEnvironment = process.env.DB_ENVIRONMENT || 'local';
-
-  if (dbEnvironment === 'render') {
+  // 2) Si DB_ENVIRONMENT=render con campos separados
+  if ((process.env.DB_ENVIRONMENT || '').toLowerCase() === 'render') {
     return {
       user: process.env.RENDER_PGUSER,
       host: process.env.RENDER_PGHOST,
       database: process.env.RENDER_PGDATABASE,
       password: process.env.RENDER_PGPASSWORD,
-      port: process.env.RENDER_PGPORT || 5432,
-      ssl: {
-        rejectUnauthorized: false // Render requiere SSL
-      }
+      port: Number(process.env.RENDER_PGPORT || 5432),
+      ssl: { rejectUnauthorized: false },
+      application_name: 'mindfit-backend-render',
     };
   }
 
-  // Configuración local por defecto
+  // 3) Local por defecto
   return {
     user: process.env.PGUSER || 'postgres',
     host: process.env.PGHOST || 'localhost',
     database: process.env.PGDATABASE || 'mindfit',
     password: process.env.PGPASSWORD || 'postgres',
-    port: process.env.PGPORT || 5432,
+    port: Number(process.env.PGPORT || 5432),
+    application_name: 'mindfit-backend-local',
   };
 };
 
-// Configuración de la base de datos
 const dbConfig = getDatabaseConfig();
 const pool = new Pool(dbConfig);
 
-// Función para probar la conexión
+/** Log de errores del pool (evita procesos colgados) */
+pool.on('error', (err) => {
+  console.error('🛑 PG Pool error:', err);
+});
+
+/** Chequeo inmediato al arrancar: imprime BD/usuario/IP y search_path */
+(async () => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT
+        current_database()   AS db,
+        current_user         AS usr,
+        inet_server_addr()   AS server_ip,
+        inet_client_addr()   AS client_ip,
+        current_setting('search_path') AS search_path
+    `);
+
+    const info = rows[0];
+    const mode =
+      dbConfig.application_name?.includes('render') ? 'render' : 'local';
+
+    console.log(
+      `✅ PostgreSQL conectado (${mode}) → db=${info.db} user=${info.usr} server_ip=${info.server_ip} client_ip=${info.client_ip} search_path=${info.search_path}`
+    );
+  } catch (e) {
+    console.error('❌ Error en DB CHECK:', e.message);
+  }
+})();
+
+/** Comprobación explícita (si quieres llamarla desde server.js) */
 export const testConnection = async () => {
   try {
-    const client = await pool.connect();
-
-    let dbInfo = 'local: localhost/mindfit';
-
-    if (process.env.DATABASE_URL) {
-      // Extraer info de DATABASE_URL para mostrar
-      const url = new URL(process.env.DATABASE_URL);
-      dbInfo = `render: ${url.hostname}/${url.pathname.slice(1)}`;
-    } else if (process.env.DB_ENVIRONMENT === 'render') {
-      dbInfo = `render: ${process.env.RENDER_PGHOST}/${process.env.RENDER_PGDATABASE}`;
-    }
-
-    console.log(`✅ Conexión a PostgreSQL establecida correctamente (${dbInfo})`);
-    client.release();
+    await pool.query('SELECT 1');
     return true;
-  } catch (error) {
-    console.error(`❌ Error conectando a PostgreSQL:`, error.message);
+  } catch (e) {
+    console.error('❌ Error conectando a PostgreSQL:', e.message);
     return false;
   }
 };
 
-// Función helper para ejecutar queries
+/** Helper para queries con log de duración y filas */
 export const query = async (text, params) => {
   const start = Date.now();
   try {
     const res = await pool.query(text, params);
     const duration = Date.now() - start;
-    console.log('✅ Executed query', { text, duration, rows: res.rowCount });
+    console.log('✅ Executed query', {
+      text,
+      duration,
+      rows: res.rowCount,
+    });
     return res;
   } catch (error) {
     console.error('❌ Database query error:', error.message);
