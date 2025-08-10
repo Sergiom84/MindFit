@@ -2781,7 +2781,9 @@ const AppContent = () => {
           <Route path="/video-correction" element={<VideoCorrectionSection />} />
           <Route path="/openai-test" element={<OpenAITest />} />
         </Routes>
-        <Navigation />
+        <div className="safe-bottom">
+          <Navigation />
+        </div>
         <MusicBubble />
       </div>
     </UserProvider>
