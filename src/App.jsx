@@ -95,14 +95,37 @@ const MusicBubble = () => {
     setIsDragging(false)
   }
 
+  const handleTouchStart = (e) => {
+    setIsDragging(true)
+  }
+
+  const handleTouchMove = (e) => {
+    if (isDragging && e.touches && e.touches[0]) {
+      e.preventDefault()
+      setPosition({
+        x: e.touches[0].clientX - 30,
+        y: e.touches[0].clientY - 30
+      })
+    }
+  }
+
+  const handleTouchEnd = () => {
+    setIsDragging(false)
+  }
+
+
   useEffect(() => {
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove)
       document.addEventListener('mouseup', handleMouseUp)
+      document.addEventListener('touchmove', handleTouchMove, { passive: false })
+      document.addEventListener('touchend', handleTouchEnd)
     }
     return () => {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
+      document.removeEventListener('touchmove', handleTouchMove)
+      document.removeEventListener('touchend', handleTouchEnd)
     }
   }, [isDragging])
 
@@ -111,6 +134,7 @@ const MusicBubble = () => {
       className={`fixed z-50 w-16 h-16 ${musicPhases[currentPhase].color} rounded-full shadow-lg cursor-move flex items-center justify-center hover:scale-110 transition-all duration-200`}
       style={{ left: position.x, top: position.y }}
       onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
       title={`${musicPhases[currentPhase].name}: ${musicPhases[currentPhase].music}`}
     >
       <Button
@@ -1086,7 +1110,7 @@ const MethodologiesScreen = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white p-6 pb-24">
+    <div className="min-h-screen bg-black text-white p-6 pt-20 pb-24">
       <h1 className="text-3xl font-bold mb-6 text-yellow-400">Metodologías de Entrenamiento</h1>
       <p className="text-gray-400 mb-8">Selecciona la metodología que mejor se adapte a tus objetivos y nivel</p>
 
@@ -1161,7 +1185,7 @@ const MethodologiesScreen = () => {
       {selectedMethodology && (
         <Card className="bg-gradient-to-r from-yellow-400/10 to-yellow-600/10 border-yellow-400/40 mb-6">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <div className="flex items-center space-x-3">
                 {selectedMethodology.icon && React.createElement(selectedMethodology.icon, { className: "w-8 h-8 text-yellow-400" })}
                 <div>
@@ -1174,7 +1198,7 @@ const MethodologiesScreen = () => {
                   <p className="text-gray-300 text-sm">{selectedMethodology.description}</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {selectionMode === 'automatic' ? (
                   <Badge className="bg-blue-400/20 text-blue-400 border-blue-400/40">
                     <Brain className="w-3 h-3 mr-1" />
@@ -1199,7 +1223,7 @@ const MethodologiesScreen = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-green-400" />
                 <div>
                   <p className="text-gray-400 text-sm">Fecha de inicio</p>
@@ -1209,7 +1233,7 @@ const MethodologiesScreen = () => {
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <Clock className="w-5 h-5 text-red-400" />
                 <div>
                   <p className="text-gray-400 text-sm">Fecha de finalización</p>
@@ -1232,7 +1256,7 @@ const MethodologiesScreen = () => {
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-gray-400 text-sm">Progreso del programa</span>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                   <span className="text-white font-semibold">{Math.round(methodologyProgress)}%</span>
                   {methodologyProgress === 100 && (
                     <Trophy className="w-4 h-4 text-yellow-400" />
@@ -1789,7 +1813,7 @@ const RoutinesScreen = () => {
   // If no methodology is selected, show message
   if (!metodologiaActiva || !metodologiaActiva.metodologia) {
     return (
-      <div className="min-h-screen bg-black text-white p-6 pb-24">
+      <div className="min-h-screen bg-black text-white p-6 pt-20 pb-24">
         <h1 className="text-3xl font-bold mb-6 text-yellow-400">Rutinas de Entrenamiento</h1>
         <Card className="bg-gray-900 border-yellow-400/20">
           <CardContent className="p-8 text-center">
@@ -2475,7 +2499,7 @@ const RoutinesScreen = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-6 pb-24">
+    <div className="min-h-screen bg-black text-white p-6 pt-20 pb-24">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-yellow-400">Rutinas de Entrenamiento</h1>
@@ -2660,7 +2684,7 @@ const RoutinesScreen = () => {
 
 const SettingsScreen = () => {
   return (
-    <div className="min-h-screen bg-black text-white p-6 pb-24">
+    <div className="min-h-screen bg-black text-white p-6 pt-20 pb-24">
       <h1 className="text-3xl font-bold mb-6 text-yellow-400">Ajustes y Configuración</h1>
 
       <div className="space-y-4">

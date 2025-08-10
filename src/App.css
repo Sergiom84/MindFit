@@ -110,6 +110,10 @@
   transition: all 0.2s ease-in-out;
 }
 
+/* Utility to hide scrollbars (for horizontal tabs on mobile) */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* Gradient text animation */
 @keyframes gradient-shift {
   0% { background-position: 0% 50%; }

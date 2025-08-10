@@ -177,7 +177,7 @@ const NutritionScreen = () => {
    };
  
    return (
-     <div className="min-h-screen bg-black text-white p-6 pb-24">
+     <div className="min-h-screen bg-black text-white p-6 pt-20 pb-24">
        <h1 className="text-3xl font-bold mb-6 text-yellow-400">
          Nutrición IA - {userData.nombre}
        </h1>
@@ -207,17 +207,17 @@ const NutritionScreen = () => {
        </Card>
  
        <Tabs value={activeNutritionTab} onValueChange={setActiveNutritionTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 bg-gray-800">
-           <TabsTrigger value="overview" className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black">
+        <TabsList className="w-full bg-gray-800 overflow-x-auto whitespace-nowrap rounded-lg no-scrollbar">
+           <TabsTrigger value="overview" className="px-4 shrink-0 data-[state=active]:bg-yellow-400 data-[state=active]:text-black">
              Resumen
            </TabsTrigger>
-          <TabsTrigger value="diet" className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black">
+          <TabsTrigger value="diet" className="px-4 shrink-0 data-[state=active]:bg-yellow-400 data-[state=active]:text-black">
             Dietas
           </TabsTrigger>
-           <TabsTrigger value="tracking" className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black">
+           <TabsTrigger value="tracking" className="px-4 shrink-0 data-[state=active]:bg-yellow-400 data-[state=active]:text-black">
              Seguimiento
            </TabsTrigger>
-           <TabsTrigger value="supplements" className="data-[state=active]:bg-yellow-400 data-[state=active]:text-black">
+           <TabsTrigger value="supplements" className="px-4 shrink-0 data-[state=active]:bg-yellow-400 data-[state=active]:text-black">
              Suplementos
            </TabsTrigger>
          </TabsList>
