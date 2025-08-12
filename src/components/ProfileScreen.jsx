@@ -43,8 +43,18 @@ import {
 } from "@/components/ui/dialog";
 
 
+const toTitleCase = (str) => {
+  if (!str) return str;
+  return str
+    .toString()
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+
 // Campo editable reusable - Componente independiente para evitar re-renders
-const EditableField = React.memo(({
+const EditableField = React.memo(({ 
   label,
   field,
   value,
@@ -203,7 +213,7 @@ const ProfileScreen = () => {
 
   const [isBodyCalcOpen, setIsBodyCalcOpen] = useState(false);
   const [bodyCalcForm, setBodyCalcForm] = useState({
-    sexo: currentUser?.sexo || userData?.sexo || "masculino",
+    sexo: toTitleCase(currentUser?.sexo || userData?.sexo || "Masculino"),
     edad: currentUser?.edad || userData?.edad || "",
     peso: currentUser?.peso || userData?.peso || "",
     altura: currentUser?.altura || userData?.altura || "",
@@ -225,10 +235,15 @@ const ProfileScreen = () => {
     ...currentUser,
     ...userData,
   };
+  ["sexo", "nivel_actividad", "metodologia_preferida"].forEach((field) => {
+    if (userProfile[field]) {
+      userProfile[field] = toTitleCase(userProfile[field]);
+    }
+  });
 
   // Helper: calcular composición corporal (grasa%, masa muscular, agua%, BMR)
   const computeBodyComposition = useCallback((v) => {
-    const sexo = (v.sexo || "masculino").toLowerCase();
+    const sexo = (v.sexo || "Masculino").toLowerCase();
     const edad = Number(v.edad) || 0;
     const peso = Number(v.peso) || 0; // kg
     const altura = Number(v.altura) || 0; // cm
@@ -377,6 +392,12 @@ const ProfileScreen = () => {
         }
       });
     }
+
+    ["sexo", "nivel_actividad", "metodologia_preferida"].forEach((field) => {
+      if (payload[field]) {
+        payload[field] = toTitleCase(payload[field]);
+      }
+    });
 
     const updated = await updateUserProfile(payload);
     if (updated) {
@@ -574,9 +595,9 @@ const ProfileScreen = () => {
                       editedData={editedData}
                       onInputChange={handleInputChange}
                       options={[
-                        { value: "masculino", label: "Masculino" },
-                        { value: "femenino", label: "Femenino" },
-                        { value: "otro", label: "Otro" },
+                        { value: "Masculino", label: "Masculino" },
+                        { value: "Femenino", label: "Femenino" },
+                        { value: "Otro", label: "Otro" },
                       ]}
                     />
                     <div>
@@ -610,11 +631,11 @@ const ProfileScreen = () => {
                       editedData={editedData}
                       onInputChange={handleInputChange}
                       options={[
-                        { value: "sedentario", label: "Sedentario" },
-                        { value: "ligero", label: "Ligero" },
-                        { value: "moderado", label: "Moderado" },
-                        { value: "activo", label: "Activo" },
-                        { value: "muy_activo", label: "Muy Activo" },
+                        { value: "Sedentario", label: "Sedentario" },
+                        { value: "Ligero", label: "Ligero" },
+                        { value: "Moderado", label: "Moderado" },
+                        { value: "Activo", label: "Activo" },
+                        { value: "Muy Activo", label: "Muy Activo" },
                       ]}
                     />
                   </div>
@@ -724,13 +745,13 @@ const ProfileScreen = () => {
                       editedData={editedData}
                       onInputChange={handleInputChange}
                       options={[
-                        { value: "powerlifting", label: "Powerlifting" },
-                        { value: "bodybuilding", label: "Bodybuilding" },
-                        { value: "crossfit", label: "CrossFit" },
-                        { value: "calistenia", label: "Calistenia" },
-                        { value: "entrenamiento_casa", label: "Entrenamiento en Casa" },
-                        { value: "heavy_duty", label: "Heavy Duty" },
-                        { value: "funcional", label: "Entrenamiento Funcional" },
+                        { value: "Powerlifting", label: "Powerlifting" },
+                        { value: "Bodybuilding", label: "Bodybuilding" },
+                        { value: "CrossFit", label: "CrossFit" },
+                        { value: "Calistenia", label: "Calistenia" },
+                        { value: "Entrenamiento en Casa", label: "Entrenamiento en Casa" },
+                        { value: "Heavy Duty", label: "Heavy Duty" },
+                        { value: "Entrenamiento Funcional", label: "Entrenamiento Funcional" },
                       ]}
                     />
                     <EditableField
@@ -807,7 +828,7 @@ const ProfileScreen = () => {
                           className="border-gray-600 text-gray-300 hover:bg-gray-700"
                           onClick={() => {
                             setBodyCalcForm({
-                              sexo: userProfile.sexo || "masculino",
+                              sexo: userProfile.sexo || "Masculino",
                               edad: userProfile.edad || "",
                               peso: userProfile.peso || "",
                               altura: userProfile.altura || "",
@@ -1564,8 +1585,8 @@ const ProfileScreen = () => {
               <select className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white"
                 value={bodyCalcForm.sexo}
                 onChange={(e)=>setBodyCalcForm({...bodyCalcForm, sexo: e.target.value})}>
-                <option value="masculino">Masculino</option>
-                <option value="femenino">Femenino</option>
+                <option value="Masculino">Masculino</option>
+                <option value="Femenino">Femenino</option>
               </select>
             </div>
             <div>
@@ -1598,7 +1619,7 @@ const ProfileScreen = () => {
                 value={bodyCalcForm.cuello}
                 onChange={(e)=>setBodyCalcForm({...bodyCalcForm, cuello: e.target.value})}/>
             </div>
-            {bodyCalcForm.sexo === 'femenino' && (
+            {bodyCalcForm.sexo === 'Femenino' && (
               <div className="col-span-2">
                 <label className="text-sm text-gray-400">Cadera (cm)</label>
                 <input type="number" className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white"
