@@ -348,7 +348,7 @@ const HomeScreen = () => {
   }, [])
 
   return (
-    <div className="min-h-screen bg-black text-white relative overflow-hidden">
+    <div className="min-h-screen bg-black text-white relative overflow-hidden pt-24">
       {/* Animated background effect */}
       <div
         className="absolute inset-0 opacity-10"

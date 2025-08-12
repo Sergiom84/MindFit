@@ -1,0 +1,19 @@
+@echo off
+cd /d "C:\Users\Sergio\Desktop\MindFit"
+echo Switching to main branch...
+git checkout main
+echo Pulling latest changes...
+git pull origin main
+echo Merging chore/responsive-webapp-min...
+git merge chore/responsive-webapp-min --no-edit
+echo Merging chore/schema-flex-local...
+git merge chore/schema-flex-local --no-edit
+echo Pushing to origin...
+git push origin main
+echo Deleting merged branches...
+git branch -d chore/responsive-webapp-min
+git branch -d chore/schema-flex-local
+git push origin --delete chore/responsive-webapp-min
+git push origin --delete chore/schema-flex-local
+echo Done! All branches merged into main.
+pause
