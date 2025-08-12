@@ -23,20 +23,37 @@ const numOrNull = (v) => {
   return Number.isFinite(n) ? n : null;
 };
 
-// JSONB genérico: 
+// JSONB genérico:
 //  - ""/undefined/null -> null
 //  - string JSON válido -> JSON.stringify(parsed)
+//  - string NO-JSON -> JSON.stringify(value)
 //  - objeto/array -> JSON.stringify(value)
-//  - si es string no JSON -> null (para no romper)
 const jsonbStringOrNull = (value) => {
   if (value === '' || value === undefined || value === null) return null;
   if (typeof value === 'string') {
-    try { return JSON.stringify(JSON.parse(value)); }
-    catch { return null; }
+    try {
+      return JSON.stringify(JSON.parse(value));
+    } catch {
+      return JSON.stringify(value);
+    }
   }
   try {
     return JSON.stringify(value);
   } catch {
+// Convierte arrays de strings a arrays de objetos con fecha
+const toDatedObjects = (arr) => {
+  if (!Array.isArray(arr)) return [];
+  return arr.map((it) => {
+    if (typeof it === 'string') return { nombre: it.trim(), createdAt: new Date().toISOString() };
+    if (it && typeof it === 'object') {
+      const nombre = String(it.nombre ?? '').trim();
+      const createdAt = it.createdAt || new Date().toISOString();
+      return nombre ? { nombre, createdAt } : null;
+    }
+    return null;
+  }).filter(Boolean);
+};
+
     return null;
   }
 };
@@ -96,7 +113,7 @@ router.post('/register', async (req, res) => {
     }
 
     // ¿email en uso?
-    const existing = await query('SELECT id FROM users WHERE email = $1', [data.email]);
+    const existing = await query('SELECT id FROM public.users WHERE email = $1', [data.email]);
     if (existing.rows.length > 0) {
       return res.status(409).json({ success: false, error: 'El email ya está registrado' });
     }
@@ -212,7 +229,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Email y password son requeridos' });
     }
 
-    const result = await query('SELECT * FROM users WHERE email = $1', [email]);
+    const result = await query('SELECT * FROM public.users WHERE email = $1', [email]);
     if (result.rows.length === 0) {
       return res.status(401).json({ success: false, error: 'Credenciales inválidas' });
     }
@@ -300,7 +317,7 @@ router.patch('/users/:id', async (req, res) => {
     // Si vienen peso y/o altura, y no mandan IMC, lo recalculamos
     if ((patchData.peso != null || patchData.altura != null)) {
       // Necesitamos los valores actuales para calcular si falta uno
-      const current = await query('SELECT peso, altura FROM users WHERE id = $1', [userId]);
+      const current = await query('SELECT peso, altura FROM public.users WHERE id = $1', [userId]);
       if (current.rows.length > 0) {
         const peso = patchData.peso != null ? patchData.peso : numOrNull(current.rows[0].peso);
         const altura = patchData.altura != null ? patchData.altura : numOrNull(current.rows[0].altura);
@@ -328,7 +345,7 @@ router.patch('/users/:id', async (req, res) => {
     }
     values.push(userId);
 
-    const sql = `UPDATE users SET ${setClauses.join(', ')}, updated_at = NOW() WHERE id = $${idx} RETURNING *`;
+    const sql = `UPDATE public.users SET ${setClauses.join(', ')}, updated_at = NOW() WHERE id = $${idx} RETURNING *`;
     const result = await query(sql, values);
 
     if (result.rows.length === 0) {

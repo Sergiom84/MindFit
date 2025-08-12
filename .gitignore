@@ -87,4 +87,7 @@ temp/
 
 # Binary artifacts
 # Ignorar archivo de migraciones comprimido
+# Subidas locales
+/uploads/
+
 /database_migrations.zip

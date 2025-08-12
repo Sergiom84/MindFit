@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useRef } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useUserContext } from "../contexts/UserContext";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ import {
   Save,
   Plus,
   Calculator,
+  Upload,
 } from "lucide-react";
 import {
   Dialog,
@@ -40,6 +41,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+
 
 // Campo editable reusable - Componente independiente para evitar re-renders
 const EditableField = React.memo(({
@@ -52,10 +54,60 @@ const EditableField = React.memo(({
   suffix = "",
   editedData,
   onInputChange,
+  isList = false,
+  displayObjects = null, // [{nombre|texto, createdAt}]
 }) => {
+  const parseList = (v) => {
+    if (Array.isArray(v)) return v;
+    if (!v) return [];
+    try {
+      const parsed = JSON.parse(v);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {}
+    return String(v)
+      .split(/[\n,]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  };
+
+  const displayList = isList ? parseList(value) : [];
   const displayValue = value ?? "No especificado";
 
   if (!editing) {
+    if (isList) {
+      const fmtDate = (iso) => {
+        try { return new Date(iso).toLocaleDateString(); } catch { return iso; }
+      };
+      if (Array.isArray(displayObjects) && displayObjects.length > 0) {
+        return (
+          <div>
+            <label className="text-gray-400">{label}</label>
+            <ul className="list-disc list-inside">
+              {displayObjects.map((obj, idx) => (
+                <li key={idx} className="text-white font-semibold">
+                  {(obj.nombre || obj.texto || '').toString()}
+                  <span className="text-gray-400 text-xs"> — {fmtDate(obj.createdAt)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      }
+      return (
+        <div>
+          <label className="text-gray-400">{label}</label>
+          {displayList.length > 0 ? (
+            <ul className="text-white font-semibold list-disc list-inside">
+              {displayList.map((item, idx) => (
+                <li key={idx}>{item}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-white font-semibold">No especificado</p>
+          )}
+        </div>
+      );
+    }
     return (
       <div>
         <label className="text-gray-400">{label}</label>
@@ -87,6 +139,21 @@ const EditableField = React.memo(({
     );
   }
 
+  if (type === "textarea") {
+    return (
+      <div>
+        <label className="text-gray-400 text-sm">{label}</label>
+        <textarea
+          rows={3}
+          value={editedData[field] ?? value ?? ""}
+          onChange={(e) => onInputChange(field, e.target.value)}
+          className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:border-yellow-400 focus:outline-none"
+          placeholder={`Ingresa ${label.toLowerCase()}`}
+        />
+      </div>
+    );
+  }
+
   return (
     <div>
       <label className="text-gray-400 text-sm">{label}</label>
@@ -112,6 +179,17 @@ const ProfileScreen = () => {
 
   // Modals state
   const [isInjuryModalOpen, setIsInjuryModalOpen] = useState(false);
+  // Modal documentación
+  const [docs, setDocs] = useState([]);
+  const [docsOpen, setDocsOpen] = useState(false);
+  const fetchDocs = useCallback(async ()=>{
+    try {
+      const res = await fetch(`/api/users/${currentUser.id}/medical-docs`);
+      const data = await res.json();
+      if (data.success) setDocs(data.docs||[]);
+    } catch {}
+  }, [currentUser?.id]);
+
   const [injuryForm, setInjuryForm] = useState({
     titulo: "",
     zona: "",
@@ -228,12 +306,53 @@ const ProfileScreen = () => {
       const parsed = JSON.parse(src);
       return Array.isArray(parsed) ? parsed : [];
     } catch {
-      // Si es texto simple, representarlo como una entrada única
       return typeof src === "string" && src.trim()
         ? [{ titulo: src.trim(), estado: "desconocido", fecha: "" }]
         : [];
     }
   }, [userProfile?.limitaciones]);
+
+  // Helpers: parsear campos en array (con soporte coma/salto de línea o JSON)
+  const parseArrayField = useCallback((src) => {
+    if (!src) return [];
+    try {
+      const parsed = JSON.parse(src);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return String(src)
+        .split(/[\n,]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+  }, []);
+
+  const historialMedicoList = useMemo(
+    () => parseArrayField(userProfile?.historial_medico),
+    [userProfile?.historial_medico, parseArrayField]
+  );
+
+  // parsea array de objetos con fecha a objetos normalizados
+  const parseArrayObjects = useCallback((src) => {
+    const arr = parseArrayField(src);
+    // Si ya vienen strings, conviértelos a objetos con fecha actual
+    return arr.map((it) => {
+      if (typeof it === 'string') return { nombre: it, createdAt: new Date().toISOString() };
+      if (it && typeof it === 'object') {
+        const nombre = String(it.nombre ?? it.texto ?? '').trim();
+        const createdAt = it.createdAt || new Date().toISOString();
+        return nombre ? { nombre, createdAt } : null;
+      }
+      return null;
+    }).filter(Boolean);
+  }, [parseArrayField]);
+  const alergiasList = useMemo(
+    () => parseArrayField(userProfile?.alergias),
+    [userProfile?.alergias, parseArrayField]
+  );
+  const medicamentosList = useMemo(
+    () => parseArrayField(userProfile?.medicamentos),
+    [userProfile?.medicamentos, parseArrayField]
+  );
 
   // Activar edición de una sección
   const startEdit = (section, sectionFields) => {
@@ -244,14 +363,26 @@ const ProfileScreen = () => {
   // Guardar cambios de la sección editada
   const handleSave = useCallback(async () => {
     if (!editingSection) return;
-    console.log('💾 Guardando datos de sección:', editingSection, editedData);
-    const updated = await updateUserProfile(editedData);
+
+    const payload = { ...editedData };
+
+    if (editingSection === 'health') {
+      ["historial_medico", "alergias", "medicamentos"].forEach((field) => {
+        if (payload[field] !== undefined) {
+          const arr = String(payload[field])
+            .split(/[\n,]+/)
+            .map((s) => s.trim())
+            .filter(Boolean);
+          payload[field] = JSON.stringify(arr);
+        }
+      });
+    }
+
+    const updated = await updateUserProfile(payload);
     if (updated) {
-      console.log('✅ Datos guardados, cerrando edición');
       setEditingSection(null);
       setEditedData({});
     } else {
-      console.error('❌ Error al guardar');
       alert("Error al guardar los datos.");
     }
   }, [editingSection, editedData, updateUserProfile]);
@@ -895,14 +1026,39 @@ const ProfileScreen = () => {
                           >
                             Cancelar
                           </Button>
+                          {/* ÚNICO icono para subir PDF */}
+                          <button
+                            onClick={() => document.getElementById('medicalDocInput')?.click()}
+                            className="p-2 text-gray-400 hover:text-yellow-400"
+                            title="Subir PDF"
+                          >
+                            <Upload className="w-4 h-4" />
+                          </button>
+                          <input id="medicalDocInput" type="file" accept="application/pdf" className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              try {
+                                const form = new FormData();
+                                form.append('file', file);
+                                const res = await fetch(`/api/users/${currentUser.id}/medical-docs`, { method: 'POST', body: form });
+                                const data = await res.json();
+                                if (!data.success) throw new Error(data.error || 'Error subiendo PDF');
+                                alert('PDF subido correctamente');
+                              } catch (err) {
+                                alert('No se pudo subir el PDF: ' + err.message);
+                              } finally {
+                                e.target.value = '';
+                              }
+                            }} />
                         </>
                       ) : (
                         <button
                           onClick={() =>
                             startEdit("health", {
-                              historial_medico: userProfile.historial_medico,
-                              alergias: userProfile.alergias,
-                              medicamentos: userProfile.medicamentos,
+                              historial_medico: historialMedicoList.join("\n"),
+                              alergias: alergiasList.join("\n"),
+                              medicamentos: medicamentosList.join("\n"),
                             })
                           }
                           disabled={editingSection && editingSection !== "health"}
@@ -918,29 +1074,58 @@ const ProfileScreen = () => {
 
                 <CardContent className="space-y-4">
                   <div className="space-y-4">
-                    <EditableField
-                      label="Historial Médico"
-                      field="historial_medico"
-                      value={userProfile.historial_medico}
-                      editing={isEditing}
-                      editedData={editedData}
-                      onInputChange={handleInputChange}
-                    />
+                    <div className="relative">
+                      <EditableField
+                        label="Historial Médico"
+                        field="historial_medico"
+                        value={editedData.historial_medico ?? historialMedicoList.join("\n")}
+                        editing={isEditing}
+                        editedData={editedData}
+                        onInputChange={handleInputChange}
+                        type="textarea"
+                        isList
+                      />
+                      {isEditing && (
+                        <div className="absolute top-0 right-0 mt-6 mr-2 flex items-center gap-2">
+                          {/* ÚNICO icono para subir */}
+                          <button
+                            onClick={() => document.getElementById('medicalDocInput')?.click()}
+                            className="p-2 text-gray-400 hover:text-yellow-400"
+                            title="Subir PDF"
+                          >
+                            <Upload className="w-4 h-4" />
+                          </button>
+                          <input id="medicalDocInput" type="file" accept="application/pdf" className="hidden" />
+                        </div>
+                      )}
+                    </div>
+                    {isEditing && (
+                      <div className="mt-2 text-xs text-gray-500">
+                        Puedes pegar texto del PDF arriba o subir el documento para que la IA lo resuma.
+                      </div>
+                    )}
+
+
                     <EditableField
                       label="Alergias"
                       field="alergias"
-                      value={userProfile.alergias}
+                      value={editedData.alergias ?? alergiasList.join("\n")}
                       editing={isEditing}
                       editedData={editedData}
                       onInputChange={handleInputChange}
+                      type="textarea"
+                      isList
                     />
+
                     <EditableField
                       label="Medicamentos"
                       field="medicamentos"
-                      value={userProfile.medicamentos}
+                      value={editedData.medicamentos ?? medicamentosList.join("\n")}
                       editing={isEditing}
                       editedData={editedData}
                       onInputChange={handleInputChange}
+                      type="textarea"
+                      isList
                     />
                   </div>
                 </CardContent>
@@ -1281,6 +1466,84 @@ const ProfileScreen = () => {
           </div>
           <DialogFooter className="mt-4">
             <Button variant="outline" className="border-gray-600 text-gray-300" onClick={()=>setIsInjuryModalOpen(false)}>Cancelar</Button>
+      {/* Modal Documentación */}
+      <Dialog open={docsOpen} onOpenChange={setDocsOpen}>
+        <DialogContent className="bg-gray-900 text-white border border-gray-700 max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Documentación</DialogTitle>
+            <DialogDescription className="text-gray-400">Archivos PDF subidos del historial médico</DialogDescription>
+          </DialogHeader>
+          <div className="mt-2 border border-gray-800 rounded-lg overflow-hidden">
+            {docs.length === 0 ? (
+              <div className="p-4 text-gray-400 text-sm">No hay documentos</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-800 text-gray-300">
+                  <tr>
+                    <th className="text-left px-3 py-2">Archivo</th>
+                    <th className="text-left px-3 py-2">Tamaño</th>
+                    <th className="text-left px-3 py-2">Subido</th>
+                    <th className="text-left px-3 py-2">IA</th>
+                    <th className="px-3 py-2 w-64 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {docs.map((d) => (
+                    <tr key={d.id} className="border-t border-gray-800">
+                      <td className="px-3 py-2"><a className="text-yellow-400 hover:underline" href={d.url} target="_blank" rel="noreferrer">{d.originalName || d.filename}</a></td>
+                      <td className="px-3 py-2 text-gray-400">{Math.round((d.size||0)/1024)} KB</td>
+                      <td className="px-3 py-2 text-gray-400">{new Date(d.uploadedAt).toLocaleString()}</td>
+                      <td className="px-3 py-2">{d.ai ? <span className="text-green-400">Listo</span> : <span className="text-gray-400">Pendiente</span>}</td>
+                      <td className="px-3 py-2 flex gap-2 justify-end">
+                        {/* Botón para indexar con IA (extraer + resumir) */}
+                        <Button size="sm" variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                          onClick={async ()=>{
+                            try {
+                              const ex = await fetch(`/api/users/${currentUser.id}/medical-docs/${d.id}/extract`, { method: 'POST' });
+                              const exData = await ex.json();
+                              if (!exData.success) throw new Error(exData.error || 'Error extrayendo texto');
+                              const su = await fetch(`/api/users/${currentUser.id}/medical-docs/${d.id}/summarize`, {
+                                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plainText: exData.plainText || '' })
+                              });
+                              const suData = await su.json();
+                              if (!suData.success) throw new Error(suData.error || 'Error resumiendo');
+                              await fetchDocs();
+                            } catch (e) {
+                              alert('No se pudo analizar: ' + e.message);
+                            }
+                          }}
+                        >Indexar con IA</Button>
+                        {d.ai && (
+                          <Button size="sm" className="bg-yellow-500 hover:bg-yellow-600 text-black"
+                            onClick={() => {
+                              try {
+                                const res = d.ai.result || {};
+                                const als = Array.isArray(res.alergias) ? res.alergias : [];
+                                const meds = Array.isArray(res.medicacion_actual) ? res.medicacion_actual : [];
+                                const hist = Array.isArray(res.antecedentes) ? res.antecedentes : [];
+                                startEdit('health', {
+                                  historial_medico: hist.join('\n'),
+                                  alergias: als.join('\n'),
+                                  medicamentos: meds.join('\n'),
+                                });
+                                setDocsOpen(false);
+                              } catch {}
+                            }}
+                          >Aplicar al perfil</Button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-800" onClick={()=>setDocsOpen(false)}>Cerrar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
             <Button className="bg-green-500 hover:bg-green-600" onClick={handleAddInjury}>Guardar</Button>
           </DialogFooter>
         </DialogContent>

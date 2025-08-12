@@ -74,6 +74,9 @@ credentials: true
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Servir uploads siempre
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+
 // Log para cada petición entrante (debug)
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
@@ -93,6 +96,12 @@ console.log('✅ poseRoutes registrado');
 app.use('/api/home-training', homeTrainingRoutes);
 console.log('✅ homeTrainingRoutes registrado');
 app.use('/api/methodologies', methodologiesRoutes);
+import medicalDocsRoutes from './routes/medicalDocs.js';
+import pdfAnalysisRoutes from './routes/pdfAnalysis.js';
+app.use('/api', pdfAnalysisRoutes);
+console.log('✅ pdfAnalysisRoutes registrado');
+app.use('/api', medicalDocsRoutes);
+console.log('✅ medicalDocsRoutes registrado');
 console.log('✅ methodologiesRoutes registrado');
 
 // Servir archivos estáticos del frontend (después de las rutas API)

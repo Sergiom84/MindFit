@@ -44,6 +44,13 @@ const getDatabaseConfig = () => {
 const dbConfig = getDatabaseConfig();
 const pool = new Pool(dbConfig);
 
+/** Forzar search_path a public para evitar confusiones con otros esquemas */
+pool.on('connect', (client) => {
+  client
+    .query("SET search_path TO public")
+    .catch((e) => console.error('❌ No se pudo fijar search_path=public:', e.message));
+});
+
 /** Log de errores del pool (evita procesos colgados) */
 pool.on('error', (err) => {
   console.error('🛑 PG Pool error:', err);
