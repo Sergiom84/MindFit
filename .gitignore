@@ -83,3 +83,8 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
+
+
+# Binary artifacts
+# Ignorar archivo de migraciones comprimido
+/database_migrations.zip
