@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useUserContext } from "../contexts/UserContext";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ import {
   Pencil,
   Save,
   Plus,
+  X,
   Calculator,
   Upload,
 } from "lucide-react";
@@ -57,17 +58,31 @@ const EditableField = React.memo(({
   isList = false,
   displayObjects = null, // [{nombre|texto, createdAt}]
 }) => {
-  const parseList = (v) => {
+  const parseList = useCallback((v) => {
     if (Array.isArray(v)) return v;
     if (!v) return [];
     try {
       const parsed = JSON.parse(v);
       if (Array.isArray(parsed)) return parsed;
-    } catch {}
+    } catch { /* ignore */ }
     return String(v)
       .split(/[\n,]+/)
       .map((s) => s.trim())
       .filter(Boolean);
+  }, []);
+
+  const [listItems, setListItems] = useState(parseList(value));
+  const [newItem, setNewItem] = useState("");
+
+  useEffect(() => {
+    if (editing) {
+      setListItems(parseList(editedData[field] ?? value ?? ""));
+    }
+  }, [editing, editedData, field, value, parseList]);
+
+  const updateParent = (next) => {
+    setListItems(next);
+    onInputChange(field, next.join("\n"));
   };
 
   const displayList = isList ? parseList(value) : [];
@@ -115,6 +130,66 @@ const EditableField = React.memo(({
           {displayValue}
           {suffix}
         </p>
+      </div>
+    );
+  }
+
+  if (isList && displayObjects !== null) {
+    const handleRemove = (idx) => {
+      const next = listItems.filter((_, i) => i !== idx);
+      updateParent(next);
+    };
+
+    const handleAdd = () => {
+      const v = newItem.trim();
+      if (!v) return;
+      const next = [...listItems, v];
+      updateParent(next);
+      setNewItem("");
+    };
+
+    return (
+      <div>
+        <label className="text-gray-400 text-sm">{label}</label>
+        <ul className="space-y-2 mt-1">
+          {listItems.map((item, idx) => (
+            <li key={idx} className="flex items-center gap-2">
+              <input
+                type="text"
+                value={item}
+                onChange={(e) => {
+                  const next = [...listItems];
+                  next[idx] = e.target.value;
+                  updateParent(next);
+                }}
+                className="flex-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:border-yellow-400 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => handleRemove(idx)}
+                className="p-2 text-gray-400 hover:text-red-400"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+        <div className="flex gap-2 mt-2">
+          <input
+            type="text"
+            value={newItem}
+            onChange={(e) => setNewItem(e.target.value)}
+            className="flex-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:border-yellow-400 focus:outline-none"
+            placeholder={`Añadir ${label.toLowerCase()}`}
+          />
+          <button
+            type="button"
+            onClick={handleAdd}
+            className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     );
   }
@@ -187,7 +262,7 @@ const ProfileScreen = () => {
       const res = await fetch(`/api/users/${currentUser.id}/medical-docs`);
       const data = await res.json();
       if (data.success) setDocs(data.docs||[]);
-    } catch {}
+    } catch { /* ignore */ }
   }, [currentUser?.id]);
 
   const [injuryForm, setInjuryForm] = useState({
@@ -258,7 +333,7 @@ const ProfileScreen = () => {
           bf = 86.010 * Math.log10(w - n) - 70.041 * Math.log10(h) + 36.76;
         }
       }
-    } catch (_) {}
+    } catch { /* ignore */ }
 
     // Limitar valores razonables
     if (bf != null) bf = Math.min(Math.max(bf, 2), 60);
@@ -345,13 +420,21 @@ const ProfileScreen = () => {
       return null;
     }).filter(Boolean);
   }, [parseArrayField]);
+  const alergiasObjList = useMemo(
+    () => parseArrayObjects(userProfile?.alergias),
+    [userProfile?.alergias, parseArrayObjects]
+  );
+  const medicamentosObjList = useMemo(
+    () => parseArrayObjects(userProfile?.medicamentos),
+    [userProfile?.medicamentos, parseArrayObjects]
+  );
   const alergiasList = useMemo(
-    () => parseArrayField(userProfile?.alergias),
-    [userProfile?.alergias, parseArrayField]
+    () => alergiasObjList.map((o) => o.nombre),
+    [alergiasObjList]
   );
   const medicamentosList = useMemo(
-    () => parseArrayField(userProfile?.medicamentos),
-    [userProfile?.medicamentos, parseArrayField]
+    () => medicamentosObjList.map((o) => o.nombre),
+    [medicamentosObjList]
   );
 
   // Activar edición de una sección
@@ -373,7 +456,26 @@ const ProfileScreen = () => {
             .split(/[\n,]+/)
             .map((s) => s.trim())
             .filter(Boolean);
-          payload[field] = JSON.stringify(arr);
+
+          if (field === 'alergias') {
+            const withDates = arr.map((n) => {
+              const found = alergiasObjList.find(
+                (o) => o.nombre.toLowerCase() === n.toLowerCase()
+              );
+              return found || { nombre: n, createdAt: new Date().toISOString() };
+            });
+            payload[field] = JSON.stringify(withDates);
+          } else if (field === 'medicamentos') {
+            const withDates = arr.map((n) => {
+              const found = medicamentosObjList.find(
+                (o) => o.nombre.toLowerCase() === n.toLowerCase()
+              );
+              return found || { nombre: n, createdAt: new Date().toISOString() };
+            });
+            payload[field] = JSON.stringify(withDates);
+          } else {
+            payload[field] = JSON.stringify(arr);
+          }
         }
       });
     }
@@ -385,7 +487,7 @@ const ProfileScreen = () => {
     } else {
       alert("Error al guardar los datos.");
     }
-  }, [editingSection, editedData, updateUserProfile]);
+  }, [editingSection, editedData, updateUserProfile, alergiasObjList, medicamentosObjList]);
 
   // Cancelar edición
   const handleCancel = useCallback(() => {
@@ -1115,6 +1217,7 @@ const ProfileScreen = () => {
                       onInputChange={handleInputChange}
                       type="textarea"
                       isList
+                      displayObjects={alergiasObjList}
                     />
 
                     <EditableField
@@ -1126,6 +1229,7 @@ const ProfileScreen = () => {
                       onInputChange={handleInputChange}
                       type="textarea"
                       isList
+                      displayObjects={medicamentosObjList}
                     />
                   </div>
                 </CardContent>
@@ -1527,7 +1631,7 @@ const ProfileScreen = () => {
                                   medicamentos: meds.join('\n'),
                                 });
                                 setDocsOpen(false);
-                              } catch {}
+                              } catch { /* ignore */ }
                             }}
                           >Aplicar al perfil</Button>
                         )}
