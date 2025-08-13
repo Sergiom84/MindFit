@@ -33,6 +33,24 @@ import {
   Play
 } from 'lucide-react';
 
+// Convierte strings numéricos a números y deja el resto igual
+const NUMBER_KEYS = [
+  'edad','peso_kg','altura_cm','grasa_corporal','masa_muscular','agua_corporal','metabolismo_basal',
+  'cintura','pecho','brazos','muslos','cuello','antebrazos',
+  'comidas_diarias','frecuencia_semanal','años_entrenando','meta_peso','meta_grasa'
+];
+
+function sanitizeProfile(p) {
+  const out = { ...p };
+  NUMBER_KEYS.forEach((k) => {
+    if (out[k] != null && typeof out[k] === 'string' && out[k].trim() !== '') {
+      const n = Number(out[k]);
+      if (!Number.isNaN(n)) out[k] = n;
+    }
+  });
+  return out;
+}
+
 const METHODOLOGIES = [
   {
     name: 'Heavy Duty',
@@ -311,7 +329,8 @@ export default function MethodologiesScreen() {
     setIsLoading(true);
     setError(null);
 
-    const fullProfile = { ...userData, ...currentUser };
+    const fullProfile = sanitizeProfile({ ...userData, ...currentUser });
+    console.log('➡️ Perfil enviado a IA:', fullProfile);
 
     try {
       const response = await fetch('/api/ia/recommend-and-generate', {

@@ -1,5 +1,5 @@
 // src/App.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 
 import { UserProvider } from '@/contexts/UserContext';
@@ -38,45 +38,121 @@ import {
   Settings as SettingsIcon,
   ChevronRight,
   Camera,
-  Music
+  Music,
+  MoreHorizontal
 } from 'lucide-react';
 
 import './App.css';
 
 const Navigation = () => {
   const location = useLocation();
-  const navItems = [
+
+  // Elementos principales (siempre visibles)
+  const mainNavItems = [
     { path: '/', icon: Home, label: 'Inicio' },
     { path: '/profile', icon: User, label: 'Perfil' },
     { path: '/methodologies', icon: Dumbbell, label: 'Metodologías' },
     { path: '/routines', icon: Calendar, label: 'Rutinas' },
-    { path: '/nutrition', icon: Apple, label: 'Nutrición' },
-    { path: '/injuries', icon: Heart, label: 'Lesiones' },
-    { path: '/progress', icon: TrendingUp, label: 'Progreso' },
     { path: '/settings', icon: SettingsIcon, label: 'Ajustes' }
   ];
 
+  // Elementos secundarios (en menú desplegable en móvil)
+  const secondaryNavItems = [
+    { path: '/nutrition', icon: Apple, label: 'Nutrición' },
+    { path: '/injuries', icon: Heart, label: 'Lesiones' },
+    { path: '/progress', icon: TrendingUp, label: 'Progreso' }
+  ];
+
+  const [showSecondaryMenu, setShowSecondaryMenu] = useState(false);
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-sm border-t border-yellow-400/20 z-40">
-      <div className="flex justify-around items-center py-2 px-4">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = location.pathname === item.path;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`flex flex-col items-center p-2 rounded-lg transition-colors ${
-                isActive ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-300'
-              }`}
-            >
-              <Icon size={20} />
-              <span className="text-xs mt-1">{item.label}</span>
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+    <>
+      {/* Menú secundario desplegable (solo móvil) */}
+      {showSecondaryMenu && (
+        <div className="fixed bottom-16 left-0 right-0 bg-black/95 backdrop-blur-sm border-t border-yellow-400/20 z-50 md:hidden">
+          <div className="flex justify-around items-center py-2 px-4">
+            {secondaryNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setShowSecondaryMenu(false)}
+                  className={`flex flex-col items-center p-2 rounded-lg transition-colors ${
+                    isActive ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-300'
+                  }`}
+                >
+                  <Icon size={18} />
+                  <span className="text-xs mt-1">{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Navegación principal */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-sm border-t border-yellow-400/20 z-40">
+        {/* Versión móvil (5 elementos principales + botón más) */}
+        <div className="flex md:hidden justify-between items-center py-2 px-2">
+          {mainNavItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex flex-col items-center p-1.5 rounded-lg transition-colors min-w-0 flex-1 ${
+                  isActive ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-300'
+                }`}
+              >
+                <Icon size={18} />
+                <span className="text-xs mt-1 truncate">{item.label}</span>
+              </Link>
+            );
+          })}
+
+          {/* Botón "Más" para elementos secundarios */}
+          <button
+            onClick={() => setShowSecondaryMenu(!showSecondaryMenu)}
+            className={`flex flex-col items-center p-1.5 rounded-lg transition-colors min-w-0 flex-1 ${
+              secondaryNavItems.some(item => location.pathname === item.path)
+                ? 'text-yellow-400'
+                : 'text-gray-400 hover:text-yellow-300'
+            }`}
+          >
+            <div className="relative">
+              <MoreHorizontal size={18} />
+              {showSecondaryMenu && (
+                <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"></div>
+              )}
+            </div>
+            <span className="text-xs mt-1">Más</span>
+          </button>
+        </div>
+
+        {/* Versión desktop (todos los elementos) */}
+        <div className="hidden md:flex justify-around items-center py-2 px-4">
+          {[...mainNavItems, ...secondaryNavItems].map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex flex-col items-center p-2 rounded-lg transition-colors ${
+                  isActive ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-300'
+                }`}
+              >
+                <Icon size={20} />
+                <span className="text-xs mt-1">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </>
   );
 };
 
