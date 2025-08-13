@@ -83,7 +83,7 @@ cp .env.example .env
 
 Edita el archivo `.env` y agrega tu API key de OpenAI:
 ```env
-VITE_OPENAI_API_KEY=tu_api_key_aqui
+OPENAI_API_KEY=tu_api_key_aqui
 VITE_OPENAI_PROMPT_ID=tu_prompt_id_aqui
 VITE_OPENAI_PROMPT_VERSION=2
 ```

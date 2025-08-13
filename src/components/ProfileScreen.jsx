@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import { useUserContext } from "../contexts/UserContext";
-import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUserContext } from "@/contexts/UserContext";
+import { Button } from "@/components/ui/button.jsx";
 import {
   Tabs,
   TabsContent,

@@ -1,6 +1,14 @@
+// backend/server.js (Unificado y Corregido)
+
+// --- CONFIGURACIÓN DE ENTORNO ---
+// Se carga la configuración de las variables de entorno al principio de todo.
+// Esto asegura que estén disponibles para cualquier otro módulo que las necesite.
+import dotenv from 'dotenv';
+dotenv.config();
+
+// --- IMPORTACIONES DE MÓDULOS ---
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import multer from 'multer';
@@ -8,34 +16,39 @@ import OpenAI from 'openai';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { testConnection } from './db.js';
+
+// --- IMPORTACIONES DE RUTAS ---
 import iaAdaptativa from './routes/iaAdaptativa.js';
+import iaRoutes from './routes/ia.js';
 import authRoutes from './routes/auth.js';
 import injuriesRoutes from './routes/injuries.js';
 import poseRoutes from './routes/pose.js';
 import homeTrainingRoutes from './routes/homeTraining.js';
 import methodologiesRoutes from './routes/methodologies.js';
-import { testConnection } from './db.js';
+import medicalDocsRoutes from './routes/medicalDocs.js';
+import pdfAnalysisRoutes from './routes/pdfAnalysis.js';
+import musicRoutes from './routes/music.js';
 
-// Para obtener __dirname en ES modules
+// --- CONFIGURACIÓN DE PATHS ---
+// Se obtiene __dirname en ES modules para referenciar rutas de archivos de forma segura.
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config();
-
+// --- INICIALIZACIÓN DE EXPRESS ---
 const app = express();
-
-const PORT = process.env.PORT || 5000; // Puerto estándar para MindFit
+const PORT = process.env.PORT || 5000;
 
 console.log('⛔ INICIANDO SERVER.JS EN EL PUERTO:', PORT);
 
-// Configurar multer para manejo de archivos
+// --- CONFIGURACIÓN DE MULTER (MANEJO DE ARCHIVOS) ---
 const upload = multer({
   dest: 'uploads/',
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB límite
+    fileSize: 10 * 1024 * 1024, // Límite de 10MB por archivo
   },
   fileFilter: (req, file, cb) => {
-    // CAMBIO: Aceptar imágenes Y PDFs para la documentación médica
+    // Se aceptan tanto imágenes como archivos PDF.
     if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') {
       cb(null, true);
     } else {
@@ -44,18 +57,23 @@ const upload = multer({
   }
 });
 
-// Inicializar cliente OpenAI solo si hay API key
+// --- INICIALIZACIÓN DEL CLIENTE DE OPENAI ---
 let openai = null;
 if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'tu_api_key_de_openai_aqui') {
   openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });
+  console.log('🤖 Cliente de OpenAI inicializado.');
+} else {
+    console.warn('⚠️ OPENAI_API_KEY no está configurada. Las funcionalidades de IA no estarán disponibles.');
 }
 
-// Middlewares
-app.use(helmet());
-app.use(morgan('combined'));
+// --- MIDDLEWARES GENERALES ---
+app.use(helmet()); // Ayuda a securizar la app estableciendo varias cabeceras HTTP.
+app.use(morgan('combined')); // Logger de peticiones HTTP.
+app.use('/api/music', musicRoutes);
 
+// Configuración de CORS para permitir peticiones desde el frontend.
 const defaultCorsOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
@@ -63,60 +81,53 @@ const defaultCorsOrigins = [
   'http://127.0.0.1:3000',
   'https://mindfit.onrender.com'
 ];
-
 const corsOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim()).filter(Boolean)
   : defaultCorsOrigins;
-
 app.use(cors({
-origin: corsOrigins,
-credentials: true
+  origin: corsOrigins,
+  credentials: true
 }));
+
+// Middlewares para parsear el cuerpo de las peticiones.
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Servir uploads siempre
+// Middleware para servir archivos subidos estáticamente.
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Log para cada petición entrante (debug)
+// Middleware para loggear cada petición entrante (útil para debug).
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
 });
 
-// Rutas
-console.log('📋 Registrando rutas...');
+// --- REGISTRO DE RUTAS DE LA API ---
+console.log('📋 Registrando rutas de la API...');
 app.use('/api', iaAdaptativa);
-console.log('✅ iaAdaptativa registrado');
+app.use('/api/ia', iaRoutes);
 app.use('/api', authRoutes);
-console.log('✅ authRoutes registrado');
 app.use('/api', injuriesRoutes);
-console.log('✅ injuriesRoutes registrado');
 app.use('/api', poseRoutes);
-console.log('✅ poseRoutes registrado');
 app.use('/api/home-training', homeTrainingRoutes);
-console.log('✅ homeTrainingRoutes registrado');
 app.use('/api/methodologies', methodologiesRoutes);
-import medicalDocsRoutes from './routes/medicalDocs.js';
-import pdfAnalysisRoutes from './routes/pdfAnalysis.js';
 app.use('/api', pdfAnalysisRoutes);
-console.log('✅ pdfAnalysisRoutes registrado');
 app.use('/api', medicalDocsRoutes);
-console.log('✅ medicalDocsRoutes registrado');
-console.log('✅ methodologiesRoutes registrado');
+console.log('✅ Todas las rutas de la API han sido registradas.');
 
-// Servir archivos estáticos del frontend (después de las rutas API)
+// --- SERVIR ARCHIVOS ESTÁTICOS DEL FRONTEND ---
 const distPath = path.join(__dirname, '..', 'dist');
 if (fs.existsSync(distPath)) {
-  console.log('📁 Sirviendo archivos estáticos desde:', distPath);
+  console.log('📁 Sirviendo archivos estáticos del frontend desde:', distPath);
   app.use(express.static(distPath));
 
-  // Manejar rutas del frontend (SPA)
+  // Manejador de rutas para Single Page Application (SPA).
+  // Si la ruta no es de la API, sirve el index.html principal.
   app.get('*', (req, res) => {
-    // Solo servir index.html para rutas que no sean de API
-    if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads') && !req.path.startsWith('/health') && !req.path.startsWith('/debug')) {
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
       res.sendFile(path.join(distPath, 'index.html'));
     } else {
+      // Si es una ruta de API no encontrada, devuelve 404.
       res.status(404).json({
         success: false,
         error: 'Endpoint no encontrado'
@@ -124,15 +135,12 @@ if (fs.existsSync(distPath)) {
     }
   });
 } else {
-  console.log('⚠️ Directorio dist no encontrado. Solo funcionará como API.');
+  console.log('⚠️ Directorio /dist del frontend no encontrado. El servidor solo funcionará como API.');
 }
 
-// Crear directorio de uploads si no existe
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
-}
+// --- ENDPOINTS DE UTILIDAD Y DEPURACIÓN ---
 
-// Endpoint de salud
+// Endpoint de salud para verificar que el servidor está activo.
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -141,88 +149,78 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Endpoint para debug de rutas
+// Endpoint para listar todas las rutas registradas en la aplicación.
 app.get('/debug/routes', (req, res) => {
-  const routes = [];
-  app._router.stack.forEach((middleware) => {
-    if (middleware.route) {
-      routes.push({
-        path: middleware.route.path,
-        methods: Object.keys(middleware.route.methods)
-      });
-    } else if (middleware.name === 'router') {
-      middleware.handle.stack.forEach((handler) => {
-        if (handler.route) {
-          routes.push({
-            path: handler.route.path,
-            methods: Object.keys(handler.route.methods)
-          });
-        }
-      });
-    }
-  });
-
-  res.json({
-    status: 'ok',
-    message: 'Rutas registradas',
-    routes: routes,
-    timestamp: new Date().toISOString()
-  });
+    const routes = [];
+    app._router.stack.forEach((middleware) => {
+      if (middleware.route) { // Rutas directas en app
+        routes.push({
+          path: middleware.route.path,
+          methods: Object.keys(middleware.route.methods)
+        });
+      } else if (middleware.name === 'router') { // Rutas dentro de un router
+        middleware.handle.stack.forEach((handler) => {
+          if (handler.route) {
+            routes.push({
+              path: `${middleware.regexp.source.replace('\\/?(?=\\/|$)', '')}${handler.route.path}`,
+              methods: Object.keys(handler.route.methods)
+            });
+          }
+        });
+      }
+    });
+    res.json({ routes });
 });
 
-// ...[resto de tu código de endpoints de imagen y texto, igual que antes]...
 
-// Manejo de errores de multer
+// --- MANEJO DE ERRORES ---
+// Middleware centralizado para capturar y manejar errores.
 app.use((error, req, res, next) => {
+  console.error('❌ Error capturado:', error.stack);
+
+  // Errores específicos de Multer
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({
-        success: false,
-        error: 'El archivo es demasiado grande. Máximo 10MB.'
-      });
+      return res.status(400).json({ success: false, error: 'El archivo es demasiado grande. Máximo 10MB.' });
     }
   }
-  // CAMBIO: Actualizar el mensaje de error para que coincida con el nuevo filtro
+
+  // Error de tipo de archivo no permitido
   if (error.message === 'Solo se permiten archivos de imagen o PDF') {
-    return res.status(400).json({
-      success: false,
-      error: 'Solo se permiten archivos de imagen o PDF'
-    });
+    return res.status(400).json({ success: false, error: 'Tipo de archivo no válido. Solo se aceptan imágenes o PDF.' });
   }
-  console.error('Error no manejado:', error);
+
+  // Error genérico del servidor
   res.status(500).json({
     success: false,
-    error: 'Error interno del servidor'
+    error: 'Error interno del servidor.'
   });
 });
 
-// El manejo de rutas no encontradas ahora se hace en el middleware del frontend
-
-// Verificar que la API key esté configurada
-if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'tu_api_key_de_openai_aqui') {
-  console.warn('⚠️ OPENAI_API_KEY no está configurada. Algunas funcionalidades de IA no estarán disponibles.');
-  console.warn('   Configura tu API key en backend/.env para habilitar todas las funciones.');
-} else {
-  console.log('🤖 OpenAI API configurada correctamente');
-}
-
-// Inicializar conexión a base de datos y servidor
+// --- INICIO DEL SERVIDOR ---
 const startServer = async () => {
-  const dbConnected = await testConnection();
-  if (!dbConnected) {
-    console.error('❌ No se pudo conectar a la base de datos');
-    process.exit(1);
-  }
+  try {
+    // 1. Verificar la conexión con la base de datos
+    await testConnection();
+    console.log('🗄️ Conexión con la base de datos verificada correctamente.');
 
-  // OJO: Aquí especifica '0.0.0.0' para aceptar todas las IPs
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Servidor MindFit Backend ejecutándose en puerto ${PORT}`);
-    console.log(`📍 Health check: http://localhost:${PORT}/health`);
-    if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'tu_api_key_de_openai_aqui') {
-      console.log(`🤖 OpenAI API configurada correctamente`);
+    // 2. Crear directorio de uploads si no existe
+    if (!fs.existsSync('uploads')) {
+      fs.mkdirSync('uploads');
+      console.log('📁 Directorio "uploads" creado.');
     }
-    console.log(`🗄️ Base de datos PostgreSQL conectada`);
-  });
+
+    // 3. Iniciar el servidor para escuchar peticiones
+    // Se usa '0.0.0.0' para que sea accesible desde fuera del contenedor en entornos de producción (como Render).
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Servidor MindFit Backend ejecutándose en puerto ${PORT}`);
+      console.log(`    Health check disponible en: http://localhost:${PORT}/health`);
+    });
+
+  } catch (error) {
+    console.error('❌ Error fatal al iniciar el servidor:', error);
+    process.exit(1); // Termina el proceso si no se puede iniciar correctamente.
+  }
 };
 
 startServer();
