@@ -35,10 +35,11 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB límite
   },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
+    // CAMBIO: Aceptar imágenes Y PDFs para la documentación médica
+    if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') {
       cb(null, true);
     } else {
-      cb(new Error('Solo se permiten archivos de imagen'), false);
+      cb(new Error('Solo se permiten archivos de imagen o PDF'), false);
     }
   }
 });
@@ -75,7 +76,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Servir uploads siempre
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Log para cada petición entrante (debug)
 app.use((req, res, next) => {
@@ -113,7 +114,7 @@ if (fs.existsSync(distPath)) {
   // Manejar rutas del frontend (SPA)
   app.get('*', (req, res) => {
     // Solo servir index.html para rutas que no sean de API
-    if (!req.path.startsWith('/api') && !req.path.startsWith('/health') && !req.path.startsWith('/debug')) {
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads') && !req.path.startsWith('/health') && !req.path.startsWith('/debug')) {
       res.sendFile(path.join(distPath, 'index.html'));
     } else {
       res.status(404).json({
@@ -181,10 +182,11 @@ app.use((error, req, res, next) => {
       });
     }
   }
-  if (error.message === 'Solo se permiten archivos de imagen') {
+  // CAMBIO: Actualizar el mensaje de error para que coincida con el nuevo filtro
+  if (error.message === 'Solo se permiten archivos de imagen o PDF') {
     return res.status(400).json({
       success: false,
-      error: 'Solo se permiten archivos de imagen'
+      error: 'Solo se permiten archivos de imagen o PDF'
     });
   }
   console.error('Error no manejado:', error);

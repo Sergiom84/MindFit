@@ -33,7 +33,7 @@ CREATE TABLE users (
     cuello DECIMAL(5,2),
     antebrazos DECIMAL(5,2),
     historial_medico TEXT,
-    limitaciones TEXT,
+    limitaciones JSONB DEFAULT '[]'::jsonb,
     alergias TEXT,
     medicamentos TEXT,
     objetivo_principal VARCHAR(100),
@@ -44,6 +44,9 @@ CREATE TABLE users (
     comidas_diarias INT,
     suplementacion TEXT,
     alimentos_excluidos TEXT,
+    fecha_inicio_objetivo DATE,
+    fecha_meta_objetivo DATE,
+    notas_progreso TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

@@ -44,6 +44,38 @@ const uploadPdf = multer({
   }
 });
 
+// GET: servir archivo PDF específico
+router.get('/users/:id/medical-docs/:docId/view', async (req, res) => {
+  try {
+    const { id: userId, docId } = req.params;
+
+    // Obtener el documento de la base de datos
+    const result = await query('SELECT historial_medico_docs FROM public.users WHERE id=$1', [userId]);
+    if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Usuario no encontrado' });
+
+    const docs = result.rows[0].historial_medico_docs || [];
+    const doc = docs.find(d => String(d.id) === String(docId));
+    if (!doc) return res.status(404).json({ success: false, error: 'Documento no encontrado' });
+
+    // Construir la ruta del archivo
+    const filePath = path.join(process.cwd(), doc.url.replace(/^\//, ''));
+
+    // Verificar que el archivo existe
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ success: false, error: 'Archivo no encontrado en el servidor' });
+    }
+
+    // Servir el archivo PDF
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${doc.originalName}"`);
+    return res.sendFile(filePath);
+
+  } catch (e) {
+    console.error('Error sirviendo PDF:', e);
+    return res.status(500).json({ success: false, error: e.message || 'Error interno' });
+  }
+});
+
 // GET: listar documentos
 router.get('/users/:id/medical-docs', async (req, res) => {
   try {
@@ -122,5 +154,54 @@ router.post('/users/:id/medical-docs/:docId/extract', async (req, res) => {
   }
 });
 
-export default router;
+// DELETE: eliminar un documento específico
+router.delete('/users/:id/medical-docs/:docId', async (req, res) => {
+  try {
+    const { id: userId, docId } = req.params;
 
+    // 1. Obtener los documentos actuales del usuario desde la BBDD
+    const result = await query('SELECT historial_medico_docs FROM public.users WHERE id=$1', [userId]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Usuario no encontrado' });
+    }
+
+    const docs = result.rows[0].historial_medico_docs || [];
+    const docToDelete = docs.find(d => String(d.id) === String(docId));
+
+    // Si el documento no existe en el registro del usuario, devuelve 404
+    if (!docToDelete) {
+      return res.status(404).json({ success: false, error: 'Documento no encontrado' });
+    }
+
+    // 2. Eliminar el archivo físico del servidor
+    // Construye la ruta absoluta al archivo desde la raíz del proyecto
+    const filePath = path.join(process.cwd(), docToDelete.url.replace(/^\//, ''));
+    
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath); // Usamos unlinkSync para simplicidad en el flujo
+        console.log(`Archivo físico eliminado: ${filePath}`);
+      } catch (fileErr) {
+        // Si falla la eliminación del archivo, solo lo registramos, pero continuamos para borrar el registro de la BBDD
+        console.error(`Error al eliminar el archivo físico ${filePath}:`, fileErr);
+      }
+    } else {
+        console.warn(`El archivo físico no se encontró para eliminar, pero se procederá a borrar el registro de la BBDD: ${filePath}`);
+    }
+
+    // 3. Crear la nueva lista de documentos filtrando el que se va a eliminar
+    const nextDocs = docs.filter(d => String(d.id) !== String(docId));
+
+    // 4. Actualizar el registro en la base de datos con la nueva lista
+    await query('UPDATE public.users SET historial_medico_docs=$1, updated_at=NOW() WHERE id=$2', [JSON.stringify(nextDocs), userId]);
+
+    // 5. Devolver una respuesta exitosa
+    return res.json({ success: true, message: 'Documento eliminado correctamente', docs: nextDocs });
+
+  } catch (e) {
+    console.error('Error en el proceso de eliminación del documento médico:', e);
+    return res.status(500).json({ success: false, error: e.message || 'Error interno del servidor' });
+  }
+});
+
+export default router;

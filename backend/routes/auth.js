@@ -184,7 +184,8 @@ router.post('/register', async (req, res) => {
         cintura, pecho, brazos, muslos, cuello, antebrazos,
         historial_medico, limitaciones, alergias, medicamentos,
         objetivo_principal, meta_peso, meta_grasa, enfoque, horario_preferido,
-        comidas_diarias, suplementacion, alimentos_excluidos
+        comidas_diarias, suplementacion, alimentos_excluidos,
+        fecha_inicio_objetivo, fecha_meta_objetivo, notas_progreso
       ) VALUES(
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,
         $12,$13,$14,$15,$16,
@@ -192,7 +193,7 @@ router.post('/register', async (req, res) => {
         $21,$22,$23,$24,$25,$26,
         $27,$28,$29,$30,
         $31,$32,$33,$34,$35,
-        $36,$37,$38
+        $36,$37,$38,$39,$40,$41
       )
       RETURNING id, nombre, apellido, email, iniciales, nivel, edad, sexo, peso, altura, imc
     `;
@@ -204,7 +205,8 @@ router.post('/register', async (req, res) => {
       cintura, pecho, brazos, muslos, cuello, antebrazos,
       historial_medico, limitaciones, alergias, medicamentos,
       objetivo_principal, meta_peso, meta_grasa, enfoque, horario_preferido,
-      comidas_diarias, suplementacion, alimentos_excluidos
+      comidas_diarias, suplementacion, alimentos_excluidos,
+      null, null, null // fecha_inicio_objetivo, fecha_meta_objetivo, notas_progreso
     ];
 
     const result = await query(insertText, values);
@@ -265,7 +267,8 @@ router.patch('/users/:id', async (req, res) => {
       'cintura','pecho','brazos','muslos','cuello','antebrazos',
       'historial_medico','limitaciones','alergias','medicamentos',
       'objetivo_principal','meta_peso','meta_grasa','enfoque','horario_preferido',
-      'comidas_diarias','suplementacion','alimentos_excluidos'
+      'comidas_diarias','suplementacion','alimentos_excluidos',
+      'fecha_inicio_objetivo','fecha_meta_objetivo','notas_progreso'
     ]);
 
     // Filtrar y normalizar
@@ -302,8 +305,14 @@ router.patch('/users/:id', async (req, res) => {
         continue;
       }
 
-      if (TEXT_FIELDS.includes(k) || ['nombre','nivel','sexo','metodologia_preferida','enfoque','horario_preferido','objetivo_principal','nivel_actividad','experiencia'].includes(k)) {
+      if (TEXT_FIELDS.includes(k) || ['nombre','nivel','sexo','metodologia_preferida','enfoque','horario_preferido','objetivo_principal','nivel_actividad','experiencia','notas_progreso'].includes(k)) {
         patchData[k] = textOrNull(v);
+        continue;
+      }
+
+      // Fechas
+      if (['fecha_inicio_objetivo','fecha_meta_objetivo'].includes(k)) {
+        patchData[k] = v && v.trim() ? v.trim() : null;
         continue;
       }
 
