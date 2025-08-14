@@ -30,6 +30,15 @@ async function safeJson(res) {
   try { return JSON.parse(text); } catch { return null; }
 }
 
+// Parsear listas de ejercicios de forma segura
+function parseExercises(content) {
+  try {
+    return JSON.parse(content || '[]');
+  } catch {
+    return [];
+  }
+}
+
 const HomeTrainingSection = () => {
   // justo dentro del componente HomeTrainingSection
   const [equipamiento, setEquipamiento] = useState('minimo');     // 'minimo' | 'basico' | 'avanzado'
@@ -116,19 +125,23 @@ const HomeTrainingSection = () => {
 
     if (safeDias.length > 0) {
       // Usar datos de la base de datos si están disponibles
-      const calendar = safeDias.map(day => ({
-        id: day.dia_semana.toLowerCase(),
-        dayName: day.dia_semana.charAt(0).toUpperCase() + day.dia_semana.slice(1),
-        dayNumber: new Date(day.fecha).getDate(),
-        date: day.fecha,
-        isToday: new Date(day.fecha).toDateString() === new Date().toDateString(),
-        exercises: JSON.parse(day.ejercicios_asignados || '[]'),
-        exerciseCount: day.es_descanso ? 0 : JSON.parse(day.ejercicios_asignados || '[]').length,
-        completed: day.ejercicios_completados,
-        total: day.es_descanso ? 0 : JSON.parse(day.ejercicios_asignados || '[]').length,
-        status: day.es_descanso ? 'rest' : day.estado,
-        isRest: day.es_descanso
-      }));
+      const calendar = safeDias.map(day => {
+        const exercises = parseExercises(day.ejercicios_asignados);
+        const exerciseCount = exercises.length;
+        return {
+          id: day.dia_semana.toLowerCase(),
+          dayName: day.dia_semana.charAt(0).toUpperCase() + day.dia_semana.slice(1),
+          dayNumber: new Date(day.fecha).getDate(),
+          date: day.fecha,
+          isToday: new Date(day.fecha).toDateString() === new Date().toDateString(),
+          exercises,
+          exerciseCount: day.es_descanso ? 0 : exerciseCount,
+          completed: day.ejercicios_completados,
+          total: day.es_descanso ? 0 : exerciseCount,
+          status: day.es_descanso ? 'rest' : day.estado,
+          isRest: day.es_descanso
+        };
+      });
       setWeeklyCalendar(calendar);
     } else if (generatedWorkout) {
       // Crear calendario de ejemplo si no hay datos de BD
