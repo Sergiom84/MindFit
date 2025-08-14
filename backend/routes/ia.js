@@ -5,10 +5,11 @@ import { query } from '../db.js';
 
 const router = express.Router();
 
-// Cliente OpenAI centralizado
-const openai = getOpenAI();
+// Cliente OpenAI (puede ser null si no hay API key)
+const openai = getOpenAI?.() ?? null;
 
-// --- Utils ---
+/* ----------------------------- Utilidades varias ---------------------------- */
+
 function todayYYYYMMDD() {
   const d = new Date();
   const y = d.getFullYear();
@@ -16,22 +17,15 @@ function todayYYYYMMDD() {
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
-function addDaysYYYYMMDD(days) {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
+
 function isTruthy(v) {
   return !!v && v !== 'no' && v !== 'false' && v !== false && v !== 0;
 }
+
 function objectToReadable(o) {
   if (!o) return 'Ninguna';
   if (Array.isArray(o)) return o.filter(Boolean).join(', ') || 'Ninguna';
   if (typeof o === 'object') {
-    // Convierte { rodilla: 'leve', hombro: null } => "rodilla: leve"
     const entries = Object.entries(o).filter(([_, v]) => isTruthy(v));
     if (entries.length === 0) return 'Ninguna';
     return entries
@@ -42,312 +36,368 @@ function objectToReadable(o) {
   return s === '' ? 'Ninguna' : s;
 }
 
-// Normaliza perfil y reglas de sugerencia - VERSIÓN COMPLETA
+function canonEquipamiento(v = '') {
+  const x = String(v).toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+  if (x.includes('avanz')) return 'avanzado';
+  if (x.includes('basi')) return 'basico';
+  return 'minimo';
+}
+
+function canonTipo(v = '') {
+  const x = String(v).toLowerCase();
+  if (x.includes('func')) return 'funcional';
+  if (x.includes('fuerz') || x.includes('fuera')) return 'fuerza'; // “fuera” suele ser un typo
+  return 'hiit';
+}
+
+/* ----------------------- Carga/normalización del perfil --------------------- */
+
+async function fetchUserProfile(userId) {
+  // Solo usamos la tabla users que ya contiene toda la información de salud
+  const profile = {};
+  try {
+    const u = await query('SELECT * FROM users WHERE id = $1 LIMIT 1', [userId]);
+    if (u?.rows?.[0]) Object.assign(profile, u.rows[0]);
+  } catch (_) {}
+
+  try {
+    const p = await query('SELECT * FROM user_profiles WHERE user_id = $1 LIMIT 1', [userId]);
+    if (p?.rows?.[0]) Object.assign(profile, p.rows[0]);
+  } catch (_) {}
+
+  return profile;
+}
+
 function normalizeProfile(rawProfile = {}) {
   const p = { ...rawProfile };
 
-  // === DATOS BÁSICOS ===
-  const nombre = p.nombre || 'Usuario';
-  const apellido = p.apellido || '';
+  // --- Datos básicos ---
+  const nombre = p.nombre || p.first_name || 'Usuario';
+  const apellido = p.apellido || p.last_name || '';
   const email = p.email || '';
   const sexo = p.sexo || p.gender || 'no_especificado';
-  const edad = Number(p.edad || p.age || 0) || undefined;
-  const peso_kg = Number(p.peso_kg || p.peso || p.weight_kg || 0) || undefined;
-  const altura_cm = Number(p.altura_cm || p.altura || p.height_cm || 0) || undefined;
+  const edad = Number(p.edad ?? p.age ?? 0) || undefined;
+  const peso_kg = Number(p.peso_kg ?? p.peso ?? p.weight_kg ?? 0) || undefined;
+  const altura_cm = Number(p.altura_cm ?? p.altura ?? p.height_cm ?? 0) || undefined;
 
-  // === IMC CALCULADO ===
+  // --- IMC ---
   let imc = undefined;
   if (peso_kg && altura_cm) {
-    const altura_m = altura_cm / 100;
-    imc = Number((peso_kg / (altura_m * altura_m)).toFixed(1));
+    const m = altura_cm / 100;
+    imc = Number((peso_kg / (m * m)).toFixed(1));
   }
 
-  // === NIVEL DE ACTIVIDAD Y ENTRENAMIENTO ===
-  const nivel_actividad = p.nivel_actividad || 'moderado';
+  // --- Nivel actividad/entrenamiento ---
+  const nivel_actividad = p.nivel_actividad || p.activity_level || 'moderado';
   const nivel = p.nivel || p.experience || 'principiante';
-  const años_entrenando = Number(p.años_entrenando || 0) || undefined;
-  const metodologia_preferida = p.metodologia_preferida || 'ninguna';
-  const frecuencia_semanal = Number(p.frecuencia_semanal || p.freq || p.sessions_per_week || 3) || 3;
+  const años_entrenando = Number(p.años_entrenando ?? p.years_training ?? 0) || undefined;
+  const frecuencia_semanal = Number(p.frecuencia_semanal ?? p.sessions_per_week ?? 3) || 3;
 
-  // === PREFERENCIAS DE ENTRENAMIENTO ===
+  // --- Preferencias ---
   const enfoque = p.enfoque || 'general';
   const horario_preferido = p.horario_preferido || 'mañana';
 
-  // === COMPOSICIÓN CORPORAL ===
-  const grasa_corporal = Number(p.grasa_corporal || p.body_fat || 0) || undefined;
-  const masa_muscular = Number(p.masa_muscular || 0) || undefined;
-  const agua_corporal = Number(p.agua_corporal || 0) || undefined;
-  const metabolismo_basal = Number(p.metabolismo_basal || 0) || undefined;
+  // --- Composición corporal ---
+  const grasa_corporal = Number(p.grasa_corporal ?? p.body_fat ?? 0) || undefined;
+  const masa_muscular = Number(p.masa_muscular ?? 0) || undefined;
+  const agua_corporal = Number(p.agua_corporal ?? 0) || undefined;
+  const metabolismo_basal = Number(p.metabolismo_basal ?? 0) || undefined;
 
-  // === MEDIDAS CORPORALES ===
-  const cintura = Number(p.cintura || 0) || undefined;
-  const pecho = Number(p.pecho || 0) || undefined;
-  const brazos = Number(p.brazos || 0) || undefined;
-  const muslos = Number(p.muslos || 0) || undefined;
-  const cuello = Number(p.cuello || 0) || undefined;
-  const antebrazos = Number(p.antebrazos || 0) || undefined;
+  // --- Medidas (opcionales) ---
+  const cintura = Number(p.cintura ?? 0) || undefined;
+  const pecho = Number(p.pecho ?? 0) || undefined;
+  const brazos = Number(p.brazos ?? 0) || undefined;
+  const muslos = Number(p.muslos ?? 0) || undefined;
+  const cuello = Number(p.cuello ?? 0) || undefined;
+  const antebrazos = Number(p.antebrazos ?? 0) || undefined;
 
-  // === SALUD Y LIMITACIONES ===
+  // --- Salud ---
   let lesiones = p.limitaciones ?? p.lesiones ?? p.lesiones_activas ?? 'Ninguna';
   lesiones = objectToReadable(lesiones);
   const alergias = objectToReadable(p.alergias || 'Ninguna');
   const medicamentos = objectToReadable(p.medicamentos || 'Ninguno');
   const historial_medico = p.historial_medico || '';
 
-  // === NUTRICIÓN ===
-  const comidas_diarias = Number(p.comidas_diarias || 3) || 3;
+  // --- Nutrición / objetivos (opcionales) ---
+  const comidas_diarias = Number(p.comidas_diarias ?? 3) || 3;
   const suplementacion = objectToReadable(p.suplementacion || 'Ninguna');
   const alimentos_excluidos = objectToReadable(p.alimentos_excluidos || 'Ninguno');
 
-  // === OBJETIVOS ===
   const objetivo_principal = p.objetivo_principal || p.objetivo || p.goal || 'salud_general';
-  const meta_peso = Number(p.meta_peso || 0) || undefined;
-  const meta_grasa = Number(p.meta_grasa || 0) || undefined;
+  const meta_peso = Number(p.meta_peso ?? 0) || undefined;
+  const meta_grasa = Number(p.meta_grasa ?? 0) || undefined;
 
-  // === ACCESO A GIMNASIO ===
+  // --- Casa/gimnasio ---
   const homeTrainingAllowed =
     isTruthy(p.prefiere_entrenar_en_casa) ||
     String(p.acceso_gimnasio || '').toLowerCase() === 'no' ||
     p.sin_acceso_gimnasio === true;
 
-  // Lista de metodologías disponibles
-  const baseMethods = [
-    'Heavy Duty',
-    'Powerlifting',
-    'Hipertrofia',
-    'Funcional',
-    'Oposiciones',
-    'CrossFit',
-    'Calistenia',
-    'Entrenamiento en Casa'
-  ];
-  const availableMethods = homeTrainingAllowed
-    ? baseMethods
-    : baseMethods.filter((m) => m !== 'Entrenamiento en Casa');
-
   return {
-    // === DATOS BÁSICOS ===
     nombre, apellido, email, sexo, edad, peso_kg, altura_cm, imc,
-
-    // === NIVEL DE ACTIVIDAD Y ENTRENAMIENTO ===
-    nivel_actividad, nivel, años_entrenando, metodologia_preferida, frecuencia_semanal,
-
-    // === PREFERENCIAS DE ENTRENAMIENTO ===
+    nivel_actividad, nivel, años_entrenando, frecuencia_semanal,
     enfoque, horario_preferido,
-
-    // === COMPOSICIÓN CORPORAL ===
     grasa_corporal, masa_muscular, agua_corporal, metabolismo_basal,
-
-    // === MEDIDAS CORPORALES ===
     cintura, pecho, brazos, muslos, cuello, antebrazos,
-
-    // === SALUD Y LIMITACIONES ===
     lesionesSanitizadas: lesiones, alergias, medicamentos, historial_medico,
-
-    // === NUTRICIÓN ===
     comidas_diarias, suplementacion, alimentos_excluidos,
-
-    // === OBJETIVOS ===
     objetivo_principal, meta_peso, meta_grasa,
-
-    // === CONFIGURACIÓN DE ENTRENAMIENTO ===
-    homeTrainingAllowed, availableMethods
+    homeTrainingAllowed
   };
 }
 
-router.post('/recommend-and-generate', async (req, res) => {
-  console.log('✅ Endpoint de IA: Recibiendo petición...');
-  try {
-    const { userId, profile: rawProfile, forcedMethodology } = req.body;
+/* ----------------------- Fallback: plan si no hay OpenAI -------------------- */
 
-    if (!userId || !rawProfile) {
-      return res.status(400).json({ success: false, error: 'Faltan datos del perfil de usuario.' });
-    }
-    if (!openai) {
-      return res.status(503).json({ success: false, error: 'IA no disponible: falta OPENAI_API_KEY en el servidor.' });
-    }
+function buildTodayPlanFallback({ tipo, equipamiento }) {
+  const fecha = todayYYYYMMDD();
+  const baseDescanso = equipamiento === 'avanzado' ? 30 : equipamiento === 'basico' ? 40 : 45;
+  const baseSeries = equipamiento === 'avanzado' ? 4 : 3;
 
-    const profile = normalizeProfile(rawProfile);
-
-    // Log limpio (sin [object Object])
-    console.log('🧩 Perfil normalizado (resumen):', {
-      edad: profile.edad,
-      sexo: profile.sexo,
-      objetivo: profile.objetivo_principal,
-      nivel: profile.nivel,
-      freq: profile.frecuencia_semanal,
-      lesiones: profile.lesionesSanitizadas,
-      homeTrainingAllowed: profile.homeTrainingAllowed
-    });
-
-    const daysOfWeek = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    const currentDayName = daysOfWeek[new Date().getDay()];
-    console.log(`🗓️  Día actual detectado: ${currentDayName}`);
-
-    const mainInstruction = forcedMethodology
-      ? `Tu tarea es actuar como un entrenador experto en la metodología "${forcedMethodology}". Crea el mejor y más detallado plan de entrenamiento semanal posible de "${forcedMethodology}" para este usuario, personalizándolo según su perfil.`
-      : 'Tu tarea es analizar el perfil de un usuario y recomendarle la mejor metodología de la lista proporcionada. Luego, genera un plan de entrenamiento semanal completo y detallado basado en esa recomendación.';
-
-    const methodsList = profile.availableMethods.join(', ');
-
-    const prompt = `
-Eres "MindFit Coach", un entrenador personal y nutricionista de élite con IA. ${mainInstruction}
-
-REGLAS CRÍTICAS PARA LA RUTINA:
-1) El plan de entrenamiento debe comenzar hoy, que es ${currentDayName}.
-2) El primer día del plan (Día 1) debe ser OBLIGATORIAMENTE un día de entrenamiento, NUNCA un día de descanso.
-3) Solo considera **lesiones activas**. Si no hay lesiones activas, ignora cualquier lesión histórica y NO restrinjas innecesariamente el plan.
-4) ${profile.homeTrainingAllowed ? 'Puedes' : 'NO puedes'} sugerir "Entrenamiento en Casa". Si no está permitido, elige otra metodología más adecuada.
-5) Evita recomendar modalidades que contradigan claramente las lesiones activas; adapta ejercicios cuando sea necesario.
-6) Devuelve DURACIÓN DEL PROGRAMA en **semanas** y el **nivel de dificultad** estimado.
-
-PERFIL COMPLETO DEL USUARIO:
-
-📋 DATOS BÁSICOS:
-- Nombre: ${profile.nombre || 'Usuario'}
-- Edad: ${profile.edad ?? 'No especificada'} años
-- Sexo: ${profile.sexo}
-- Peso: ${profile.peso_kg ?? '—'} kg
-- Altura: ${profile.altura_cm ?? '—'} cm
-- IMC: ${profile.imc ?? '—'}
-
-🏃 EXPERIENCIA Y NIVEL:
-- Nivel de Actividad: ${profile.nivel_actividad}
-- Nivel de Entrenamiento: ${profile.nivel}
-- Años Entrenando: ${profile.años_entrenando ?? '—'} años
-- Metodología Preferida: ${profile.metodologia_preferida}
-- Frecuencia Semanal: ${profile.frecuencia_semanal} días/semana
-- Enfoque Seleccionado: ${profile.enfoque}
-- Horario Preferido: ${profile.horario_preferido}
-
-🎯 OBJETIVOS:
-- Objetivo Principal: ${profile.objetivo_principal}
-- Meta de Peso: ${profile.meta_peso ?? '—'} kg
-- Meta de Grasa Corporal: ${profile.meta_grasa ?? '—'}%
-
-💪 COMPOSICIÓN CORPORAL:
-- Grasa Corporal: ${profile.grasa_corporal ?? '—'}%
-- Masa Muscular: ${profile.masa_muscular ?? '—'} kg
-- Agua Corporal: ${profile.agua_corporal ?? '—'}%
-- Metabolismo Basal: ${profile.metabolismo_basal ?? '—'} kcal
-
-📏 MEDIDAS CORPORALES:
-- Cintura: ${profile.cintura ?? '—'} cm
-- Pecho: ${profile.pecho ?? '—'} cm
-- Brazos: ${profile.brazos ?? '—'} cm
-- Muslos: ${profile.muslos ?? '—'} cm
-- Cuello: ${profile.cuello ?? '—'} cm
-- Antebrazos: ${profile.antebrazos ?? '—'} cm
-
-🏥 SALUD Y LIMITACIONES:
-- Lesiones ACTIVAS: ${profile.lesionesSanitizadas}
-- Alergias: ${profile.alergias}
-- Medicamentos: ${profile.medicamentos}
-- Historial Médico: ${profile.historial_medico || 'No especificado'}
-
-🍽️ NUTRICIÓN:
-- Comidas Diarias: ${profile.comidas_diarias} comidas/día
-- Suplementación: ${profile.suplementacion}
-- Alimentos Excluidos: ${profile.alimentos_excluidos}
-- Evita: ${profile.evita || '—'}
-
-METODOLOGÍAS DISPONIBLES (si estás en modo recomendador, elige solo de esta lista):
-${methodsList}
-
-INSTRUCCIONES PARA LA RESPUESTA (OBLIGATORIO):
-Devuelve un único objeto JSON válido EXACTAMENTE con esta estructura:
-{
-  "recomendacion": {
-    "metodologia_sugerida": "${forcedMethodology || 'NombreDeLaMetodologiaElegida'}",
-    "justificacion": "Un párrafo conciso y motivador explicando por qué esta metodología es la mejor para el usuario, mencionando explícitamente las lesiones ACTIVAS si las hay.",
-    "program_duration_weeks": 12,
-    "difficulty_level": "Principiante | Intermedio | Avanzado"
-  },
-  "rutina_semanal": {
-    "nombre_rutina": "Plan de ${forcedMethodology || '[Metodología]'} para ${profile.objetivo_principal}",
-    "dias": [
-      { "dia": 1, "nombre_sesion": "Ej: Empuje (${currentDayName})", "ejercicios": [ { "nombre": "Press de Banca", "series": 4, "repeticiones": "8-12", "descanso_seg": 60, "notas": "Controla la fase excéntrica." } ] }
+  const blocks = {
+    hiit: [
+      { nombre: 'Jumping Jacks', tipo: 'time', duracion_seg: 40, descanso_seg: baseDescanso, series: baseSeries, notas: 'Ritmo alto, respiración controlada.' },
+      { nombre: 'Sentadillas air squat', tipo: 'reps', repeticiones: 15, descanso_seg: baseDescanso, series: baseSeries, notas: 'Espalda neutra.' },
+      { nombre: 'Mountain Climbers', tipo: 'time', duracion_seg: 30, descanso_seg: baseDescanso, series: baseSeries, notas: 'Core firme.' },
+      { nombre: 'Plancha', tipo: 'time', duracion_seg: 30, descanso_seg: baseDescanso, series: baseSeries, notas: 'No hundas la cadera.' }
+    ],
+    funcional: [
+      { nombre: 'Puente de glúteo', tipo: 'reps', repeticiones: 12, descanso_seg: baseDescanso, series: baseSeries, notas: '' },
+      { nombre: 'Remo con mochila', tipo: 'reps', repeticiones: 12, descanso_seg: baseDescanso, series: baseSeries, notas: 'Mochila con libros.' },
+      { nombre: 'Zancadas alternas', tipo: 'reps', repeticiones: 10, descanso_seg: baseDescanso, series: baseSeries, notas: '' },
+      { nombre: 'Plancha lateral', tipo: 'time', duracion_seg: 20, descanso_seg: baseDescanso, series: baseSeries, notas: 'Ambos lados.' }
+    ],
+    fuerza: [
+      { nombre: 'Sentadilla goblet (carga doméstica)', tipo: 'reps', repeticiones: 10, descanso_seg: baseDescanso, series: baseSeries, notas: '' },
+      { nombre: 'Flexiones', tipo: 'reps', repeticiones: 8, descanso_seg: baseDescanso, series: baseSeries, notas: 'Escala en rodillas si hace falta.' },
+      { nombre: 'Peso muerto rumano mono-lateral', tipo: 'reps', repeticiones: 10, descanso_seg: baseDescanso, series: baseSeries, notas: 'Con garrafa/banda.' },
+      { nombre: 'Remo inclinado con banda/mochila', tipo: 'reps', repeticiones: 12, descanso_seg: baseDescanso, series: baseSeries, notas: '' }
     ]
+  };
+
+  const lista = blocks[tipo] || blocks.hiit;
+  const duracion_estimada_min = Math.max(20, Math.round(lista.reduce((acc, e) => {
+    const porSerie = e.tipo === 'time' ? (e.duracion_seg + e.descanso_seg) : (40 + e.descanso_seg);
+    return acc + porSerie * (e.series || 3);
+  }, 0) / 60));
+
+  return {
+    titulo: `${tipo.toUpperCase()} en Casa`,
+    subtitulo: 'Entrenamiento personalizado adaptado a tu equipamiento',
+    fecha,
+    equipamiento,
+    tipoEntrenamiento: tipo,
+    duracion_estimada_min,
+    ejercicios: lista
+  };
+}
+
+/* ----------------------------- Prompt de OpenAI ----------------------------- */
+
+function buildPrompt({ profile, tipo, equipamiento }) {
+  return `
+Eres "MindFit Coach", un entrenador personal experto. Genera SOLO un JSON válido (sin markdown) con un plan para HOY (${todayYYYYMMDD()}) de entrenamiento en casa.
+
+Condiciones:
+- Estilo solicitado: "${tipo}" (uno de: hiit, funcional, fuerza).
+- Equipamiento: "${equipamiento}" (minimo, basico, avanzado). Si es "minimo", usa peso corporal y objetos domésticos; "basico" permite banda/gomas o par de mancuernas; "avanzado" admite más volumen e intensidades.
+- Personaliza según este perfil (si faltan campos, ignóralos): ${JSON.stringify(profile)}
+
+Formato EXACTO del JSON:
+{
+  "titulo": "HIIT en Casa",
+  "subtitulo": "Entrenamiento personalizado adaptado a tu equipamiento",
+  "fecha": "YYYY-MM-DD",
+  "equipamiento": "minimo|basico|avanzado",
+  "tipoEntrenamiento": "hiit|funcional|fuerza",
+  "duracion_estimada_min": 25,
+  "ejercicios": [
+    {
+      "nombre": "Sentadillas",
+      "tipo": "reps" | "time",
+      "series": 3,
+      "repeticiones": 12,          // si tipo="reps"
+      "duracion_seg": 30,          // si tipo="time"
+      "descanso_seg": 45,
+      "notas": "Puntos técnicos"
+    }
+  ]
+}
+
+Reglas:
+- Genera de 4 a 7 ejercicios.
+- Ajusta series/reps/tiempo/descanso a edad, nivel, lesiones y equipamiento.
+- No incluyas texto fuera del JSON.`;
+}
+
+/* --------------------------- Endpoint: generate-today ----------------------- */
+/**
+ * POST /api/ia/home-training/generate-today
+ * body: { userId, equipamiento, tipoEntrenamiento }
+ */
+router.post('/home-training/generate-today', async (req, res) => {
+  try {
+    const { userId, equipamiento, tipoEntrenamiento } = req.body || {};
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'Falta userId.' });
+    }
+
+    const tipo = canonTipo(tipoEntrenamiento);
+    const equip = canonEquipamiento(equipamiento);
+
+    // Carga perfil desde BD (best-effort)
+    const raw = await fetchUserProfile(userId);
+    const profile = normalizeProfile(raw);
+
+    // Llamada a OpenAI si disponible
+    let plan = null;
+    if (openai) {
+      try {
+        const prompt = buildPrompt({ profile, tipo, equipamiento: equip });
+        // SDK openai v4 (responses API)
+        const resp = await openai.responses.create({
+          model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+          input: prompt,
+          temperature: 0.6
+        });
+
+        const rawText =
+          resp?.output_text ??
+          resp?.content?.[0]?.text ??
+          resp?.choices?.[0]?.message?.content ??
+          '';
+
+        // Extrae el primer bloque JSON válido
+        const match = rawText.match(/\{[\s\S]*\}/);
+        if (match) {
+          plan = JSON.parse(match[0]);
+        }
+      } catch (err) {
+        console.warn('⚠️ OpenAI falló, usando fallback:', err?.message || err);
+      }
+    }
+
+    if (!plan) {
+      plan = buildTodayPlanFallback({ tipo, equipamiento: equip });
+    }
+
+    // Sanitiza estructura mínima
+    plan = {
+      titulo: plan?.titulo || `${tipo.toUpperCase()} en Casa`,
+      subtitulo: plan?.subtitulo || 'Entrenamiento personalizado adaptado a tu equipamiento',
+      fecha: plan?.fecha || todayYYYYMMDD(),
+      equipamiento: canonEquipamiento(plan?.equipamiento || equip),
+      tipoEntrenamiento: canonTipo(plan?.tipoEntrenamiento || tipo),
+      duracion_estimada_min: Number(plan?.duracion_estimada_min) || 30,
+      ejercicios: Array.isArray(plan?.ejercicios) ? plan.ejercicios.map((e) => ({
+        nombre: e?.nombre || 'Ejercicio',
+        tipo: (e?.tipo === 'time' || e?.tipo === 'reps') ? e.tipo : (e?.duracion_seg ? 'time' : 'reps'),
+        series: Number(e?.series) > 0 ? Number(e.series) : 3,
+        repeticiones: e?.repeticiones ?? null,
+        duracion_seg: Number(e?.duracion_seg) > 0 ? Number(e.duracion_seg) : null,
+        descanso_seg: Number(e?.descanso_seg) >= 0 ? Number(e.descanso_seg) : 45,
+        notas: e?.notas || ''
+      })) : []
+    };
+
+    // Meta para depuración/UX
+    const meta = {
+      source: openai ? (plan?._from_ai || 'openai') : 'fallback',
+      profile_used: {
+        edad: profile.edad,
+        sexo: profile.sexo,
+        nivel: profile.nivel,
+        nivel_actividad: profile.nivel_actividad,
+        años_entrenando: profile.años_entrenando,
+        imc: profile.imc,
+        lesiones: profile.lesionesSanitizadas
+      }
+    };
+
+    return res.json({ success: true, data: plan, meta });
+  } catch (err) {
+    console.error('❌ Error en generate-today:', err);
+    return res.status(500).json({ success: false, error: 'Error generando el entrenamiento de hoy.' });
+  }
+});
+
+/* --------------------------- Endpoint: log-session -------------------------- */
+/**
+ * Registra la sesión realizada por el usuario al terminar el player.
+ * POST /api/ia/home-training/log-session
+ * body: {
+ *   userId, plan: {...}, metrics: { duration_sec, exercises_done, total_exercises },
+ *   seriesCompleted?: number[], startedAt?: ISO, finishedAt?: ISO
+ * }
+ */
+let ensuredWorkoutSessions = false;
+async function ensureWorkoutSessionsTable() {
+  if (ensuredWorkoutSessions) return;
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS workout_sessions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        date DATE NOT NULL,
+        plan_json JSONB NOT NULL,
+        duration_sec INTEGER DEFAULT 0,
+        exercises_done INTEGER DEFAULT 0,
+        total_exercises INTEGER DEFAULT 0,
+        series_completed JSONB,
+        started_at TIMESTAMP NULL,
+        finished_at TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_workout_sessions_user_date
+        ON workout_sessions (user_id, date);
+    `);
+    ensuredWorkoutSessions = true;
+  } catch (e) {
+    console.warn('No se pudo crear/verificar workout_sessions:', e.message);
   }
 }
-IMPORTANTE: "program_duration_weeks" debe ser un número entero (ej. 8, 10, 12).
-`;
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4-turbo',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' }
-    });
+router.post('/home-training/log-session', async (req, res) => {
+  try {
+    const { userId, plan, metrics = {}, seriesCompleted, startedAt, finishedAt } = req.body || {};
+    if (!userId || !plan) {
+      return res.status(400).json({ success: false, error: 'Faltan userId o plan.' });
+    }
 
-    const ai = JSON.parse(completion.choices[0].message.content);
+    await ensureWorkoutSessionsTable();
 
-    // Fallbacks por si el modelo olvida campos
-    const weeks = Number(ai?.recomendacion?.program_duration_weeks || 12);
-    const difficulty = ai?.recomendacion?.difficulty_level || 'Intermedio';
-    const metodologia = ai?.recomendacion?.metodologia_sugerida || 'Hipertrofia';
-    const justificacion = ai?.recomendacion?.justificacion || 'Plan generado automáticamente según tu perfil.';
-    const program_duration = `${weeks} semanas`;
+    const today = todayYYYYMMDD();
+    const duration_sec = Number(metrics.duration_sec || 0) || 0;
+    const exercises_done = Number(metrics.exercises_done || 0) || 0;
+    const total_exercises = Number(metrics.total_exercises || (plan?.ejercicios?.length || 0));
 
-    const fecha_inicio = todayYYYYMMDD();
-    const fecha_fin = addDaysYYYYMMDD(weeks * 7);
-
-    // Cancela metodologías activas anteriores del usuario
-    await query(
-      `UPDATE user_selected_methodologies
-       SET estado = 'cancelado', cancelled_at = CURRENT_TIMESTAMP
-       WHERE user_id = $1 AND estado = 'activo'`,
-      [userId]
+    const result = await query(
+      `INSERT INTO workout_sessions
+        (user_id, date, plan_json, duration_sec, exercises_done, total_exercises, series_completed, started_at, finished_at)
+       VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7::jsonb, $8, $9)
+       RETURNING id`,
+      [
+        userId,
+        today,
+        JSON.stringify(plan),
+        duration_sec,
+        exercises_done,
+        total_exercises,
+        seriesCompleted ? JSON.stringify(seriesCompleted) : null,
+        startedAt ? new Date(startedAt) : null,
+        finishedAt ? new Date(finishedAt) : null
+      ]
     );
 
-    // Inserta NUEVO registro con columnas completas (incluye program_duration)
-    const insertSQL = `
-      INSERT INTO user_selected_methodologies (
-        user_id,
-        methodology_name,
-        methodology_description,
-        methodology_icon,
-        methodology_version,
-        selection_mode,
-        program_duration,
-        difficulty_level,
-        fecha_inicio,
-        fecha_fin,
-        methodology_data,
-        ai_recommendation_data,
-        estado
-      )
-      VALUES (
-        $1, $2, $3, $4, $5, $6,
-        $7, $8, $9, $10,
-        $11, $12, 'activo'
-      )
-      RETURNING *;
-    `;
-
-    const insertParams = [
-      userId,
-      metodologia,
-      justificacion,
-      null,                     // methodology_icon (opcional)
-      'Adaptada',
-      forcedMethodology ? 'manual' : 'automatic',
-      program_duration,
-      difficulty,
-      fecha_inicio,
-      fecha_fin,
-      ai?.rutina_semanal || {},
-      ai?.recomendacion || {}
-    ];
-
-    const insertResult = await query(insertSQL, insertParams);
-
-    return res.status(200).json({ success: true, data: insertResult.rows[0] });
-  } catch (error) {
-    console.error('Error en el endpoint de IA:', error);
-    return res
-      .status(500)
-      .json({ success: false, error: 'Error interno del servidor en la ruta de IA.' });
+    return res.json({ success: true, id: result?.rows?.[0]?.id || null });
+  } catch (err) {
+    console.error('❌ Error en log-session:', err);
+    return res.status(500).json({ success: false, error: 'No se pudo registrar la sesión.' });
   }
+});
+
+/* ---------------------- (Opcional) ping para diagnóstico -------------------- */
+router.get('/home-training/ping', (req, res) => {
+  res.json({ ok: true, ts: new Date().toISOString() });
 });
 
 export default router;

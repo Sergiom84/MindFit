@@ -2,9 +2,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+
 // Contextos (desde src con alias @)
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserContext } from '@/contexts/UserContext';
+
 
 // UI (con .jsx para mantener consistencia)
 import { Button } from '@/components/ui/button.jsx';
@@ -14,6 +16,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert.jsx';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group.jsx';
 import { Label } from '@/components/ui/label.jsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.jsx';
+
 
 // Iconos
 import {
@@ -33,12 +36,14 @@ import {
   Play
 } from 'lucide-react';
 
+
 // Convierte strings numéricos a números y deja el resto igual
 const NUMBER_KEYS = [
   'edad','peso_kg','altura_cm','grasa_corporal','masa_muscular','agua_corporal','metabolismo_basal',
   'cintura','pecho','brazos','muslos','cuello','antebrazos',
   'comidas_diarias','frecuencia_semanal','años_entrenando','meta_peso','meta_grasa'
 ];
+
 
 function sanitizeProfile(p) {
   const out = { ...p };
@@ -50,6 +55,7 @@ function sanitizeProfile(p) {
   });
   return out;
 }
+
 
 const METHODOLOGIES = [
   {
@@ -303,25 +309,31 @@ const METHODOLOGIES = [
   }
 ];
 
+
 export default function MethodologiesScreen() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const { userData } = useUserContext();
+
 
   // UI state
   const [selectionMode, setSelectionMode] = useState('automatico'); // 'automatico' | 'manual'
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
+
   // Manual selection / details
   const [showManualSelectionModal, setShowManualSelectionModal] = useState(false);
   const [pendingMethodology, setPendingMethodology] = useState(null);
 
+
   const [showDetails, setShowDetails] = useState(false);
   const [detailsMethod, setDetailsMethod] = useState(null);
 
+
   // Success dialog with DB row from backend
   const [successData, setSuccessData] = useState(null);
+
 
   // --- Activar IA (automático o forzado) ---
   const handleActivateIA = async (forcedMethodology = null) => {
@@ -329,8 +341,10 @@ export default function MethodologiesScreen() {
     setIsLoading(true);
     setError(null);
 
+
     const fullProfile = sanitizeProfile({ ...userData, ...currentUser });
     console.log('➡️ Perfil enviado a IA:', fullProfile);
+
 
     try {
       const response = await fetch('/api/ia/recommend-and-generate', {
@@ -354,6 +368,7 @@ export default function MethodologiesScreen() {
     }
   };
 
+
   // --- Flujo manual ---
   const handleManualCardClick = (methodology) => {
     if (selectionMode === 'manual') {
@@ -361,6 +376,7 @@ export default function MethodologiesScreen() {
       setShowManualSelectionModal(true);
     }
   };
+
 
   const confirmManualSelection = () => {
     if (pendingMethodology) {
@@ -370,15 +386,18 @@ export default function MethodologiesScreen() {
     }
   };
 
+
   const handleOpenDetails = (m) => {
     setDetailsMethod(m);
     setShowDetails(true);
   };
 
+
   const handleCloseSuccessDialog = () => {
     setSuccessData(null);
     navigate('/routines');
   };
+
 
   return (
     <div className="p-6 bg-black text-white min-h-screen pt-20 pb-24">
@@ -387,6 +406,7 @@ export default function MethodologiesScreen() {
         {/* Texto actualizado */}
         Automático (IA) o Manual (IA pero eligiendo que metodología realizar)
       </p>
+
 
       {/* Errores */}
       {error && (
@@ -397,6 +417,7 @@ export default function MethodologiesScreen() {
           </AlertDescription>
         </Alert>
       )}
+
 
       {/* Selección de modo (tarjetas clicables con borde iluminado) */}
       <Card className="bg-gray-900 border-yellow-400/20 mb-8">
@@ -445,6 +466,7 @@ export default function MethodologiesScreen() {
               )}
             </div>
 
+
             {/* Manual (tú eliges) */}
             <div
               onClick={() => setSelectionMode('manual')}
@@ -473,6 +495,7 @@ export default function MethodologiesScreen() {
         </CardContent>
       </Card>
 
+
       {/* Grid de metodologías */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {METHODOLOGIES.map((m) => {
@@ -499,6 +522,7 @@ export default function MethodologiesScreen() {
                 <CardDescription className="text-gray-400 mt-2">{m.description}</CardDescription>
               </CardHeader>
 
+
               <CardContent className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Frecuencia:</span>
@@ -513,6 +537,7 @@ export default function MethodologiesScreen() {
                   <span className="text-white">{m.intensity}</span>
                 </div>
 
+
                 {/* Botones: Ver Detalles / Seleccionar */}
                 <div className="flex gap-2 pt-2">
                   <Button
@@ -525,6 +550,7 @@ export default function MethodologiesScreen() {
                   >
                     Ver Detalles
                   </Button>
+
 
                   <Button
                     disabled={!manualActive}
@@ -543,6 +569,7 @@ export default function MethodologiesScreen() {
         })}
       </div>
 
+
       {/* Loader (IA) */}
       {isLoading && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
@@ -553,6 +580,7 @@ export default function MethodologiesScreen() {
           </div>
         </div>
       )}
+
 
       {/* Modal de selección manual */}
       <Dialog open={showManualSelectionModal} onOpenChange={setShowManualSelectionModal}>
@@ -567,6 +595,7 @@ export default function MethodologiesScreen() {
             </DialogDescription>
           </DialogHeader>
 
+
           {pendingMethodology && (
             <div className="mt-2 text-sm grid grid-cols-2 gap-2">
               <p><span className="text-gray-400">Nivel:</span> {pendingMethodology.level}</p>
@@ -575,6 +604,7 @@ export default function MethodologiesScreen() {
               <p><span className="text-gray-400">Intensidad:</span> {pendingMethodology.intensity}</p>
             </div>
           )}
+
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowManualSelectionModal(false)}>Cancelar</Button>
@@ -585,6 +615,7 @@ export default function MethodologiesScreen() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
 
       {/* Modal de Detalles Mejorado */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
@@ -599,6 +630,7 @@ export default function MethodologiesScreen() {
             </DialogDescription>
           </DialogHeader>
 
+
           {detailsMethod && (
             <div className="space-y-6">
               {/* Descripción detallada */}
@@ -611,6 +643,7 @@ export default function MethodologiesScreen() {
                 </div>
               )}
 
+
               {/* Video placeholder */}
               {detailsMethod.videoPlaceholder && (
                 <div className="p-6 bg-gray-800/50 rounded-lg border-2 border-dashed border-gray-600 text-center">
@@ -622,6 +655,7 @@ export default function MethodologiesScreen() {
                 </div>
               )}
 
+
               <Tabs defaultValue="principles" className="w-full">
                 <TabsList className="grid w-full grid-cols-4 bg-gray-800">
                   <TabsTrigger value="principles" className="text-xs">Principios</TabsTrigger>
@@ -629,6 +663,7 @@ export default function MethodologiesScreen() {
                   <TabsTrigger value="target" className="text-xs">Dirigido a</TabsTrigger>
                   <TabsTrigger value="science" className="text-xs">Ciencia</TabsTrigger>
                 </TabsList>
+
 
                 <TabsContent value="principles" className="mt-4">
                   <h4 className="text-yellow-400 font-semibold mb-2">Principios Fundamentales</h4>
@@ -642,6 +677,7 @@ export default function MethodologiesScreen() {
                   </ul>
                 </TabsContent>
 
+
                 <TabsContent value="benefits" className="mt-4">
                   <h4 className="text-yellow-400 font-semibold mb-2">Beneficios Principales</h4>
                   <ul className="space-y-1">
@@ -653,6 +689,7 @@ export default function MethodologiesScreen() {
                     )) || <li className="text-gray-400 text-sm">No hay beneficios disponibles</li>}
                   </ul>
                 </TabsContent>
+
 
                 <TabsContent value="target" className="mt-4">
                   <h4 className="text-yellow-400 font-semibold mb-2">Público Objetivo</h4>
@@ -677,6 +714,7 @@ export default function MethodologiesScreen() {
                   </div>
                 </TabsContent>
 
+
                 <TabsContent value="science" className="mt-4">
                   <h4 className="text-yellow-400 font-semibold mb-2">Base Científica</h4>
                   <p className="text-gray-300 text-sm">{detailsMethod.scientificBasis || 'No especificado'}</p>
@@ -684,6 +722,7 @@ export default function MethodologiesScreen() {
               </Tabs>
             </div>
           )}
+
 
           <DialogFooter className="flex justify-between items-center mt-6 pt-4 border-t border-gray-700">
             <div className="flex items-center space-x-2">
@@ -717,6 +756,7 @@ export default function MethodologiesScreen() {
         </DialogContent>
       </Dialog>
 
+
       {/* Diálogo de éxito (respuesta de /api/ia/recommend-and-generate) */}
       <Dialog open={!!successData} onOpenChange={(open) => { if (!open) handleCloseSuccessDialog(); }}>
         <DialogContent className="max-w-lg bg-gray-900 border-yellow-400/20 text-white">
@@ -730,6 +770,7 @@ export default function MethodologiesScreen() {
             </DialogDescription>
           </DialogHeader>
 
+
           <div className="space-y-2 text-sm">
             <p>
               <span className="text-gray-400">Metodología:</span>{' '}
@@ -739,6 +780,7 @@ export default function MethodologiesScreen() {
               {successData?.methodology_description}
             </p>
           </div>
+
 
           <DialogFooter className="mt-2">
             <Button className="bg-yellow-400 text-black hover:bg-yellow-300" onClick={handleCloseSuccessDialog}>
@@ -751,3 +793,6 @@ export default function MethodologiesScreen() {
     </div>
   );
 }
+
+
+

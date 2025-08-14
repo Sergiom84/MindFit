@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import SpaceEvaluationModal from './SpaceEvaluationModal'
 import WorkoutExerciseModal from './WorkoutExerciseModal'
+import IAHomeTraining from '@/components/IAHomeTraining'
 import { useUserContext } from '@/contexts/UserContext'
 import {
   Dumbbell,
@@ -21,7 +22,19 @@ import {
 } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
 
+// Evita crashear si el servidor responde 304/204 o body vacío
+async function safeJson(res) {
+  if (res.status === 304 || res.status === 204) return null;
+  const text = await res.text();
+  if (!text) return null;
+  try { return JSON.parse(text); } catch { return null; }
+}
+
 const HomeTrainingSection = () => {
+  // justo dentro del componente HomeTrainingSection
+  const [equipamiento, setEquipamiento] = useState('minimo');     // 'minimo' | 'basico' | 'avanzado'
+  const [tipo, setTipo] = useState('funcional');                  // 'funcional' | 'hiit' | 'fuerza'
+  const [showIAPlan, setShowIAPlan] = useState(false);
   const [selectedEquipment, setSelectedEquipment] = useState('minimal')
   const [selectedTrainingType, setSelectedTrainingType] = useState('functional')
   const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false)
@@ -52,20 +65,29 @@ const HomeTrainingSection = () => {
     }
   }, [entrenamientoCasa.equipoDisponible]);
 
-  // Cargar programa activo y estadísticas al iniciar
+  // 👉 desactiva efectos cuando showIAPlan = true
   useEffect(() => {
-    if (userData.id) {
-      loadActiveProgram();
-      loadHomeTrainingStats();
-    }
-  }, [userData.id]);
+    // Si el usuario ha lanzado "Generar Mi Entrenamiento" con IA,
+    // no dispares las cargas del programa/estadísticas semanales.
+    if (showIAPlan) return;
+    if (!userData.id) return;
 
-  const loadActiveProgram = async () => {
+    loadActiveProgram(userData.id);
+    loadHomeTrainingStats(userData.id);
+  }, [showIAPlan, userData.id]);
+
+  // (solo si quieres reiniciar al cambiar selección)
+  // Si deseas que al cambiar de equipamiento/tipo se "reseteé" el player para obligar a regenerar:
+  useEffect(() => {
+    setShowIAPlan(false);
+  }, [equipamiento, tipo]);
+
+  const loadActiveProgram = async (userId) => {
     try {
-      const response = await fetch(`/api/home-training/active-program/${userData.id}`);
-      const data = await response.json();
+      const response = await fetch(`/api/home-training/active-program/${userId}`);
+      const data = await safeJson(response);
 
-      if (data.success && data.program) {
+      if (data && data.success && data.program) {
         setActiveProgram(data.program);
         generateWeeklyCalendar(data.program);
       }
@@ -74,12 +96,12 @@ const HomeTrainingSection = () => {
     }
   };
 
-  const loadHomeTrainingStats = async () => {
+  const loadHomeTrainingStats = async (userId) => {
     try {
-      const response = await fetch(`/api/home-training/stats/${userData.id}`);
-      const data = await response.json();
+      const response = await fetch(`/api/home-training/stats/${userId}`);
+      const data = await safeJson(response);
 
-      if (data.success) {
+      if (data && data.success) {
         setHomeTrainingStats(data.stats);
       }
     } catch (error) {
@@ -88,9 +110,13 @@ const HomeTrainingSection = () => {
   };
 
   const generateWeeklyCalendar = (program) => {
-    if (program && program.dias) {
+    // Hacer la función tolerante a data vacío
+    const safeProgram = program || {};
+    const safeDias = Array.isArray(safeProgram.dias) ? safeProgram.dias : [];
+
+    if (safeDias.length > 0) {
       // Usar datos de la base de datos si están disponibles
-      const calendar = program.dias.map(day => ({
+      const calendar = safeDias.map(day => ({
         id: day.dia_semana.toLowerCase(),
         dayName: day.dia_semana.charAt(0).toUpperCase() + day.dia_semana.slice(1),
         dayNumber: new Date(day.fecha).getDate(),
@@ -202,7 +228,10 @@ const HomeTrainingSection = () => {
         throw new Error('Error al generar entrenamiento');
       }
 
-      const data = await response.json();
+      const data = await safeJson(response);
+      if (!data) {
+        throw new Error('Respuesta vacía del servidor');
+      }
       setGeneratedWorkout(data.entrenamiento);
       setCurrentExerciseIndex(0);
 
@@ -223,6 +252,9 @@ const HomeTrainingSection = () => {
   };
 
   const createProgramInDatabase = async (entrenamiento) => {
+    // 👉 No crear programas en BD si estamos usando el componente IA
+    if (showIAPlan) return;
+
     try {
       const response = await fetch('/api/home-training/create-program', {
         method: 'POST',
@@ -242,11 +274,11 @@ const HomeTrainingSection = () => {
         })
       });
 
-      const data = await response.json();
+      const data = await safeJson(response);
 
-      if (data.success) {
+      if (data && data.success) {
         // Recargar programa activo
-        await loadActiveProgram();
+        await loadActiveProgram(userData.id);
         console.log('Programa creado exitosamente');
       }
     } catch (error) {
@@ -279,6 +311,9 @@ const HomeTrainingSection = () => {
   };
 
   const completeWorkoutDay = async () => {
+    // 👉 No hacer nada si estamos usando el componente IA
+    if (showIAPlan) return;
+
     try {
       // Encontrar el día actual en el calendario
       const today = new Date().toDateString();
@@ -308,9 +343,10 @@ const HomeTrainingSection = () => {
             })
           });
 
-          if (response.ok) {
-            await loadActiveProgram();
-            await loadHomeTrainingStats();
+          const data = await safeJson(response);
+          if (data && response.ok) {
+            await loadActiveProgram(userData.id);
+            await loadHomeTrainingStats(userData.id);
           }
         } else {
           // Actualizar calendario mock localmente
@@ -472,14 +508,20 @@ const HomeTrainingSection = () => {
         {/* Selector de Equipamiento */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           {Object.entries(equipmentLevels).map(([key, level]) => (
-            <Card 
+            <Card
               key={key}
               className={`cursor-pointer transition-all ${
-                selectedEquipment === key 
-                  ? `${level.color} bg-yellow-400/5` 
+                selectedEquipment === key
+                  ? `${level.color} bg-yellow-400/5`
                   : 'border-gray-600 hover:border-yellow-400/50'
               }`}
-              onClick={() => setSelectedEquipment(key)}
+              onClick={() => {
+                setSelectedEquipment(key);
+                // Mapear valores para el componente IA
+                if (key === 'minimal') setEquipamiento('minimo');
+                else if (key === 'basic') setEquipamiento('basico');
+                else if (key === 'advanced') setEquipamiento('avanzado');
+              }}
             >
               <CardHeader>
                 <div className="flex items-center space-x-2">
@@ -517,7 +559,13 @@ const HomeTrainingSection = () => {
         </div>
 
         {/* Estilos de Entrenamiento */}
-        <Tabs value={selectedTrainingType} onValueChange={setSelectedTrainingType} className="mb-8">
+        <Tabs value={selectedTrainingType} onValueChange={(value) => {
+          setSelectedTrainingType(value);
+          // Mapear valores para el componente IA
+          if (value === 'functional') setTipo('funcional');
+          else if (value === 'hiit') setTipo('hiit');
+          else if (value === 'strength') setTipo('fuerza');
+        }} className="mb-8">
           <TabsList className="grid w-full grid-cols-3 bg-gray-900">
             <TabsTrigger value="functional">Funcional</TabsTrigger>
             <TabsTrigger value="hiit">HIIT</TabsTrigger>
@@ -540,244 +588,107 @@ const HomeTrainingSection = () => {
               </span>
             </p>
             <Button
-              onClick={generateWorkout}
-              disabled={isGeneratingWorkout}
+              onClick={() => {
+                // Opcional: si quieres reiniciar cuando el usuario cambia de selección:
+                // setShowIAPlan(false);
+                setShowIAPlan(true);
+              }}
               className="bg-yellow-400 text-black hover:bg-yellow-300 px-8 py-3 text-lg font-semibold"
             >
-              {isGeneratingWorkout ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black mr-2"></div>
-                  Generando...
-                </>
-              ) : (
-                <>
-                  <Target className="w-5 h-5 mr-2" />
-                  Generar Mi Entrenamiento
-                </>
-              )}
+              <Target className="w-5 h-5 mr-2" />
+              Generar Mi Entrenamiento
             </Button>
           </div>
         </div>
 
-        {/* Entrenamiento Generado */}
-        {generatedWorkout && (
-          <Card className="bg-gray-900 border-yellow-400/20 mb-8">
-            <CardHeader>
-              <CardTitle className="text-white text-xl">
-                {generatedWorkout.titulo || 'Entrenamiento Personalizado'}
-              </CardTitle>
-              <CardDescription className="text-gray-400">
-                {generatedWorkout.descripcion || 'Entrenamiento adaptado a tu equipamiento'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {/* Información del entrenamiento */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="text-center bg-gray-800 rounded-lg p-4">
-                  <Clock className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
-                  <div className="text-white font-semibold">{generatedWorkout.duracionTotal || '30-45 min'}</div>
-                  <div className="text-gray-400 text-sm">Duración</div>
-                </div>
-                <div className="text-center bg-gray-800 rounded-lg p-4">
-                  <Calendar className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
-                  <div className="text-white font-semibold">{generatedWorkout.frecuencia || '4-5 días/semana'}</div>
-                  <div className="text-gray-400 text-sm">Frecuencia</div>
-                </div>
-                <div className="text-center bg-gray-800 rounded-lg p-4">
-                  <Target className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
-                  <div className="text-white font-semibold">{generatedWorkout.enfoque || 'Fuerza funcional y movilidad'}</div>
-                  <div className="text-gray-400 text-sm">Enfoque</div>
-                </div>
-              </div>
-
-              {/* Lista de ejercicios */}
-              <div className="mb-6">
-                <h3 className="text-white font-semibold mb-4 flex items-center">
-                  <Play className="w-5 h-5 mr-2 text-green-400" />
-                  Ejercicios Principales:
-                </h3>
-                <div className="space-y-3">
-                  {generatedWorkout.ejercicios && generatedWorkout.ejercicios.map((ejercicio, idx) => (
-                    <div key={idx} className="flex items-center justify-between bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-black font-bold">
-                          {idx + 1}
-                        </div>
-                        <div>
-                          <h4 className="text-white font-semibold">{ejercicio.nombre}</h4>
-                          <p className="text-gray-400 text-sm">
-                            {ejercicio.series} series × {ejercicio.tipo === 'tiempo' ? `${ejercicio.duracion}s` : `${ejercicio.repeticiones} reps`}
-                          </p>
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="text-yellow-400 border-yellow-400">
-                        {ejercicio.descanso}s descanso
-                      </Badge>
+        {/* Render condicional (sustituye el bloque antiguo) */}
+        {showIAPlan ? (
+          // 👉 El nuevo player de la sesión de HOY
+          <IAHomeTraining
+            equipamiento={equipamiento}
+            tipo={tipo}
+            autoStart
+          />
+        ) : (
+          // 👉 Tu contenido previo de selección / explicación / cards
+          // (deja aquí el grid con Mínimo/Básico/Avanzado, tabs Funcional/HIIT/Fuerza,
+          // y el botón "Generar Mi Entrenamiento")
+          <div>
+            {/* Entrenamiento Generado */}
+            {generatedWorkout && (
+              <Card className="bg-gray-900 border-yellow-400/20 mb-8">
+                <CardHeader>
+                  <CardTitle className="text-white text-xl">
+                    {generatedWorkout.titulo || 'Entrenamiento Personalizado'}
+                  </CardTitle>
+                  <CardDescription className="text-gray-400">
+                    {generatedWorkout.descripcion || 'Entrenamiento adaptado a tu equipamiento'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {/* Información del entrenamiento */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="text-center bg-gray-800 rounded-lg p-4">
+                      <Clock className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
+                      <div className="text-white font-semibold">{generatedWorkout.duracionTotal || '30-45 min'}</div>
+                      <div className="text-gray-400 text-sm">Duración</div>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div className="text-center bg-gray-800 rounded-lg p-4">
+                      <Calendar className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
+                      <div className="text-white font-semibold">{generatedWorkout.frecuencia || '4-5 días/semana'}</div>
+                      <div className="text-gray-400 text-sm">Frecuencia</div>
+                    </div>
+                    <div className="text-center bg-gray-800 rounded-lg p-4">
+                      <Target className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
+                      <div className="text-white font-semibold">{generatedWorkout.enfoque || 'Fuerza funcional y movilidad'}</div>
+                      <div className="text-gray-400 text-sm">Enfoque</div>
+                    </div>
+                  </div>
 
-              <div className="flex justify-center">
-                <Button
-                  onClick={startWorkout}
-                  className="bg-yellow-400 text-black hover:bg-yellow-300 px-8 py-3 text-lg font-semibold"
-                >
-                  <Play className="w-5 h-5 mr-2" />
-                  Comenzar Entrenamiento
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Programa Activo y Calendario Semanal */}
-        {(activeProgram || (generatedWorkout && weeklyCalendar.length > 0)) && (
-          <Card className="bg-gray-900 border-yellow-400/20 mb-8">
-            <CardHeader>
-              <CardTitle className="text-white text-xl flex items-center">
-                <Calendar className="w-5 h-5 mr-2 text-yellow-400" />
-                {activeProgram?.titulo || generatedWorkout?.titulo || 'Entrenamiento Personalizado'} - Semana Actual
-              </CardTitle>
-              <CardDescription className="text-gray-400">
-                {activeProgram?.descripcion || generatedWorkout?.descripcion || 'Tu programa de entrenamiento semanal'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {/* Barra de Progreso */}
-              <div className="mb-6">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-white font-semibold">Progreso del Programa</span>
-                  <span className="text-yellow-400 font-semibold">
-                    {activeProgram?.progreso_porcentaje || calculateMockProgress()}%
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm text-gray-400 mb-2">
-                  <span>Inicio: {activeProgram ? new Date(activeProgram.fecha_inicio).toLocaleDateString() : new Date().toLocaleDateString()}</span>
-                  <span>Fin: {activeProgram ? new Date(activeProgram.fecha_fin).toLocaleDateString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}</span>
-                </div>
-                <Progress
-                  value={activeProgram?.progreso_porcentaje || calculateMockProgress()}
-                  className="h-3 bg-gray-700"
-                />
-              </div>
-
-              {/* Calendario Semanal */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {weeklyCalendar.map((day) => {
-                  const getStatusIcon = (status) => {
-                    switch (status) {
-                      case 'completado':
-                        return <CheckCircle className="w-5 h-5 text-green-400" />
-                      case 'en_progreso':
-                        return <Clock className="w-5 h-5 text-blue-400" />
-                      case 'pendiente':
-                        return <Circle className="w-5 h-5 text-gray-400" />
-                      case 'perdido':
-                        return <AlertTriangle className="w-5 h-5 text-red-400" />
-                      case 'rest':
-                        return <Heart className="w-5 h-5 text-purple-400" />
-                      default:
-                        return <Circle className="w-5 h-5 text-gray-400" />
-                    }
-                  };
-
-                  const getStatusColor = (status) => {
-                    switch (status) {
-                      case 'completado':
-                        return 'border-green-400/50 bg-green-900/20'
-                      case 'en_progreso':
-                        return 'border-blue-400/50 bg-blue-900/20'
-                      case 'pendiente':
-                        return 'border-gray-600 bg-gray-800'
-                      case 'perdido':
-                        return 'border-red-400/50 bg-red-900/20'
-                      case 'rest':
-                        return 'border-purple-400/50 bg-purple-900/20'
-                      default:
-                        return 'border-gray-600 bg-gray-800'
-                    }
-                  };
-
-                  return (
-                    <Card
-                      key={day.id}
-                      className={`${getStatusColor(day.status)} border transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer transform ${
-                        day.isToday ? 'ring-2 ring-yellow-400 shadow-yellow-400/20' : ''
-                      } ${day.status === 'completado' ? 'animate-pulse-once' : ''}`}
-                      onClick={() => handleDayClick(day)}
-                      style={{
-                        animationDelay: `${day.id === 'lunes' ? 0 : day.id === 'martes' ? 100 : day.id === 'miercoles' ? 200 : day.id === 'jueves' ? 300 : day.id === 'viernes' ? 400 : day.id === 'sabado' ? 500 : 600}ms`
-                      }}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <h3 className="text-white font-semibold">
-                              {day.dayName} {day.dayNumber}
-                              {day.isToday && (
-                                <Badge className="ml-2 bg-yellow-400 text-black text-xs">Hoy</Badge>
-                              )}
-                            </h3>
-                            <p className="text-gray-400 text-sm">
-                              {day.isRest ? 'Descanso' : `${day.exerciseCount} ejercicios`}
-                            </p>
+                  {/* Lista de ejercicios */}
+                  <div className="mb-6">
+                    <h3 className="text-white font-semibold mb-4 flex items-center">
+                      <Play className="w-5 h-5 mr-2 text-green-400" />
+                      Ejercicios Principales:
+                    </h3>
+                    <div className="space-y-3">
+                      {generatedWorkout.ejercicios && generatedWorkout.ejercicios.map((ejercicio, idx) => (
+                        <div key={idx} className="flex items-center justify-between bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-black font-bold">
+                              {idx + 1}
+                            </div>
+                            <div>
+                              <h4 className="text-white font-semibold">{ejercicio.nombre}</h4>
+                              <p className="text-gray-400 text-sm">
+                                {ejercicio.series} series × {ejercicio.tipo === 'tiempo' ? `${ejercicio.duracion}s` : `${ejercicio.repeticiones} reps`}
+                              </p>
+                            </div>
                           </div>
-                          <div className="flex flex-col items-end">
-                            {getStatusIcon(day.status)}
-                          </div>
+                          <Badge variant="outline" className="text-yellow-400 border-yellow-400">
+                            {ejercicio.descanso}s descanso
+                          </Badge>
                         </div>
+                      ))}
+                    </div>
+                  </div>
 
-                        {/* Exercise List Preview */}
-                        {!day.isRest && (activeProgram || generatedWorkout) && (
-                          <div className="space-y-1 mb-3">
-                            {(activeProgram?.ejercicios || generatedWorkout?.ejercicios || []).slice(0, 3).map((exercise, idx) => (
-                              <p key={idx} className="text-gray-300 text-sm">
-                                {exercise.nombre}
-                              </p>
-                            ))}
-                            {(activeProgram?.ejercicios || generatedWorkout?.ejercicios || []).length > 3 && (
-                              <p className="text-gray-500 text-xs">
-                                +{(activeProgram?.ejercicios || generatedWorkout?.ejercicios || []).length - 3} más...
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Exercise Count and Progress */}
-                        {day.status !== 'rest' && !day.isRest && (
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-400">{day.exerciseCount} ejercicios</span>
-                              <span className="text-yellow-400 font-medium">
-                                {day.completed}/{day.total} completados
-                              </span>
-                            </div>
-
-                            {/* Progress Bar */}
-                            <div className="w-full bg-gray-700 rounded-full h-2">
-                              <div
-                                className="bg-yellow-400 h-2 rounded-full transition-all duration-300"
-                                style={{ width: `${day.total > 0 ? (day.completed / day.total) * 100 : 0}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                        )}
-
-                        {(day.status === 'rest' || day.isRest) && (
-                          <div className="text-center py-2">
-                            <p className="text-purple-300 text-sm">Día de descanso</p>
-                            <p className="text-gray-500 text-xs">Recuperación activa</p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="flex justify-center">
+                    <Button
+                      onClick={startWorkout}
+                      className="bg-yellow-400 text-black hover:bg-yellow-300 px-8 py-3 text-lg font-semibold"
+                    >
+                      <Play className="w-5 h-5 mr-2" />
+                      Comenzar Entrenamiento
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         )}
+
+
 
         {/* Estadísticas Personales del Usuario */}
         <Card className="bg-gray-900 border-yellow-400/20 mb-8">
