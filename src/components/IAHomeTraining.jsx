@@ -356,58 +356,69 @@ export default function IAHomeTraining({
     }, 0);
   }, [plan, seriesCompleted]);
 
-  const buildDetalle = useCallback(() => {
-    if (!plan) return [];
-    return plan.ejercicios.map((ex, idx) => ({
-      nombre: ex.nombre,
-      tipo: ex.tipo,
-      series: ex.series,
-      seriesCompletadas: seriesCompleted[idx] || 0,
-      repeticiones: ex.repeticiones ?? null,
-      duracion_seg: ex.duracion_seg ?? null,
-      notas: ex.notas || ""
-    }));
-  }, [plan, seriesCompleted]);
 
-  const logSession = useCallback(async (status = "completed") => {
-    if (!plan || !userId) return;
-
-    try {
-      setSaveState({ status: "saving", message: "" });
-
-      const duracion_real_seg = computeDurationSeconds();
-
-      const body = {
-        userId,
-        fecha: plan.fecha,
-        equipamiento: plan.equipamiento,
-        tipoEntrenamiento: plan.tipoEntrenamiento,
-        duracion_estimada_min: plan.duracion_estimada_min,
-        duracion_real_seg,
-        total_ejercicios: totalExercises,
-        completados: exercisesFullyCompleted,
-        status,
-        detalle: buildDetalle(),
-      };
-
-      const res = await fetch(`${API_BASE}/ia/home-training/log-session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const msg = (await res.json().catch(() => ({})))?.error || "No se pudo guardar la sesión.";
-        throw new Error(msg);
+  const logSession = useCallback(
+    async (status = "completed") => {
+      if (!userId || !plan) {
+        const msg = "No hay usuario o plan disponible. Sesión no guardada.";
+        console.warn(msg);
+        setSaveState({ status: "error", message: msg });
+        return;
       }
 
-      setSaveState({ status: "saved", message: "Sesión guardada ✅" });
-      loggedRef.current = true;
-    } catch (e) {
-      console.error(e);
-      setSaveState({ status: "error", message: e?.message || "Error al guardar la sesión" });
-    }
-  }, [plan, userId, totalExercises, exercisesFullyCompleted, buildDetalle, computeDurationSeconds]);
+      try {
+        setSaveState({ status: "saving", message: "" });
+
+        const duracion_real_seg = computeDurationSeconds();
+        const metrics = {
+          duracion_estimada_min: plan.duracion_estimada_min,
+          duracion_real_seg,
+          total_ejercicios: totalExercises,
+          completados: exercisesFullyCompleted,
+          status,
+        };
+
+        const body = {
+          userId,
+          plan,
+          metrics,
+          seriesCompleted,
+          startedAt: sessionStartAtRef.current,
+          finishedAt: Date.now(),
+        };
+
+        const res = await fetch(`${API_BASE}/ia/home-training/log-session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          const msg =
+            (await res.json().catch(() => ({})))?.error ||
+            "No se pudo guardar la sesión.";
+          throw new Error(msg);
+        }
+
+        setSaveState({ status: "saved", message: "Sesión guardada ✅" });
+        loggedRef.current = true;
+      } catch (e) {
+        console.error(e);
+        setSaveState({
+          status: "error",
+          message: e?.message || "Error al guardar la sesión",
+        });
+      }
+    },
+    [
+      userId,
+      plan,
+      totalExercises,
+      exercisesFullyCompleted,
+      seriesCompleted,
+      computeDurationSeconds,
+    ]
+  );
 
   // Auto-guardar cuando el player termine
   useEffect(() => {
