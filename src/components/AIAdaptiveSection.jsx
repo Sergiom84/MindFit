@@ -320,10 +320,14 @@ const AIAdaptiveSection = () => {
           onClose={() => setIsModalOpen(false)}
           onResult={(data) => {
             // ---------- NUEVO ---------------
-            /* el backend devuelve { success, modo, respuestaIA, timestamp }   */
+            /* el backend devuelve { success, modo, respuestaIA, metodologia, timestamp }   */
             if (data?.respuestaIA) {
               setAiRoutine(data.respuestaIA)            // <- tu estado para la rutina
-              setSelectedMethodology(data.respuestaIA.metodologia || data.modo)
+              setSelectedMethodology(
+                data.metodologia                          // ← pref. el campo directo
+                || data.respuestaIA?.ajustesRecomendados?.metodologia
+                || data.modo
+              )
             } else if (data?.plan) {
               setAiRoutine(data.plan)                   // por si en un futuro cambia el nombre
             } else {

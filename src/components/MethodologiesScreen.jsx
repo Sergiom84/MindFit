@@ -306,12 +306,14 @@ const METHODOLOGIES = [
 export default function MethodologiesScreen () {
   const navigate = useNavigate()
   const { currentUser } = useAuth()
-  const { userData } = useUserContext()
+  const { userData, activarIAAdaptativa, isLoading: contextLoading } = useUserContext()
 
   // UI state
   const [selectionMode, setSelectionMode] = useState('automatico') // 'automatico' | 'manual'
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
+
+  // Usar el loading del contexto
+  const isLoading = contextLoading
 
   // Manual selection / details
   const [showManualSelectionModal, setShowManualSelectionModal] = useState(false)
@@ -330,43 +332,20 @@ export default function MethodologiesScreen () {
       return
     }
 
-    setIsLoading(true)
     setError(null)
 
-    /* ---------- construir SOLO los 10 campos ---------- */
-    const fullProfile = sanitizeProfile({ ...userData, ...currentUser })
-    const variablesPrompt = {
-      userId:          fullProfile.id,
-      age:             fullProfile.edad,
-      sex:             fullProfile.sexo,
-      heightCm:        Number(fullProfile.altura) || null,
-      weightKg:        Number(fullProfile.peso)   || null,
-      level:           fullProfile.nivel,
-      experienceYears: fullProfile.años_entrenando,
-      methodology:     fullProfile.metodologia_preferida,
-      goals:           [fullProfile.objetivo_principal || fullProfile.objetivo],
-      injuries:        fullProfile.limitaciones?.map(l => l.zona) || []
-    }
-    console.log('➡️ Payload IA:', variablesPrompt)
-
     try {
-      const res = await fetch('/api/activar-ia-adaptativa', {
-        method : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body   : JSON.stringify({ modo: selectionMode, variablesPrompt })
-      })
+      // Usar la función del contexto que ya está bien implementada
+      const result = await activarIAAdaptativa(selectionMode)
 
-      const data = await res.json()
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Error desconocido')
+      if (result.success) {
+        setSuccessData(result.data)   // Guardar todo el objeto de respuesta
+      } else {
+        setError(result.error || 'Error al activar IA adaptativa')
       }
-
-      setSuccessData(data.respuestaIA || data.plan)   // o como lo devuelva tu backend
     } catch (e) {
       console.error('[handleActivateIA]', e)
       setError(e.message)
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -749,11 +728,24 @@ export default function MethodologiesScreen () {
           <div className="space-y-2 text-sm">
             <p>
               <span className="text-gray-400">Metodología:</span>{' '}
-              <span className="text-white font-semibold">{successData?.methodology_name || '—'}</span>
+              <span className="text-white font-semibold">{successData?.metodologia || successData?.modo || '—'}</span>
             </p>
             <p className="text-gray-300">
-              {successData?.methodology_description}
+              {successData?.respuestaIA?.recomendacionIA || 'Rutina generada exitosamente'}
             </p>
+
+            {/* Mostrar información adicional de la IA */}
+            {successData?.respuestaIA && (
+              <div className="mt-4 p-3 bg-gray-800/50 rounded-lg">
+                <h4 className="text-yellow-400 font-semibold mb-2">Análisis de IA:</h4>
+                <div className="space-y-1 text-xs">
+                  <p><span className="text-gray-400">Estado Metabólico:</span> {successData.respuestaIA.estadoMetabolico}</p>
+                  <p><span className="text-gray-400">Recuperación Neural:</span> {successData.respuestaIA.recuperacionNeural}</p>
+                  <p><span className="text-gray-400">Eficiencia Adaptativa:</span> {successData.respuestaIA.eficienciaAdaptativa}</p>
+                  <p><span className="text-gray-400">Próxima Revisión:</span> {successData.respuestaIA.proximaRevision}</p>
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter className="mt-2">

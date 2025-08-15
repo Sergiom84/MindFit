@@ -157,6 +157,9 @@ Analiza los datos del usuario y proporciona recomendaciones específicas para el
       success: true,
       modo,
       respuestaIA,
+      metodologia:                   // 👈 nuevo campo
+        respuestaIA?.ajustesRecomendados?.metodologia
+        || variablesPrompt.methodology,
       timestamp: new Date().toISOString()
     })
   } catch (error) {
