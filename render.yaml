@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: mindfit
+    env: node
+    plan: free
+    buildCommand: |
+      rm -rf node_modules package-lock.json
+      npm install --no-package-lock --legacy-peer-deps
+      npm run build
+      cd backend && npm install --production --no-package-lock
+    startCommand: cd backend && node server.js
+    envVars:
+      - key: NODE_VERSION
+        value: 22.16.0
+      - key: NPM_CONFIG_LEGACY_PEER_DEPS
+        value: true
+      - key: NPM_CONFIG_PACKAGE_LOCK
+        value: false
+    healthCheckPath: /

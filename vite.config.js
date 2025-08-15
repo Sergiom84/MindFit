@@ -14,6 +14,16 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: { '@': path.resolve(__dirname, './src') },
     },
+    build: {
+      rollupOptions: {
+        external: [],
+        output: {
+          manualChunks: undefined,
+        }
+      },
+      target: 'esnext',
+      minify: 'esbuild',
+    },
     server: {
       proxy: {
         '/api': {

@@ -40,6 +40,10 @@ coverage
 # Optional npm cache directory
 .npm
 
+# Package lock files (using pnpm)
+package-lock.json
+yarn.lock
+
 # Optional eslint cache
 .eslintcache
 
