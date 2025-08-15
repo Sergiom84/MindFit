@@ -39,27 +39,14 @@ router.post('/activar-ia-adaptativa', async (req, res) => {
       })
     }
 
-    // Llamada al prompt MindBot usando la nueva API de OpenAI con prompt personalizado
-    let response
-    try {
-      // Intentar usar el prompt personalizado primero
-      response = await openai.responses.create({
-        prompt: {
-          id: 'pmpt_688fd23d27448193b5bfbb2c4ef9548103c68f1f6b84e824',
-          version: '1'
-        },
-        variables: variablesPrompt
-      })
-    } catch (promptError) {
-      console.warn('⚠️ Error con prompt personalizado, usando chat.completions:', promptError.message)
-
-      // Fallback a chat.completions si el prompt personalizado falla
-      response = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: `Eres MindBot, un entrenador personal con IA avanzada especializado en adaptación metabólica y anatómica.
+    /* Llamada única obligando a JSON */
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      response_format: { type: 'json_object' },   // 👈 fuerza JSON válido
+      messages: [
+        {
+          role: 'system',
+          content: `Eres MindBot, un entrenador personal con IA avanzada especializado en adaptación metabólica y anatómica.
 
 Tu función es analizar TODOS los datos del usuario y proporcionar recomendaciones específicas basadas en el modo de adaptación seleccionado.
 
@@ -111,75 +98,16 @@ Debes responder en formato JSON con la siguiente estructura:
 }
 
 Analiza los datos del usuario y proporciona recomendaciones específicas para el modo ${modo}.`
-          },
-          {
-            role: 'user',
-            content: `Analiza mi situación actual y proporciona recomendaciones para el modo ${modo}:
-
-DATOS COMPLETOS DEL USUARIO:
-
-📊 DATOS BÁSICOS:
-- Nombre: ${variablesPrompt.nombre || 'No especificado'} ${variablesPrompt.apellido || ''}
-- Edad: ${variablesPrompt.edad || 'No especificado'} años
-- Sexo: ${variablesPrompt.sexo || 'No especificado'}
-- Peso actual: ${variablesPrompt.peso || 'No especificado'} kg
-- Altura: ${variablesPrompt.altura || 'No especificado'} cm
-- IMC: ${variablesPrompt.imc || 'No calculado'}
-
-🏋️ EXPERIENCIA Y ENTRENAMIENTO:
-- Nivel actual: ${variablesPrompt.nivel || 'No especificado'}
-- Años entrenando: ${variablesPrompt.años_entrenando || 'No especificado'}
-- Metodología preferida: ${variablesPrompt.metodologia_preferida || 'No especificado'}
-- Frecuencia semanal: ${variablesPrompt.frecuencia_semanal || 'No especificado'} días
-- Nivel de actividad: ${variablesPrompt.nivel_actividad || 'No especificado'}
-
-📏 COMPOSICIÓN CORPORAL:
-- Grasa corporal: ${variablesPrompt.grasa_corporal || 'No especificado'}%
-- Masa muscular: ${variablesPrompt.masa_muscular || 'No especificado'}%
-- Agua corporal: ${variablesPrompt.agua_corporal || 'No especificado'}%
-- Metabolismo basal: ${variablesPrompt.metabolismo_basal || 'No especificado'} kcal
-- Medidas corporales:
-  * Cintura: ${variablesPrompt.cintura || 'No especificado'} cm
-  * Pecho: ${variablesPrompt.pecho || 'No especificado'} cm
-  * Brazos: ${variablesPrompt.brazos || 'No especificado'} cm
-  * Muslos: ${variablesPrompt.muslos || 'No especificado'} cm
-  * Cuello: ${variablesPrompt.cuello || 'No especificado'} cm
-  * Antebrazos: ${variablesPrompt.antebrazos || 'No especificado'} cm
-
-🏥 SALUD Y LIMITACIONES:
-- Historial médico: ${variablesPrompt.historial_medico || 'Sin historial registrado'}
-- Limitaciones físicas: ${variablesPrompt.limitaciones || 'Ninguna registrada'}
-- Alergias: ${variablesPrompt.alergias || 'Ninguna registrada'}
-- Medicamentos actuales: ${variablesPrompt.medicamentos || 'Ninguno registrado'}
-
-🎯 OBJETIVOS Y METAS:
-- Objetivo principal: ${variablesPrompt.objetivo_principal || 'No especificado'}
-- Meta de peso: ${variablesPrompt.meta_peso || 'No especificado'} kg
-- Meta de grasa corporal: ${variablesPrompt.meta_grasa || 'No especificado'}%
-
-🍽️ NUTRICIÓN Y ESTILO DE VIDA:
-- Enfoque nutricional: ${variablesPrompt.enfoque || 'No especificado'}
-- Horario preferido: ${variablesPrompt.horario_preferido || 'No especificado'}
-- Comidas diarias: ${variablesPrompt.comidas_diarias || 'No especificado'}
-- Suplementación: ${variablesPrompt.suplementacion || 'Ninguna registrada'}
-- Alimentos excluidos: ${variablesPrompt.alimentos_excluidos || 'Ninguno registrado'}
-
-📈 DATOS ADICIONALES DE SEGUIMIENTO:
-- Progreso reciente: ${variablesPrompt.progreso || 'No especificado'}
-- Rutina actual: ${variablesPrompt.rutina || 'No especificado'}
-- Nivel de fatiga: ${variablesPrompt.fatiga || 'No especificado'}
-- Calidad del sueño: ${variablesPrompt.sueño || 'No especificado'}
-- RPE promedio: ${variablesPrompt.rpe || 'No especificado'}
-
-Modo de adaptación seleccionado: ${modo}
-
-Proporciona un análisis completo y recomendaciones específicas en formato JSON.`
-          }
-        ],
-        max_tokens: 1500,
-        temperature: 0.7
-      })
-    }
+        },
+        {
+          role: 'user',
+          content: `Analiza mi situación actual y proporciona recomendaciones
+                    para el modo ${modo}.\n\nDATOS:\n${JSON.stringify(variablesPrompt)}`
+        }
+      ],
+      max_tokens: 1500,
+      temperature: 0.7
+    })
 
     // Procesar respuesta de OpenAI
     let contenido

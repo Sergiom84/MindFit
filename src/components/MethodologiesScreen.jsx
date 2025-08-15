@@ -325,30 +325,46 @@ export default function MethodologiesScreen () {
 
   // --- Activar IA (automático o forzado) ---
   const handleActivateIA = async (forcedMethodology = null) => {
-    if (!currentUser) return
+    if (!selectionMode) {
+      setError('Selecciona un modo de adaptación')
+      return
+    }
+
     setIsLoading(true)
     setError(null)
 
+    /* ---------- construir SOLO los 10 campos ---------- */
     const fullProfile = sanitizeProfile({ ...userData, ...currentUser })
-    console.log('➡️ Perfil enviado a IA:', fullProfile)
+    const variablesPrompt = {
+      userId:          fullProfile.id,
+      age:             fullProfile.edad,
+      sex:             fullProfile.sexo,
+      heightCm:        Number(fullProfile.altura) || null,
+      weightKg:        Number(fullProfile.peso)   || null,
+      level:           fullProfile.nivel,
+      experienceYears: fullProfile.años_entrenando,
+      methodology:     fullProfile.metodologia_preferida,
+      goals:           [fullProfile.objetivo_principal || fullProfile.objetivo],
+      injuries:        fullProfile.limitaciones?.map(l => l.zona) || []
+    }
+    console.log('➡️ Payload IA:', variablesPrompt)
 
     try {
-      const response = await fetch('/api/ia/recommend-and-generate', {
-        method: 'POST',
+      const res = await fetch('/api/activar-ia-adaptativa', {
+        method : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: currentUser.id,
-          profile: fullProfile,
-          forcedMethodology // null = modo automático; "Hipertrofia" etc. = manual forzado
-        })
+        body   : JSON.stringify({ modo: selectionMode, variablesPrompt })
       })
-      const result = await response.json()
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'No se pudo generar la rutina.')
+
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Error desconocido')
       }
-      setSuccessData(result.data)
-    } catch (err) {
-      setError(err.message)
+
+      setSuccessData(data.respuestaIA || data.plan)   // o como lo devuelva tu backend
+    } catch (e) {
+      console.error('[handleActivateIA]', e)
+      setError(e.message)
     } finally {
       setIsLoading(false)
     }

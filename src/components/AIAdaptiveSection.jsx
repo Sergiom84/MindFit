@@ -23,6 +23,8 @@ import {
 const AIAdaptiveSection = () => {
   const [selectedFeature, setSelectedFeature] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [aiRoutine, setAiRoutine] = useState(null)
+  const [selectedMethodology, setSelectedMethodology] = useState(null)
   const { panelIA, getEstadoMetabolicoColor, getAlertColor } = useUserContext()
 
   const aiFeatures = [
@@ -287,6 +289,22 @@ const AIAdaptiveSection = () => {
           ))}
         </div>
 
+        {/* Renderizar resultado de IA */}
+        {aiRoutine && (
+          <Card className="mt-6 border-green-500">
+            <CardHeader>
+              <CardTitle className="text-green-400">
+                Rutina generada por IA ({selectedMethodology})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <pre className="whitespace-pre-wrap text-sm text-gray-200">
+                {JSON.stringify(aiRoutine, null, 2)}
+              </pre>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="mt-8 text-center">
           <Button
             onClick={() => setIsModalOpen(true)}
@@ -301,8 +319,17 @@ const AIAdaptiveSection = () => {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onResult={(data) => {
-            console.log('Resultado de IA:', data)
-            // Los datos ya se actualizan automáticamente a través del contexto
+            // ---------- NUEVO ---------------
+            /* el backend devuelve { success, modo, respuestaIA, timestamp }   */
+            if (data?.respuestaIA) {
+              setAiRoutine(data.respuestaIA)            // <- tu estado para la rutina
+              setSelectedMethodology(data.respuestaIA.metodologia || data.modo)
+            } else if (data?.plan) {
+              setAiRoutine(data.plan)                   // por si en un futuro cambia el nombre
+            } else {
+              console.error('La IA no devolvió una rutina reconocible')
+            }
+            // ---------------------------------
           }}
         />
       </div>

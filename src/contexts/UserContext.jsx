@@ -17,6 +17,7 @@ export const useUserContext = () => {
 export const UserProvider = ({ children }) => {
   const { currentUser, getUserData, updateUserData: updateAuthUserData, replaceUser } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
+  const [adaptivePlan, setPlan] = useState(null)
 
   // Obtener datos dinámicos del usuario actual
   const userData = currentUser || {}
@@ -71,45 +72,51 @@ export const UserProvider = ({ children }) => {
     return updateAuthUserData('panelIA', updatedPanelData)
   }
 
-  // Función para activar IA adaptativa
-  const activarIAAdaptativa = async (modo) => {
-    setIsLoading(true)
+  /*  🔸 FUNCIÓN ACTUALIZADA  🔸 */
+  const activarIAAdaptativa = async (modoId) => {
+    if (!userData) return { success: false, error: 'Usuario no cargado' }
 
+    setIsLoading(true)
     try {
-      const response = await fetch('/api/activar-ia-adaptativa', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          modo,
-          variablesPrompt: userData
-        })
+      /* 1. Lesiones activas (si tuvieras endpoint, cámbialo abajo) */
+      let injuries = []
+      try {
+        const r = await fetch(`/api/injuries/${userData.id}`)
+        if (r.ok) injuries = await r.json()
+      } catch (_) {}
+
+      /* 2. Payload con LOS 10 CAMPOS pedid-os */
+      const variablesPrompt = {
+        userId:          userData.id,
+        age:             userData.edad,
+        sex:             userData.sexo,
+        heightCm:        userData.alturaCm,
+        weightKg:        userData.pesoKg,
+        level:           userData.nivel,
+        experienceYears: userData.aniosExperiencia,
+        methodology:     userData.metodologia,
+        goals:           userData.objetivos,
+        injuries                         // ← array
+      }
+
+      /* 3. POST al backend real */
+      const res = await fetch('/api/activar-ia-adaptativa', {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({ modo: modoId, variablesPrompt })
       })
 
-      const data = await response.json()
-
-      if (data.success) {
-        // Actualizar el panel con la respuesta de la IA
-        updatePanelIA({
-          ...data.respuestaIA,
-          modoActivo: modo,
-          ultimaActualizacion: data.timestamp
-        })
-
-        return {
-          success: true,
-          data: data.respuestaIA
-        }
-      } else {
-        throw new Error(data.error || 'Error desconocido')
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Error generando plan adaptativo')
       }
-    } catch (error) {
-      console.error('Error activando IA adaptativa:', error)
-      return {
-        success: false,
-        error: error.message
-      }
+
+      const data = await res.json()
+      setPlan(data)
+      return { success: true, data }
+    } catch (e) {
+      console.error('[activarIAAdaptativa]', e)
+      return { success: false, error: e.message }
     } finally {
       setIsLoading(false)
     }
@@ -233,6 +240,7 @@ export const UserProvider = ({ children }) => {
 
     // Estados
     isLoading,
+    adaptivePlan,
 
     // Funciones
     activarIAAdaptativa,
