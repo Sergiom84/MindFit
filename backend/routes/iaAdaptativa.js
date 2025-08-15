@@ -291,13 +291,27 @@ router.post('/recomendar-metodologia', async (req, res) => {
     let methodologyPrompt;
 
     if (isHomeTrainingRequest) {
+      const imc =
+        datosUsuario?.imc ||
+        (datosUsuario?.peso && datosUsuario?.altura
+          ? (datosUsuario.peso / Math.pow(datosUsuario.altura / 100, 2)).toFixed(2)
+          : 'No calculado');
       // Prompt específico para entrenamiento en casa
       methodologyPrompt = `Eres un entrenador personal experto especializado en entrenamientos en casa. Tu tarea es crear un entrenamiento personalizado y detallado.
 
 INFORMACIÓN DEL USUARIO:
 - Nombre: ${datosUsuario?.nombre || 'Usuario'}
+- Edad: ${datosUsuario?.edad || 'N/A'}
+- Peso: ${datosUsuario?.peso || 'N/A'} kg
+- Estatura: ${datosUsuario?.altura || 'N/A'} cm
+- Sexo: ${datosUsuario?.sexo || 'N/A'}
+- IMC: ${imc}
 - Nivel: ${datosUsuario?.nivel || 'intermedio'}
-- Objetivos: ${datosUsuario?.objetivos || 'mantener forma'}
+- Nivel de actividad: ${datosUsuario?.nivel_actividad || 'N/A'}
+- Años entrenando: ${datosUsuario?.['años_entrenando'] || 'N/A'}
+- Objetivo principal: ${datosUsuario?.objetivo_principal || datosUsuario?.objetivos || 'mantener forma'}
+- Composición corporal: grasa corporal ${datosUsuario?.composicion_corporal?.grasa_corporal || 'N/A'}%, masa muscular ${datosUsuario?.composicion_corporal?.masa_muscular || 'N/A'} kg, agua corporal ${datosUsuario?.composicion_corporal?.agua_corporal || 'N/A'}%, metabolismo basal ${datosUsuario?.composicion_corporal?.metabolismo_basal || 'N/A'} kcal
+- Medidas corporales: cintura ${datosUsuario?.medidas_corporales?.cintura || 'N/A'} cm, pecho ${datosUsuario?.medidas_corporales?.pecho || 'N/A'} cm, brazos ${datosUsuario?.medidas_corporales?.brazos || 'N/A'} cm, muslos ${datosUsuario?.medidas_corporales?.muslos || 'N/A'} cm, cuello ${datosUsuario?.medidas_corporales?.cuello || 'N/A'} cm, antebrazos ${datosUsuario?.medidas_corporales?.antebrazos || 'N/A'} cm
 - Limitaciones: ${datosUsuario?.limitaciones?.length > 0 ? datosUsuario.limitaciones.join(', ') : 'Ninguna'}
 
 EQUIPAMIENTO SELECCIONADO: ${equipamiento}

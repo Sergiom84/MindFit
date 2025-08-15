@@ -33,6 +33,7 @@ export default function IAHomeTraining({
   // --- Estado de datos de IA ---
   const [loading, setLoading] = useState(false);
   const [plan, setPlan] = useState(null);
+  const [meta, setMeta] = useState(null);
   const [error, setError] = useState("");
 
   // --- Estado del Player ---
@@ -57,6 +58,9 @@ export default function IAHomeTraining({
 
   // Para plegado/desplegado del listado
   const [openIndex, setOpenIndex] = useState(null);
+
+  // Evitar llamadas duplicadas y poder cancelar
+  const abortRef = useRef(null);
 
   // Normaliza cadenas
   const tipoCanon = String(tipo || "").toLowerCase();
@@ -101,11 +105,24 @@ export default function IAHomeTraining({
   // ---------------------------------------------------------------------------
   const fetchTodayPlan = useCallback(async () => {
     if (!userId) {
-      setError("No se encontró el usuario autenticado.");
+      setError("No hay usuario autenticado.");
       return;
     }
+
+    // Cancelar petición previa si existiera
+    if (abortRef.current) abortRef.current.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
+
+    console.log("[IA] POST", `${API_BASE}/ia/home-training/generate-today`, {
+      userId,
+      equipamiento: equipCanon,
+      tipoEntrenamiento: tipoCanon,
+    });
+
     setError("");
     setLoading(true);
+
     try {
       const res = await fetch(`${API_BASE}/ia/home-training/generate-today`, {
         method: "POST",
@@ -115,6 +132,7 @@ export default function IAHomeTraining({
           equipamiento: equipCanon,
           tipoEntrenamiento: tipoCanon,
         }),
+        signal: ac.signal,
       });
 
       if (!res.ok) {
@@ -123,18 +141,28 @@ export default function IAHomeTraining({
       }
 
       const json = await res.json();
-      const data = json?.data || null;
+      console.log("[IA] /generate-today ->", json);
+      setMeta(json?.meta || null);
 
-      // Sanitiza ejercicios
-      const ejercicios = Array.isArray(data?.ejercicios) ? data.ejercicios.map((e) => ({
-        nombre: e?.nombre || "Ejercicio",
-        tipo: (e?.tipo === "time" || e?.tipo === "reps") ? e.tipo : (e?.duracion_seg ? "time" : "reps"),
-        series: Number(e?.series) > 0 ? Number(e.series) : 3,
-        repeticiones: e?.repeticiones ?? null,
-        duracion_seg: Number(e?.duracion_seg) > 0 ? Number(e.duracion_seg) : null,
-        descanso_seg: Number(e?.descanso_seg) >= 0 ? Number(e.descanso_seg) : 45,
-        notas: e?.notas || "",
-      })) : [];
+      const data = json?.data || null;
+      const metaSource = json?.meta?.source || "desconocida";
+
+      const ejercicios = Array.isArray(data?.ejercicios)
+        ? data.ejercicios.map((e) => ({
+            nombre: e?.nombre || "Ejercicio",
+            tipo:
+              e?.tipo === "time" || e?.tipo === "reps"
+                ? e.tipo
+                : e?.duracion_seg
+                ? "time"
+                : "reps",
+            series: Number(e?.series) > 0 ? Number(e.series) : 3,
+            repeticiones: e?.repeticiones ?? null,
+            duracion_seg: Number(e?.duracion_seg) > 0 ? Number(e.duracion_seg) : null,
+            descanso_seg: Number(e?.descanso_seg) >= 0 ? Number(e.descanso_seg) : 45,
+            notas: e?.notas || "",
+          }))
+        : [];
 
       const parsedPlan = {
         titulo: data?.titulo || `${tipoCanon.toUpperCase()} en Casa`,
@@ -144,6 +172,7 @@ export default function IAHomeTraining({
         tipoEntrenamiento: data?.tipoEntrenamiento || tipoCanon,
         duracion_estimada_min: Number(data?.duracion_estimada_min) || 30,
         ejercicios,
+        _metaSource: metaSource, // 👈 guardamos la fuente para mostrarla
       };
 
       setPlan(parsedPlan);
@@ -170,6 +199,11 @@ export default function IAHomeTraining({
         handlePauseResumeAccounting(true);
       }
     } catch (err) {
+      if (err?.name === "AbortError") {
+        console.log("[IA] fetchTodayPlan abortado");
+        setLoading(false);   // ✅ añade esta línea
+        return;
+      }
       console.error(err);
       setError(err.message || "Error al generar el entrenamiento.");
       setLoading(false);
@@ -177,8 +211,20 @@ export default function IAHomeTraining({
   }, [userId, equipCanon, tipoCanon, autoStart, ensureSessionStarted, handlePauseResumeAccounting]);
 
   useEffect(() => {
-    fetchTodayPlan();
+    // Pequeño delay para evitar llamadas duplicadas en development
+    const timer = setTimeout(() => {
+      fetchTodayPlan();
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [fetchTodayPlan]);
+
+  // Limpieza al desmontar el componente
+  useEffect(() => {
+    return () => {
+      if (abortRef.current) abortRef.current.abort();
+    };
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Lógica del player (interval)
@@ -456,6 +502,23 @@ export default function IAHomeTraining({
         {plan?.titulo || `${tipoCanon.toUpperCase()} en Casa`}
       </div>
       <p className="mt-1 text-sm text-gray-300">{plan?.subtitulo || "Entrenamiento personalizado adaptado a tu equipamiento"}</p>
+
+      {/* Fuente del plan + perfil usado */}
+      {meta && (
+        <div className="text-xs opacity-70 mt-1">
+          Fuente del plan: <b>{meta.source}</b>
+          {meta.profile_used && (
+            <> · perfil usado →
+              edad: {meta.profile_used.edad ?? "—"},
+              peso_kg: {meta.profile_used.peso_kg ?? "—"},
+              altura_cm: {meta.profile_used.altura_cm ?? "—"},
+              nivel: {meta.profile_used.nivel ?? "—"},
+              imc: {meta.profile_used.imc ?? "—"},
+              lesiones: {meta.profile_used.lesiones ?? "—"}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Progress */}
       <div className="mt-5">

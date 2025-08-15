@@ -50,19 +50,84 @@ function canonTipo(v = '') {
   return 'hiit';
 }
 
+/* ----------------------- Inventario y guías de diversidad ------------------- */
+
+// ---- Inventario explícito por equipamiento ----
+const EQUIPMENT_MAP = {
+  minimo: [
+    "Peso corporal",
+    "Toallas",
+    "Silla o sofá",
+    "Pared"
+  ],
+  basico: [
+    "Peso corporal",
+    "Toallas",
+    "Silla o sofá",
+    "Pared",
+    "Mancuernas ajustables",
+    "Bandas elásticas",
+    "Esterilla",
+    "Banco/Step"
+  ],
+  avanzado: [
+    "Peso corporal",
+    "Toallas",
+    "Silla o sofá",
+    "Pared",
+    "Mancuernas ajustables",
+    "Bandas elásticas",
+    "Esterilla",
+    "Banco/Step",
+    "Barra de dominadas",
+    "Kettlebells",
+    "TRX",
+    "Discos olímpicos"
+  ],
+};
+
+// ---- Guías por estilo con enfoque en diversidad ----
+const STYLE_GUIDELINES = {
+  hiit: [
+    "Incluye calentamiento 5–10 min y vuelta a la calma 5–10 min.",
+    "Intervalos de 15 s a 4 min a alta intensidad (~RPE 8–9).",
+    "Relación trabajo/descanso: 1:1 a 1:2 según nivel.",
+    "Volumen de alta intensidad total 10–20 min en sesión de 20–35 min.",
+    "Varía el tipo de intervalos (Tabata, EMOM, bloques 30/30, 40/20…)."
+  ],
+  funcional: [
+    "Prioriza patrones: sentadilla, bisagra de cadera, zancada, empuje, tracción, rotación/antirrotación.",
+    "Incluye varios planos de movimiento y trabajo unilateral/balance.",
+    "Formato circuito/EMOM: 4–6 ejercicios, 30–45 s o 8–12 reps, 30–60 s descanso.",
+    "Core integrado en la mayoría de ejercicios."
+  ],
+  fuerza: [
+    "Prioriza multiarticulares; luego accesorios.",
+    "Rangos para fuerza: ≤6 reps, 2–6 series; descanso 2–5 min.",
+    "Sin 1RM, usa RPE 7–9 o cargas que permitan 3–6 reps exigentes.",
+    "Accesorios a 6–12 reps, 60–90 s descanso cuando aplique."
+  ],
+};
+
 /* ----------------------- Carga/normalización del perfil --------------------- */
 
 async function fetchUserProfile(userId) {
-  // Solo usamos la tabla users que ya contiene toda la información de salud
+  // Obtener datos del usuario desde la tabla users (unificada)
   const profile = {};
   try {
     const u = await query('SELECT * FROM users WHERE id = $1 LIMIT 1', [userId]);
     if (u?.rows?.[0]) Object.assign(profile, u.rows[0]);
   } catch (_) {}
 
+  // Obtener lesiones activas del usuario
   try {
-    const p = await query('SELECT * FROM user_profiles WHERE user_id = $1 LIMIT 1', [userId]);
-    if (p?.rows?.[0]) Object.assign(profile, p.rows[0]);
+    const lesiones = await query(
+      'SELECT titulo, zona, tipo, gravedad, estado FROM injuries WHERE user_id = $1 AND estado IN ($2, $3) ORDER BY fecha_inicio DESC',
+      [userId, 'activo', 'en recuperación']
+    );
+    if (lesiones?.rows?.length > 0) {
+      profile.lesiones_activas = lesiones.rows;
+    }
   } catch (_) {}
 
   return profile;
@@ -71,78 +136,59 @@ async function fetchUserProfile(userId) {
 function normalizeProfile(rawProfile = {}) {
   const p = { ...rawProfile };
 
-  // --- Datos básicos ---
-  const nombre = p.nombre || p.first_name || 'Usuario';
-  const apellido = p.apellido || p.last_name || '';
-  const email = p.email || '';
-  const sexo = p.sexo || p.gender || 'no_especificado';
+  // Solo extraer los datos básicos más importantes para la IA
   const edad = Number(p.edad ?? p.age ?? 0) || undefined;
   const peso_kg = Number(p.peso_kg ?? p.peso ?? p.weight_kg ?? 0) || undefined;
   const altura_cm = Number(p.altura_cm ?? p.altura ?? p.height_cm ?? 0) || undefined;
 
-  // --- IMC ---
+  // Nivel de experiencia
+  const nivel = p.nivel || p.experience || 'principiante';
+
+  // Lesiones/limitaciones - priorizar lesiones activas de la tabla injuries
+  let lesiones = 'Ninguna';
+
+  if (p.lesiones_activas && Array.isArray(p.lesiones_activas) && p.lesiones_activas.length > 0) {
+    // Usar lesiones activas de la tabla injuries
+    lesiones = p.lesiones_activas.map(l => {
+      const parts = [l.titulo || 'Lesión'];
+      if (l.zona) parts.push(`(${l.zona})`);
+      if (l.gravedad) parts.push(`- ${l.gravedad}`);
+      return parts.join(' ');
+    }).join(', ');
+  } else {
+    // Fallback a limitaciones del perfil
+    const limitaciones = p.limitaciones ?? p.lesiones;
+    if (Array.isArray(limitaciones) && limitaciones.length > 0) {
+      lesiones = limitaciones.filter(Boolean).join(', ');
+    } else if (typeof limitaciones === 'string' && limitaciones.trim()) {
+      lesiones = limitaciones.trim();
+    } else if (typeof limitaciones === 'object' && limitaciones !== null) {
+      // Intentar extraer información útil del objeto
+      try {
+        const keys = Object.keys(limitaciones);
+        if (keys.length > 0) {
+          lesiones = keys.map(k => `${k}: ${limitaciones[k]}`).join(', ');
+        }
+      } catch (e) {
+        lesiones = 'Ninguna';
+      }
+    }
+  }
+
+  // IMC si tenemos peso y altura
   let imc = undefined;
   if (peso_kg && altura_cm) {
     const m = altura_cm / 100;
     imc = Number((peso_kg / (m * m)).toFixed(1));
   }
 
-  // --- Nivel actividad/entrenamiento ---
-  const nivel_actividad = p.nivel_actividad || p.activity_level || 'moderado';
-  const nivel = p.nivel || p.experience || 'principiante';
-  const años_entrenando = Number(p.años_entrenando ?? p.years_training ?? 0) || undefined;
-  const frecuencia_semanal = Number(p.frecuencia_semanal ?? p.sessions_per_week ?? 3) || 3;
-
-  // --- Preferencias ---
-  const enfoque = p.enfoque || 'general';
-  const horario_preferido = p.horario_preferido || 'mañana';
-
-  // --- Composición corporal ---
-  const grasa_corporal = Number(p.grasa_corporal ?? p.body_fat ?? 0) || undefined;
-  const masa_muscular = Number(p.masa_muscular ?? 0) || undefined;
-  const agua_corporal = Number(p.agua_corporal ?? 0) || undefined;
-  const metabolismo_basal = Number(p.metabolismo_basal ?? 0) || undefined;
-
-  // --- Medidas (opcionales) ---
-  const cintura = Number(p.cintura ?? 0) || undefined;
-  const pecho = Number(p.pecho ?? 0) || undefined;
-  const brazos = Number(p.brazos ?? 0) || undefined;
-  const muslos = Number(p.muslos ?? 0) || undefined;
-  const cuello = Number(p.cuello ?? 0) || undefined;
-  const antebrazos = Number(p.antebrazos ?? 0) || undefined;
-
-  // --- Salud ---
-  let lesiones = p.limitaciones ?? p.lesiones ?? p.lesiones_activas ?? 'Ninguna';
-  lesiones = objectToReadable(lesiones);
-  const alergias = objectToReadable(p.alergias || 'Ninguna');
-  const medicamentos = objectToReadable(p.medicamentos || 'Ninguno');
-  const historial_medico = p.historial_medico || '';
-
-  // --- Nutrición / objetivos (opcionales) ---
-  const comidas_diarias = Number(p.comidas_diarias ?? 3) || 3;
-  const suplementacion = objectToReadable(p.suplementacion || 'Ninguna');
-  const alimentos_excluidos = objectToReadable(p.alimentos_excluidos || 'Ninguno');
-
-  const objetivo_principal = p.objetivo_principal || p.objetivo || p.goal || 'salud_general';
-  const meta_peso = Number(p.meta_peso ?? 0) || undefined;
-  const meta_grasa = Number(p.meta_grasa ?? 0) || undefined;
-
-  // --- Casa/gimnasio ---
-  const homeTrainingAllowed =
-    isTruthy(p.prefiere_entrenar_en_casa) ||
-    String(p.acceso_gimnasio || '').toLowerCase() === 'no' ||
-    p.sin_acceso_gimnasio === true;
-
   return {
-    nombre, apellido, email, sexo, edad, peso_kg, altura_cm, imc,
-    nivel_actividad, nivel, años_entrenando, frecuencia_semanal,
-    enfoque, horario_preferido,
-    grasa_corporal, masa_muscular, agua_corporal, metabolismo_basal,
-    cintura, pecho, brazos, muslos, cuello, antebrazos,
-    lesionesSanitizadas: lesiones, alergias, medicamentos, historial_medico,
-    comidas_diarias, suplementacion, alimentos_excluidos,
-    objetivo_principal, meta_peso, meta_grasa,
-    homeTrainingAllowed
+    edad,
+    peso_kg,
+    altura_cm,
+    imc,
+    nivel,
+    lesiones: lesiones
   };
 }
 
@@ -194,38 +240,83 @@ function buildTodayPlanFallback({ tipo, equipamiento }) {
 /* ----------------------------- Prompt de OpenAI ----------------------------- */
 
 function buildPrompt({ profile, tipo, equipamiento }) {
+  // MVP de datos básicos
+  const edad   = profile.edad || 30;
+  const peso   = profile.peso_kg || 70;
+  const altura = profile.altura_cm || 170;
+  const nivel  = profile.nivel || 'principiante';
+  const lesiones = profile.lesiones || 'Ninguna';
+
+  const equipCanon = (equipamiento || 'minimo').toLowerCase();
+  const tipoCanon  = (tipo || 'hiit').toLowerCase();
+
+  const inventario = (EQUIPMENT_MAP[equipCanon] || EQUIPMENT_MAP.minimo).join(', ');
+  const reglasEstilo = (STYLE_GUIDELINES[tipoCanon] || STYLE_GUIDELINES.hiit)
+    .map((r, i) => `  ${i + 1}. ${r}`)
+    .join('\n');
+
+  // Reglas de diversidad aplicables a todos los estilos
+  const reglasDiversidad = [
+    "No repitas el mismo PATRÓN de movimiento en dos ejercicios consecutivos.",
+    "Rota los IMPLEMENTOS disponibles entre ejercicios consecutivos cuando sea posible.",
+    "Evita repetir el mismo ejercicio de nombre similar dos veces seguidas.",
+    "Con equipamiento minimo: al menos 3 ejercicios solo con peso corporal.",
+    "Con equipamiento basico: incluye ≥2 ejercicios con mancuernas o bandas.",
+    "Con equipamiento avanzado: incluye 1–2 ejercicios con kettlebell/TRX/dominadas si cuadra con el estilo."
+  ].map((r, i) => `  ${i + 1}. ${r}`).join('\n');
+
   return `
 Eres "MindFit Coach", un entrenador personal experto. Genera SOLO un JSON válido (sin markdown) con un plan para HOY (${todayYYYYMMDD()}) de entrenamiento en casa.
 
-Condiciones:
-- Estilo solicitado: "${tipo}" (uno de: hiit, funcional, fuerza).
-- Equipamiento: "${equipamiento}" (minimo, basico, avanzado). Si es "minimo", usa peso corporal y objetos domésticos; "basico" permite banda/gomas o par de mancuernas; "avanzado" admite más volumen e intensidades.
-- Personaliza según este perfil (si faltan campos, ignóralos): ${JSON.stringify(profile)}
+Perfil del usuario (contexto):
+- Edad: ${edad} años
+- Peso: ${peso} kg
+- Altura: ${altura} cm
+- Nivel: ${nivel}
+- Lesiones: ${lesiones}
 
-Formato EXACTO del JSON:
+Selección del usuario:
+- Estilo: "${tipoCanon}" (hiit | funcional | fuerza)
+- Equipamiento: "${equipCanon}"
+
+Equipamiento disponible (usa exclusivamente estos implementos/superficies):
+- ${inventario}
+
+Instrucciones por estilo:
+${reglasEstilo}
+
+Requisitos de diversidad:
+${reglasDiversidad}
+
+FORMATO EXACTO del JSON de salida:
 {
   "titulo": "HIIT en Casa",
-  "subtitulo": "Entrenamiento personalizado adaptado a tu equipamiento",
+  "subtitulo": "Entrenamiento personalizado",
   "fecha": "YYYY-MM-DD",
   "equipamiento": "minimo|basico|avanzado",
   "tipoEntrenamiento": "hiit|funcional|fuerza",
   "duracion_estimada_min": 25,
   "ejercicios": [
     {
-      "nombre": "Sentadillas",
-      "tipo": "reps" | "time",
+      "nombre": "Sentadilla goblet",
+      "tipo": "reps",
       "series": 3,
-      "repeticiones": 12,          // si tipo="reps"
-      "duracion_seg": 30,          // si tipo="time"
-      "descanso_seg": 45,
-      "notas": "Puntos técnicos"
+      "repeticiones": 10,
+      "descanso_seg": 60,
+      "duracion_seg": null,
+      "notas": "Puntos técnicos y progresión/regresión",
+      "patron": "sentadilla",          // OPCIONAL: patrón de movimiento
+      "implemento": "mancuernas"       // OPCIONAL: implemento principal
     }
   ]
 }
 
-Reglas:
-- Genera de 4 a 7 ejercicios.
-- Ajusta series/reps/tiempo/descanso a edad, nivel, lesiones y equipamiento.
+Reglas generales:
+- Genera 4–6 ejercicios.
+- Adapta la intensidad a nivel y lesiones; da regresiones si algo no es viable.
+- Si "hiit": respeta relaciones trabajo/descanso y duración total indicada.
+- Si "fuerza": respeta rangos de series/reps/descansos indicados.
+- Si "funcional": cubre al menos 3 patrones distintos y ≥2 planos.
 - No incluyas texto fuera del JSON.`;
 }
 
@@ -253,34 +344,57 @@ router.post('/home-training/generate-today', async (req, res) => {
     if (openai) {
       try {
         const prompt = buildPrompt({ profile, tipo, equipamiento: equip });
-        // SDK openai v4 (responses API)
-        const resp = await openai.responses.create({
+        console.log('🤖 Llamando a OpenAI para generar entrenamiento...');
+
+        // Usar la API correcta de OpenAI
+        const resp = await openai.chat.completions.create({
           model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-          input: prompt,
-          temperature: 0.6
+          messages: [
+            {
+              role: 'system',
+              content: 'Eres MindFit Coach, un entrenador personal experto. Responde SOLO con JSON válido, sin markdown ni texto adicional.'
+            },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.9,       // ↑ más variedad
+          top_p: 0.95,            // nucleus sampling
+          frequency_penalty: 0.3, // ↓ repeticiones literales
+          presence_penalty: 0.2,  // ↑ novedad temática
+          max_tokens: 2000
         });
 
-        const rawText =
-          resp?.output_text ??
-          resp?.content?.[0]?.text ??
-          resp?.choices?.[0]?.message?.content ??
-          '';
+        const rawText = resp?.choices?.[0]?.message?.content || '';
+        console.log('🤖 Respuesta de OpenAI recibida:', rawText.substring(0, 200) + '...');
+        console.log('🤖 Respuesta completa:', rawText);
 
         // Extrae el primer bloque JSON válido
         const match = rawText.match(/\{[\s\S]*\}/);
         if (match) {
-          plan = JSON.parse(match[0]);
+          console.log('🔍 JSON extraído:', match[0]);
+          try {
+            plan = JSON.parse(match[0]);
+            plan._from_ai = true; // Marcar que viene de IA
+            console.log('✅ Plan de IA generado exitosamente:', plan.titulo);
+          } catch (parseErr) {
+            console.log('❌ Error parseando JSON:', parseErr.message);
+            console.log('❌ JSON problemático:', match[0]);
+          }
+        } else {
+          console.log('❌ No se encontró JSON válido en la respuesta');
         }
       } catch (err) {
         console.warn('⚠️ OpenAI falló, usando fallback:', err?.message || err);
       }
+    } else {
+      console.log('⚠️ OpenAI no disponible, usando fallback');
     }
 
     if (!plan) {
       plan = buildTodayPlanFallback({ tipo, equipamiento: equip });
     }
 
-    // Sanitiza estructura mínima
+    // Sanitiza estructura mínima (preservando _from_ai)
+    const isFromAI = plan?._from_ai;
     plan = {
       titulo: plan?.titulo || `${tipo.toUpperCase()} en Casa`,
       subtitulo: plan?.subtitulo || 'Entrenamiento personalizado adaptado a tu equipamiento',
@@ -295,21 +409,24 @@ router.post('/home-training/generate-today', async (req, res) => {
         repeticiones: e?.repeticiones ?? null,
         duracion_seg: Number(e?.duracion_seg) > 0 ? Number(e.duracion_seg) : null,
         descanso_seg: Number(e?.descanso_seg) >= 0 ? Number(e.descanso_seg) : 45,
-        notas: e?.notas || ''
-      })) : []
+        notas: e?.notas || [
+          e?.implemento ? `Implemento: ${e.implemento}` : null,
+          e?.patron ? `Patrón: ${e.patron}` : null
+        ].filter(Boolean).join(' · ')
+      })) : [],
+      _from_ai: isFromAI // Preservar el flag de IA
     };
 
     // Meta para depuración/UX
     const meta = {
-      source: openai ? (plan?._from_ai || 'openai') : 'fallback',
+      source: plan?._from_ai ? 'openai' : 'fallback',
       profile_used: {
         edad: profile.edad,
-        sexo: profile.sexo,
+        peso_kg: profile.peso_kg,
+        altura_cm: profile.altura_cm,
         nivel: profile.nivel,
-        nivel_actividad: profile.nivel_actividad,
-        años_entrenando: profile.años_entrenando,
         imc: profile.imc,
-        lesiones: profile.lesionesSanitizadas
+        lesiones: profile.lesiones
       }
     };
 
@@ -337,7 +454,7 @@ async function ensureWorkoutSessionsTable() {
       CREATE TABLE IF NOT EXISTS workout_sessions (
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL,
-        date DATE NOT NULL,
+        fecha_sesion DATE NOT NULL DEFAULT CURRENT_DATE,
         plan_json JSONB NOT NULL,
         duration_sec INTEGER DEFAULT 0,
         exercises_done INTEGER DEFAULT 0,
@@ -347,10 +464,11 @@ async function ensureWorkoutSessionsTable() {
         finished_at TIMESTAMP NULL,
         created_at TIMESTAMP DEFAULT NOW()
       );
-      CREATE INDEX IF NOT EXISTS idx_workout_sessions_user_date
-        ON workout_sessions (user_id, date);
+      CREATE INDEX IF NOT EXISTS idx_workout_sessions_user_fecha
+        ON workout_sessions (user_id, fecha_sesion);
     `);
     ensuredWorkoutSessions = true;
+    console.log('✅ Tabla workout_sessions verificada/creada');
   } catch (e) {
     console.warn('No se pudo crear/verificar workout_sessions:', e.message);
   }
@@ -372,7 +490,7 @@ router.post('/home-training/log-session', async (req, res) => {
 
     const result = await query(
       `INSERT INTO workout_sessions
-        (user_id, date, plan_json, duration_sec, exercises_done, total_exercises, series_completed, started_at, finished_at)
+        (user_id, fecha_sesion, plan_json, duration_sec, exercises_done, total_exercises, series_completed, started_at, finished_at)
        VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7::jsonb, $8, $9)
        RETURNING id`,
       [
@@ -388,10 +506,51 @@ router.post('/home-training/log-session', async (req, res) => {
       ]
     );
 
+    console.log('✅ Sesión de IA registrada con ID:', result.rows[0]?.id);
+
     return res.json({ success: true, id: result?.rows?.[0]?.id || null });
   } catch (err) {
     console.error('❌ Error en log-session:', err);
     return res.status(500).json({ success: false, error: 'No se pudo registrar la sesión.' });
+  }
+});
+
+/* ---------------------- Endpoint: recommend-and-generate -------------------- */
+/**
+ * POST /api/ia/recommend-and-generate
+ * body: { userId, profile, forcedMethodology }
+ *
+ * Este endpoint integra las lesiones del usuario con las recomendaciones de metodología
+ */
+router.post('/recommend-and-generate', async (req, res) => {
+  try {
+    const { userId, profile, forcedMethodology } = req.body || {};
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'Falta userId.' });
+    }
+
+    // Obtener perfil completo del usuario incluyendo lesiones
+    const rawProfile = await fetchUserProfile(userId);
+    const normalizedProfile = normalizeProfile(rawProfile);
+
+    // Combinar con el perfil enviado desde el frontend
+    const fullProfile = { ...normalizedProfile, ...profile };
+
+    // Simular respuesta exitosa (aquí podrías integrar con OpenAI para recomendaciones)
+    const mockResponse = {
+      success: true,
+      data: {
+        methodology: forcedMethodology || 'Entrenamiento Funcional',
+        reason: `Basándome en tu perfil (edad: ${fullProfile.edad}, nivel: ${fullProfile.nivel}, lesiones: ${fullProfile.lesiones}), esta metodología es la más adecuada.`,
+        profile_used: fullProfile,
+        created_at: new Date().toISOString()
+      }
+    };
+
+    return res.json(mockResponse);
+  } catch (err) {
+    console.error('❌ Error en recommend-and-generate:', err);
+    return res.status(500).json({ success: false, error: 'Error generando recomendación.' });
   }
 });
 

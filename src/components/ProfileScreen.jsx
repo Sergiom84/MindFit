@@ -297,11 +297,13 @@ const ProfileScreen = () => {
         setNotification({ open: true, message: 'Análisis con IA en desarrollo.', type: 'info' });
     }, []);
     
-    useEffect(() => {
-        if (currentUser?.id) {
-            fetchDocs();
-        }
-    }, [currentUser?.id, fetchDocs]);
+    /*  Temporalmente desactivado
+useEffect(() => {
+  if (currentUser?.id) {
+    fetchDocs(); // GET /api/users/{id}/medical-docs
+  }
+}, [currentUser?.id, fetchDocs]);
+*/
 
     const tabProps = {
         userProfile, currentUser, editingSection, editedData, docs,

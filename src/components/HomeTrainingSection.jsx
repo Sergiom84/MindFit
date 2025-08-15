@@ -85,13 +85,7 @@ const HomeTrainingSection = () => {
     loadHomeTrainingStats(userData.id);
   }, [showIAPlan, userData.id]);
 
-  // (solo si quieres reiniciar al cambiar selección)
-  // Si deseas que al cambiar de equipamiento/tipo se "reseteé" el player para obligar a regenerar:
-  useEffect(() => {
-    setShowIAPlan(false);
-  }, [equipamiento, tipo]);
-
-  const loadActiveProgram = async (userId) => {
+   const loadActiveProgram = async (userId) => {
     try {
       const response = await fetch(`/api/home-training/active-program/${userId}`);
       const data = await safeJson(response);
@@ -217,6 +211,7 @@ const HomeTrainingSection = () => {
         if (selectedTrainingType === 'strength') return index === 2;
         return false;
       });
+      const imc = calculateBMI(userData.peso, userData.altura);
 
       const response = await fetch('/api/recomendar-metodologia', {
         method: 'POST',
@@ -231,7 +226,28 @@ const HomeTrainingSection = () => {
           datosUsuario: {
             nombre: userData.nombre,
             nivel: userData.nivel || 'intermedio',
-            objetivos: userData.objetivo_principal || 'mantener_forma',
+            edad: userData.edad,
+            peso: userData.peso,
+            altura: userData.altura,
+            sexo: userData.sexo,
+            imc,
+            nivel_actividad: userData.nivel_actividad,
+            'años_entrenando': userData['años_entrenando'],
+            objetivo_principal: userData.objetivo_principal || 'mantener_forma',
+            composicion_corporal: {
+              grasa_corporal: userData.grasa_corporal,
+              masa_muscular: userData.masa_muscular,
+              agua_corporal: userData.agua_corporal,
+              metabolismo_basal: userData.metabolismo_basal,
+            },
+            medidas_corporales: {
+              cintura: userData.cintura,
+              pecho: userData.pecho,
+              brazos: userData.brazos,
+              muslos: userData.muslos,
+              cuello: userData.cuello,
+              antebrazos: userData.antebrazos,
+            },
             limitaciones: userData.limitaciones || []
           }
         })
@@ -618,6 +634,7 @@ const HomeTrainingSection = () => {
         {showIAPlan ? (
           // 👉 El nuevo player de la sesión de HOY
           <IAHomeTraining
+            key={`${equipamiento}-${tipo}`}
             equipamiento={equipamiento}
             tipo={tipo}
             autoStart
