@@ -43,6 +43,8 @@ router.post('/activar-ia-adaptativa', async (req, res) => {
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       response_format: { type: 'json_object' },   // 👈 fuerza JSON válido
+      max_tokens: 2000,                           // 👈 limitar respuesta
+      temperature: 0.3,                           // 👈 más determinista
       messages: [
         {
           role: 'system',
@@ -79,53 +81,56 @@ INSTRUCCIONES ESPECIALES:
 8. CONSIDERA la composición corporal actual vs objetivos
 9. ADAPTA horarios según preferencias del usuario
 
-Debes responder en formato JSON con la siguiente estructura:
+IMPORTANTE: Responde SOLO en formato JSON válido. NO añadas texto adicional.
+
+Estructura JSON requerida:
 {
-  "estadoMetabolico": "Óptimo|Bueno|Regular|Necesita ajuste",
+  "estadoMetabolico": "Optimo",
   "recuperacionNeural": "85%",
   "eficienciaAdaptativa": "+12%",
-  "proximaRevision": "X días",
-  "recomendacionIA": "Texto de recomendación específica considerando TODAS las limitaciones y alergias",
-  "adaptacionDetectada": "Texto describiendo adaptación detectada",
-  "metodologiaSeleccionada": "Heavy Duty|Powerlifting|Hipertrofia|Funcional|Oposiciones|Crossfit|Calistenia|Entrenamiento en casa",
+  "proximaRevision": "7 dias",
+  "recomendacionIA": "Recomendacion breve y concisa",
+  "metodologiaSeleccionada": "Hipertrofia",
   "rutinaSemanal": [
     {
       "dia": 1,
-      "fecha": "YYYY-MM-DD",
-      "nombre_sesion": "Nombre del entrenamiento",
+      "nombre_sesion": "Entrenamiento Dia 1",
       "ejercicios": [
         {
-          "nombre": "Nombre del ejercicio",
-          "series": 3,
+          "nombre": "Press Banca",
+          "series": 4,
           "repeticiones": "8-12",
-          "peso": "progresivo",
-          "descanso": "60-90 segundos",
-          "notas": "Instrucciones específicas"
+          "descanso": "90 seg"
+        },
+        {
+          "nombre": "Remo con Barra",
+          "series": 4,
+          "repeticiones": "8-12",
+          "descanso": "90 seg"
         }
       ]
+    },
+    {
+      "dia": 2,
+      "nombre_sesion": "Descanso",
+      "ejercicios": []
     }
   ],
   "ajustesRecomendados": {
-    "calorias": "número o null",
-    "volumenEntrenamiento": "aumentar|mantener|reducir",
-    "intensidad": "aumentar|mantener|reducir",
-    "frecuencia": "aumentar|mantener|reducir",
-    "metodologia": "metodología seleccionada",
-    "nutricion": "recomendaciones nutricionales específicas"
-  },
-  "consideracionesMedicas": {
-    "alergias": "consideraciones específicas por alergias",
-    "limitaciones": "adaptaciones por limitaciones físicas",
-    "medicamentos": "interacciones o consideraciones"
+    "volumenEntrenamiento": "mantener",
+    "intensidad": "aumentar",
+    "metodologia": "Hipertrofia"
   },
   "alertas": [
     {
-      "tipo": "success|warning|info",
-      "titulo": "Título de la alerta",
-      "mensaje": "Mensaje detallado"
+      "tipo": "success",
+      "titulo": "Rutina generada",
+      "mensaje": "Plan personalizado creado"
     }
   ]
 }
+
+Genera EXACTAMENTE 7 dias de rutina. Mantén las descripciones CORTAS.
 
 Analiza los datos del usuario y proporciona recomendaciones específicas para el modo ${modo}.`
         },
@@ -154,28 +159,34 @@ Analiza los datos del usuario y proporciona recomendaciones específicas para el
     // Intentar parsear la respuesta JSON
     let respuestaIA
     try {
+      console.log('🤖 Respuesta de IA (primeros 500 chars):', contenido.substring(0, 500))
       respuestaIA = JSON.parse(contenido)
+      console.log('✅ JSON parseado correctamente')
     } catch (parseError) {
-      console.error('Error parseando respuesta JSON:', parseError)
-      // Si no se puede parsear, crear una respuesta de fallback
+      console.error('❌ Error parseando respuesta JSON:', parseError.message)
+      console.error('📄 Contenido problemático:', contenido.substring(0, 1000))
+
+      // Si no se puede parsear, crear una respuesta de fallback completa
       respuestaIA = {
         estadoMetabolico: 'Bueno',
         recuperacionNeural: '80%',
         eficienciaAdaptativa: '+8%',
-        proximaRevision: '7 días',
-        recomendacionIA: contenido, // Usar el contenido completo como recomendación
-        adaptacionDetectada: 'Análisis en progreso. Continuando con protocolo actual.',
+        proximaRevision: '7 dias',
+        recomendacionIA: 'Plan de entrenamiento personalizado generado con configuracion basica',
+        metodologiaSeleccionada: variablesPrompt.methodology || 'Hipertrofia',
+        rutinaSemanal: generateFallbackRoutine(variablesPrompt.methodology),
         ajustesRecomendados: {
           calorias: null,
           volumenEntrenamiento: 'mantener',
           intensidad: 'mantener',
-          frecuencia: 'mantener'
+          frecuencia: 'mantener',
+          metodologia: variablesPrompt.methodology || 'Hipertrofia'
         },
         alertas: [
           {
-            tipo: 'info',
-            titulo: 'Análisis Completado',
-            mensaje: 'Se ha generado un análisis personalizado basado en tus datos.'
+            tipo: 'warning',
+            titulo: 'Rutina basica generada',
+            mensaje: 'Se genero una rutina basica debido a un error de procesamiento'
           }
         ]
       }
@@ -489,5 +500,38 @@ Responde en formato JSON:
     })
   }
 })
+
+// Función para generar rutina de fallback
+function generateFallbackRoutine(metodologia = 'Hipertrofia') {
+  const ejerciciosPorMetodologia = {
+    'Hipertrofia': [
+      { nombre: 'Press Banca', series: 4, repeticiones: '8-12', descanso: '90 seg' },
+      { nombre: 'Remo con Barra', series: 4, repeticiones: '8-12', descanso: '90 seg' },
+      { nombre: 'Sentadilla', series: 4, repeticiones: '10-15', descanso: '2 min' }
+    ],
+    'Calistenia': [
+      { nombre: 'Flexiones', series: 4, repeticiones: '8-15', descanso: '60 seg' },
+      { nombre: 'Dominadas', series: 4, repeticiones: '5-12', descanso: '90 seg' },
+      { nombre: 'Sentadillas', series: 4, repeticiones: '15-25', descanso: '60 seg' }
+    ],
+    'Funcional': [
+      { nombre: 'Burpees', series: 4, repeticiones: '8-12', descanso: '60 seg' },
+      { nombre: 'Kettlebell Swing', series: 4, repeticiones: '15-20', descanso: '60 seg' },
+      { nombre: 'Mountain Climbers', series: 3, repeticiones: '20-30', descanso: '45 seg' }
+    ]
+  }
+
+  const ejercicios = ejerciciosPorMetodologia[metodologia] || ejerciciosPorMetodologia['Hipertrofia']
+
+  return [
+    { dia: 1, nombre_sesion: `${metodologia} - Dia 1`, ejercicios },
+    { dia: 2, nombre_sesion: 'Descanso', ejercicios: [] },
+    { dia: 3, nombre_sesion: `${metodologia} - Dia 3`, ejercicios },
+    { dia: 4, nombre_sesion: 'Descanso', ejercicios: [] },
+    { dia: 5, nombre_sesion: `${metodologia} - Dia 5`, ejercicios },
+    { dia: 6, nombre_sesion: 'Descanso', ejercicios: [] },
+    { dia: 7, nombre_sesion: 'Descanso', ejercicios: [] }
+  ]
+}
 
 export default router
