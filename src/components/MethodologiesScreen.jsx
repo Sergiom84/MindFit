@@ -306,7 +306,7 @@ const METHODOLOGIES = [
 export default function MethodologiesScreen () {
   const navigate = useNavigate()
   const { currentUser } = useAuth()
-  const { userData, activarIAAdaptativa, isLoading: contextLoading } = useUserContext()
+  const { userData, activarIAAdaptativa, isLoading: contextLoading, setMetodologiaActiva } = useUserContext()
 
   // UI state
   const [selectionMode, setSelectionMode] = useState('automatico') // 'automatico' | 'manual'
@@ -371,8 +371,148 @@ export default function MethodologiesScreen () {
   }
 
   const handleCloseSuccessDialog = () => {
+    // Guardar la metodología activa en el contexto antes de navegar
+    if (successData) {
+      const today = new Date()
+      const fechaInicio = today.toISOString().split('T')[0] // Formato YYYY-MM-DD
+      const fechaFin = new Date(today.getTime() + (7 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0] // +7 días
+
+      // Crear la estructura que espera RoutinesScreen
+      const metodologiaSeleccionada = successData.respuestaIA?.metodologiaSeleccionada
+        || successData.metodologia
+        || successData.modo
+        || 'IA Adaptativa'
+
+      const metodologiaData = {
+        methodology_name: metodologiaSeleccionada,
+        methodology_data: {
+          dias: generateWeeklyRoutineFromIA(successData.respuestaIA, today)
+        },
+        fechaInicio,
+        fechaFin,
+        generadaPorIA: true,
+        respuestaCompleta: successData
+      }
+
+      setMetodologiaActiva(metodologiaData, fechaInicio, fechaFin)
+    }
+
     setSuccessData(null)
     navigate('/routines')
+  }
+
+  // Función para generar rutina semanal desde la respuesta de IA
+  const generateWeeklyRoutineFromIA = (respuestaIA, startDate) => {
+    // Si la IA ya devuelve una rutina estructurada, usarla directamente
+    if (respuestaIA?.rutinaSemanal && Array.isArray(respuestaIA.rutinaSemanal)) {
+      // Actualizar las fechas para que empiecen desde hoy
+      return respuestaIA.rutinaSemanal.map((dia, index) => ({
+        ...dia,
+        dia: index + 1,
+        fecha: new Date(startDate.getTime() + (index * 24 * 60 * 60 * 1000)).toISOString().split('T')[0]
+      }))
+    }
+
+    // Si no, generar una rutina básica de 7 días basada en las recomendaciones
+    const dias = []
+    const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+    const metodologia = respuestaIA?.metodologiaSeleccionada || respuestaIA?.ajustesRecomendados?.metodologia || 'Hipertrofia'
+
+    for (let i = 0; i < 7; i++) {
+      const currentDate = new Date(startDate.getTime() + (i * 24 * 60 * 60 * 1000))
+      const dayName = dayNames[currentDate.getDay() === 0 ? 6 : currentDate.getDay() - 1] // Ajustar domingo
+
+      // Nunca empezar con descanso el primer día
+      const isRestDay = i > 0 && (i === 2 || i === 4 || i === 6) // Descanso miércoles, viernes, domingo
+
+      if (isRestDay) {
+        dias.push({
+          dia: i + 1,
+          fecha: currentDate.toISOString().split('T')[0],
+          nombre_sesion: `Descanso - ${dayName}`,
+          ejercicios: []
+        })
+      } else {
+        // Generar entrenamiento basado en las recomendaciones de IA
+        const ejercicios = generateExercisesFromIA(respuestaIA, i + 1, metodologia)
+        dias.push({
+          dia: i + 1,
+          fecha: currentDate.toISOString().split('T')[0],
+          nombre_sesion: `${metodologia} - ${dayName}`,
+          ejercicios
+        })
+      }
+    }
+
+    return dias
+  }
+
+  // Función para generar ejercicios basados en recomendaciones de IA
+  const generateExercisesFromIA = (respuestaIA, dayNumber, metodologia) => {
+    // Ejercicios específicos por metodología
+    const exercisesByMethodology = {
+      'Heavy Duty': [
+        { nombre: 'Calentamiento', series: 1, repeticiones: '10 min', peso: 'corporal', descanso: '2-3 min' },
+        { nombre: 'Sentadilla', series: 1, repeticiones: '6-8', peso: 'máximo', descanso: '3-5 min' },
+        { nombre: 'Press Banca', series: 1, repeticiones: '6-8', peso: 'máximo', descanso: '3-5 min' },
+        { nombre: 'Peso Muerto', series: 1, repeticiones: '6-8', peso: 'máximo', descanso: '3-5 min' }
+      ],
+      'Powerlifting': [
+        { nombre: 'Calentamiento específico', series: 1, repeticiones: '15 min', peso: 'progresivo', descanso: '2 min' },
+        { nombre: 'Sentadilla', series: 5, repeticiones: '3-5', peso: '85-95% 1RM', descanso: '3-5 min' },
+        { nombre: 'Press Banca', series: 5, repeticiones: '3-5', peso: '85-95% 1RM', descanso: '3-5 min' },
+        { nombre: 'Peso Muerto', series: 3, repeticiones: '1-3', peso: '90-100% 1RM', descanso: '5 min' }
+      ],
+      'Hipertrofia': [
+        { nombre: 'Calentamiento', series: 1, repeticiones: '10 min', peso: 'ligero', descanso: '1 min' },
+        { nombre: 'Press Banca', series: 4, repeticiones: '8-12', peso: '70-80% 1RM', descanso: '60-90 seg' },
+        { nombre: 'Remo con Barra', series: 4, repeticiones: '8-12', peso: '70-80% 1RM', descanso: '60-90 seg' },
+        { nombre: 'Press Militar', series: 3, repeticiones: '10-15', peso: '60-70% 1RM', descanso: '60 seg' },
+        { nombre: 'Curl Bíceps', series: 3, repeticiones: '12-15', peso: 'moderado', descanso: '45 seg' }
+      ],
+      'Calistenia': [
+        { nombre: 'Movilidad articular', series: 1, repeticiones: '10 min', peso: 'corporal', descanso: '30 seg' },
+        { nombre: 'Flexiones', series: 4, repeticiones: '8-15', peso: 'corporal', descanso: '60 seg' },
+        { nombre: 'Dominadas', series: 4, repeticiones: '5-12', peso: 'corporal', descanso: '90 seg' },
+        { nombre: 'Sentadillas', series: 4, repeticiones: '15-25', peso: 'corporal', descanso: '60 seg' },
+        { nombre: 'Plancha', series: 3, repeticiones: '30-60 seg', peso: 'corporal', descanso: '60 seg' }
+      ],
+      'Funcional': [
+        { nombre: 'Calentamiento dinámico', series: 1, repeticiones: '10 min', peso: 'corporal', descanso: '30 seg' },
+        { nombre: 'Burpees', series: 4, repeticiones: '8-12', peso: 'corporal', descanso: '60 seg' },
+        { nombre: 'Kettlebell Swing', series: 4, repeticiones: '15-20', peso: 'moderado', descanso: '60 seg' },
+        { nombre: 'Mountain Climbers', series: 3, repeticiones: '20-30', peso: 'corporal', descanso: '45 seg' },
+        { nombre: 'Farmer Walk', series: 3, repeticiones: '30-60 seg', peso: 'pesado', descanso: '90 seg' }
+      ]
+    }
+
+    // Usar ejercicios específicos de la metodología o ejercicios por defecto
+    let baseExercises = exercisesByMethodology[metodologia] || exercisesByMethodology['Hipertrofia']
+
+    // Ajustar según las recomendaciones de volumen e intensidad
+    if (respuestaIA?.ajustesRecomendados) {
+      const ajustes = respuestaIA.ajustesRecomendados
+
+      if (ajustes.volumenEntrenamiento === 'aumentar') {
+        baseExercises = [...baseExercises, {
+          nombre: 'Ejercicio adicional',
+          series: 2,
+          repeticiones: '12-15',
+          peso: 'moderado',
+          descanso: '60 seg'
+        }]
+      }
+
+      if (ajustes.intensidad === 'aumentar') {
+        baseExercises = baseExercises.map(ex => ({
+          ...ex,
+          repeticiones: ex.nombre.includes('Calentamiento') ? ex.repeticiones : '6-8 (alta intensidad)',
+          descanso: ex.nombre.includes('Calentamiento') ? ex.descanso : '2-3 min'
+        }))
+      }
+    }
+
+    return baseExercises
   }
 
   return (

@@ -78,25 +78,30 @@ export const UserProvider = ({ children }) => {
 
     setIsLoading(true)
     try {
-      /* 1. Lesiones activas (si tuvieras endpoint, cámbialo abajo) */
+      /* 1. Lesiones activas */
       let injuries = []
       try {
-        const r = await fetch(`/api/injuries/${userData.id}`)
-        if (r.ok) injuries = await r.json()
-      } catch (_) {}
+        const r = await fetch(`/api/users/${userData.id}/injuries`)
+        if (r.ok) {
+          const data = await r.json()
+          injuries = data.injuries || []
+        }
+      } catch (_) {
+        console.warn('No se pudieron cargar las lesiones del usuario')
+      }
 
-      /* 2. Payload con LOS 10 CAMPOS pedid-os */
+      /* 2. Payload con los 9 parámetros exactos solicitados */
       const variablesPrompt = {
-        userId:          userData.id,
-        age:             userData.edad,
-        sex:             userData.sexo,
-        heightCm:        userData.alturaCm,
-        weightKg:        userData.pesoKg,
-        level:           userData.nivel,
-        experienceYears: userData.aniosExperiencia,
-        methodology:     userData.metodologia,
-        goals:           userData.objetivos,
-        injuries                         // ← array
+        userId:          userData.id,                    // userId (uuid)
+        age:             userData.edad,                  // profile.age
+        sex:             userData.sexo,                  // profile.sex
+        heightCm:        userData.altura,                // profile.heightCm
+        weightKg:        userData.peso,                  // profile.weightKg
+        level:           userData.nivel,                 // profile.level
+        experienceYears: userData.años_entrenando,       // profile.experienceYears
+        methodology:     userData.metodologia_preferida, // profile.methodology
+        goals:           userData.objetivos || [userData.objetivo_principal], // profile.goals (array)
+        injuries                                         // injuries (array devuelta por /api/injuries)
       }
 
       /* 3. POST al backend real */

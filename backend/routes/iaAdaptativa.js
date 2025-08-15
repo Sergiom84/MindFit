@@ -58,14 +58,26 @@ Modos disponibles:
 - EXPERTO: Adaptación diaria en tiempo real, microperiodización
 - PERSONALIZADO: Según preferencias específicas del usuario
 
+METODOLOGÍAS DE ENTRENAMIENTO DISPONIBLES:
+- Heavy Duty: Alta intensidad, bajo volumen, descansos largos
+- Powerlifting: Fuerza máxima en sentadilla, press banca y peso muerto
+- Hipertrofia: Volumen moderado-alto, 8-15 repeticiones, enfoque estético
+- Funcional: Movimientos multiarticulares, transferencia a vida diaria
+- Oposiciones: Preparación física para pruebas específicas
+- Crossfit: Alta intensidad, variedad, acondicionamiento metabólico
+- Calistenia: Peso corporal, progresiones, control corporal
+- Entrenamiento en casa: Adaptado a espacio limitado y equipamiento básico
+
 INSTRUCCIONES ESPECIALES:
-1. CONSIDERA TODAS LAS ALERGIAS Y LIMITACIONES para las recomendaciones
-2. RESPETA el historial médico y medicamentos actuales
-3. ADAPTA las recomendaciones a la metodología preferida del usuario
-4. INCLUYE consideraciones nutricionales basadas en alimentos excluidos
-5. AJUSTA la intensidad según el nivel de experiencia y años entrenando
-6. CONSIDERA la composición corporal actual vs objetivos
-7. ADAPTA horarios según preferencias del usuario
+1. SELECCIONA la metodología más apropiada según el perfil del usuario
+2. GENERA una rutina semanal completa de 7 días con ejercicios específicos
+3. CONSIDERA limitaciones, lesiones y equipamiento disponible
+4. RESPETA el historial médico y medicamentos actuales
+5. ADAPTA las recomendaciones a la metodología preferida del usuario
+6. INCLUYE consideraciones nutricionales basadas en alimentos excluidos
+7. AJUSTA la intensidad según el nivel de experiencia y años entrenando
+8. CONSIDERA la composición corporal actual vs objetivos
+9. ADAPTA horarios según preferencias del usuario
 
 Debes responder en formato JSON con la siguiente estructura:
 {
@@ -75,12 +87,30 @@ Debes responder en formato JSON con la siguiente estructura:
   "proximaRevision": "X días",
   "recomendacionIA": "Texto de recomendación específica considerando TODAS las limitaciones y alergias",
   "adaptacionDetectada": "Texto describiendo adaptación detectada",
+  "metodologiaSeleccionada": "Heavy Duty|Powerlifting|Hipertrofia|Funcional|Oposiciones|Crossfit|Calistenia|Entrenamiento en casa",
+  "rutinaSemanal": [
+    {
+      "dia": 1,
+      "fecha": "YYYY-MM-DD",
+      "nombre_sesion": "Nombre del entrenamiento",
+      "ejercicios": [
+        {
+          "nombre": "Nombre del ejercicio",
+          "series": 3,
+          "repeticiones": "8-12",
+          "peso": "progresivo",
+          "descanso": "60-90 segundos",
+          "notas": "Instrucciones específicas"
+        }
+      ]
+    }
+  ],
   "ajustesRecomendados": {
     "calorias": "número o null",
     "volumenEntrenamiento": "aumentar|mantener|reducir",
     "intensidad": "aumentar|mantener|reducir",
     "frecuencia": "aumentar|mantener|reducir",
-    "metodologia": "sugerencia de ajuste en metodología si aplica",
+    "metodologia": "metodología seleccionada",
     "nutricion": "recomendaciones nutricionales específicas"
   },
   "consideracionesMedicas": {
