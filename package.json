@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "prebuild": "rm -rf node_modules pnpm-lock.yaml",
     "dev": "vite",
     "build": "vite build",
     "lint": "npx eslint \"src/**/*.{js,jsx}\" \"backend/**/*.js\" --no-cache",
