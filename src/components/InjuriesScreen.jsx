@@ -1,16 +1,16 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { useUserContext } from '../contexts/UserContext';
-import { 
-  Heart, 
-  Activity, 
+import React, { useEffect, useMemo, useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { useUserContext } from '../contexts/UserContext'
+import {
+  Heart,
+  Activity,
   CheckCircle
-} from 'lucide-react';
+} from 'lucide-react'
 
 /**
  * @typedef {Object} Injury
@@ -31,43 +31,43 @@ import {
  */
 
 // Estados válidos para lesiones (alineado con API y BD)
-const ESTADOS = Object.freeze(['activo','en recuperación','recuperado']);
+const ESTADOS = Object.freeze(['activo', 'en recuperación', 'recuperado'])
 
 // Helpers de normalización/visualización
-const s = (v = '') => String(v || '').toLowerCase();
-const isEstadoValido = (v) => ESTADOS.includes(s(v));
-const displayEstado = (v) => (isEstadoValido(v) ? v : '(desconocido)');
+const s = (v = '') => String(v || '').toLowerCase()
+const isEstadoValido = (v) => ESTADOS.includes(s(v))
+const displayEstado = (v) => (isEstadoValido(v) ? v : '(desconocido)')
 
 const InjuriesScreen = () => {
-  const [activeInjuryTab, setActiveInjuryTab] = useState('status');
-  const { userData } = useUserContext();
+  const [activeInjuryTab, setActiveInjuryTab] = useState('status')
+  const { userData } = useUserContext()
   /** @type {[Injury[], React.Dispatch<React.SetStateAction<Injury[]>>]} */
-  const [injuries, setInjuries] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [addOpen, setAddOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ titulo:'', zona:'', tipo:'', gravedad:'leve', fecha_inicio:'', causa:'', tratamiento:'', estado:'activo', notas:'' });
-  const [editingInjury, setEditingInjury] = useState(null);
-  const [deletingInjury, setDeletingInjury] = useState(null);
-  const [preventingId, setPreventingId] = useState(null);
-  const [prevention, setPrevention] = useState(null);
+  const [injuries, setInjuries] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [addOpen, setAddOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({ titulo: '', zona: '', tipo: '', gravedad: 'leve', fecha_inicio: '', causa: '', tratamiento: '', estado: 'activo', notas: '' })
+  const [editingInjury, setEditingInjury] = useState(null)
+  const [deletingInjury, setDeletingInjury] = useState(null)
+  const [preventingId, setPreventingId] = useState(null)
+  const [prevention, setPrevention] = useState(null)
 
   // Evitar duplicar barras si VITE_API_URL viene con '/'
-  const apiBase = ''; // usar proxy de Vite en desarrollo
+  const apiBase = '' // usar proxy de Vite en desarrollo
 
   const fetchInjuries = async () => {
-    if (!userData?.id) return;
-    setLoading(true);
-    setError('');
+    if (!userData?.id) return
+    setLoading(true)
+    setError('')
     try {
-      const r = await fetch(`${apiBase}/api/users/${userData.id}/injuries`);
-      const j = await r.json();
-      if (!r.ok || !j.success) throw new Error(j.error || 'Error');
+      const r = await fetch(`${apiBase}/api/users/${userData.id}/injuries`)
+      const j = await r.json()
+      if (!r.ok || !j.success) throw new Error(j.error || 'Error')
       // Mapeo defensivo al tipo Injury
-      const list = Array.isArray(j.injuries) ? j.injuries : [];
+      const list = Array.isArray(j.injuries) ? j.injuries : []
       /** @type {Injury[]} */
       const mapped = list.map((it) => ({
         id: it.id,
@@ -84,54 +84,54 @@ const InjuriesScreen = () => {
         notas: it.notas ?? null,
         created_at: it.created_at,
         updated_at: it.updated_at
-      }));
-      setInjuries(mapped);
+      }))
+      setInjuries(mapped)
     } catch (e) {
-      setError(e.message);
+      setError(e.message)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
-  useEffect(() => { fetchInjuries();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userData?.id]);
+  useEffect(() => {
+    fetchInjuries()
+  }, [userData?.id])
 
   // Calcular conteos y separar lesiones
   const { counts, activeInjuries, historyInjuries } = useMemo(() => {
-    const active = injuries.filter(i => s(i.estado) === 'activo').length;
-    const recovering = injuries.filter(i => s(i.estado) === 'en recuperación').length;
-    const activeInjuries = injuries.filter(i => s(i.estado) === 'activo' || s(i.estado) === 'en recuperación');
-    const historyInjuries = injuries.filter(i => s(i.estado) === 'recuperado');
+    const active = injuries.filter(i => s(i.estado) === 'activo').length
+    const recovering = injuries.filter(i => s(i.estado) === 'en recuperación').length
+    const activeInjuries = injuries.filter(i => s(i.estado) === 'activo' || s(i.estado) === 'en recuperación')
+    const historyInjuries = injuries.filter(i => s(i.estado) === 'recuperado')
 
     return {
       counts: { active, recovering },
       activeInjuries,
       historyInjuries
-    };
-  }, [injuries]);
+    }
+  }, [injuries])
 
   const onSaveInjury = async () => {
-    if (!userData?.id || !form.titulo) return;
-    setSaving(true);
+    if (!userData?.id || !form.titulo) return
+    setSaving(true)
     try {
       const r = await fetch(`${apiBase}/api/users/${userData.id}/injuries`, {
-        method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(form)
-      });
-      const j = await r.json();
-      if (!r.ok || !j.success) throw new Error(j.error || 'Error al crear lesión');
-      setAddOpen(false);
-      setForm({ titulo:'', zona:'', tipo:'', gravedad:'leve', fecha_inicio:'', causa:'', tratamiento:'', estado:'activo', notas:'' });
-      fetchInjuries();
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form)
+      })
+      const j = await r.json()
+      if (!r.ok || !j.success) throw new Error(j.error || 'Error al crear lesión')
+      setAddOpen(false)
+      setForm({ titulo: '', zona: '', tipo: '', gravedad: 'leve', fecha_inicio: '', causa: '', tratamiento: '', estado: 'activo', notas: '' })
+      fetchInjuries()
     } catch (e) {
-      setError(e.message);
+      setError(e.message)
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   const onEditInjury = (injury) => {
-    setEditingInjury(injury);
+    setEditingInjury(injury)
     setForm({
       titulo: injury.titulo || '',
       zona: injury.zona || '',
@@ -142,64 +142,64 @@ const InjuriesScreen = () => {
       tratamiento: injury.tratamiento || '',
       estado: injury.estado || 'activo',
       notas: injury.notas || ''
-    });
-    setEditOpen(true);
-  };
+    })
+    setEditOpen(true)
+  }
 
   const onUpdateInjury = async () => {
-    if (!editingInjury?.id || !form.titulo) return;
-    setSaving(true);
+    if (!editingInjury?.id || !form.titulo) return
+    setSaving(true)
     try {
       const r = await fetch(`${apiBase}/api/injuries/${editingInjury.id}`, {
-        method: 'PATCH', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(form)
-      });
-      const j = await r.json();
-      if (!r.ok || !j.success) throw new Error(j.error || 'Error al actualizar lesión');
-      setEditOpen(false);
-      setEditingInjury(null);
-      setForm({ titulo:'', zona:'', tipo:'', gravedad:'leve', fecha_inicio:'', causa:'', tratamiento:'', estado:'activo', notas:'' });
-      fetchInjuries();
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form)
+      })
+      const j = await r.json()
+      if (!r.ok || !j.success) throw new Error(j.error || 'Error al actualizar lesión')
+      setEditOpen(false)
+      setEditingInjury(null)
+      setForm({ titulo: '', zona: '', tipo: '', gravedad: 'leve', fecha_inicio: '', causa: '', tratamiento: '', estado: 'activo', notas: '' })
+      fetchInjuries()
     } catch (e) {
-      setError(e.message);
+      setError(e.message)
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   const onDeleteInjury = async () => {
-    if (!deletingInjury?.id) return;
-    setSaving(true);
+    if (!deletingInjury?.id) return
+    setSaving(true)
     try {
       const r = await fetch(`${apiBase}/api/injuries/${deletingInjury.id}`, {
         method: 'DELETE'
-      });
-      const j = await r.json();
-      if (!r.ok || !j.success) throw new Error(j.error || 'Error al eliminar lesión');
-      setDeleteOpen(false);
-      setDeletingInjury(null);
-      fetchInjuries();
+      })
+      const j = await r.json()
+      if (!r.ok || !j.success) throw new Error(j.error || 'Error al eliminar lesión')
+      setDeleteOpen(false)
+      setDeletingInjury(null)
+      fetchInjuries()
     } catch (e) {
-      setError(e.message);
+      setError(e.message)
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   const onRequestPrevention = async (injuryId) => {
-  setPreventingId(injuryId);
-  setPrevention(null);
-  setActiveInjuryTab('prevention');
+    setPreventingId(injuryId)
+    setPrevention(null)
+    setActiveInjuryTab('prevention')
     try {
-      const r = await fetch(`${apiBase}/api/injuries/${injuryId}/prevention`, { method: 'POST' });
-      const j = await r.json();
-      if (!r.ok || !j.success) throw new Error(j.error || 'Error IA prevención');
-      setPrevention(j.prevention);
+      const r = await fetch(`${apiBase}/api/injuries/${injuryId}/prevention`, { method: 'POST' })
+      const j = await r.json()
+      if (!r.ok || !j.success) throw new Error(j.error || 'Error IA prevención')
+      setPrevention(j.prevention)
     } catch (e) {
-      setError(e.message);
+      setError(e.message)
     } finally {
-      setPreventingId(null);
+      setPreventingId(null)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-black text-white p-6 pb-24">
@@ -272,7 +272,7 @@ const InjuriesScreen = () => {
                   {/* Riesgo actual: placeholder */}
                 </AlertDescription>
               </Alert>
-              
+
               {/* Información específica del usuario */}
               {false && (
                 <div className="mt-4 p-3 bg-blue-400/10 rounded-lg border border-blue-400/20">
@@ -299,7 +299,8 @@ const InjuriesScreen = () => {
               )}
 
               {/* Lesiones activas */}
-              {activeInjuries.length > 0 ? (
+              {activeInjuries.length > 0
+                ? (
                 <div className="mt-4 space-y-3">
                   <h4 className="text-white font-semibold">Lesiones Activas:</h4>
                   {activeInjuries.map((inj) => (
@@ -312,8 +313,9 @@ const InjuriesScreen = () => {
                               <Badge
                                 variant="outline"
                                 className={`text-xs ${
-                                  s(inj.estado) === 'en recuperación' ? 'border-yellow-400 text-yellow-400' :
-                                  'border-red-400 text-red-400'
+                                  s(inj.estado) === 'en recuperación'
+? 'border-yellow-400 text-yellow-400'
+                                  : 'border-red-400 text-red-400'
                                 }`}
                               >
                                 {displayEstado(inj.estado)}
@@ -340,8 +342,8 @@ const InjuriesScreen = () => {
                               variant="outline"
                               className="border-red-400 text-red-400 hover:bg-red-400 hover:text-white"
                               onClick={() => {
-                                setDeletingInjury(inj);
-                                setDeleteOpen(true);
+                                setDeletingInjury(inj)
+                                setDeleteOpen(true)
                               }}
                             >
                               Eliminar
@@ -352,19 +354,21 @@ const InjuriesScreen = () => {
                     </Card>
                   ))}
                 </div>
-              ) : (
+                  )
+                : (
                 <div className="mt-4 p-4 bg-green-400/10 rounded-lg border border-green-400/20 text-center">
                   <CheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
                   <p className="text-green-300 font-medium">¡Sin lesiones activas!</p>
                   <p className="text-green-400 text-sm">Mantén las buenas prácticas preventivas.</p>
                 </div>
-              )}
+                  )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="history" className="space-y-6">
-          {historyInjuries.length === 0 ? (
+          {historyInjuries.length === 0
+            ? (
             <Card className="bg-gray-900 border-yellow-400/20">
               <CardContent className="text-center py-8">
                 <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
@@ -373,7 +377,8 @@ const InjuriesScreen = () => {
                 <p className="text-gray-400 text-sm mt-2">Las lesiones que marques como "recuperadas" aparecerán aquí.</p>
               </CardContent>
             </Card>
-          ) : (
+              )
+            : (
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-white text-lg font-semibold">Historial de Lesiones Recuperadas</h3>
@@ -417,8 +422,8 @@ const InjuriesScreen = () => {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="secondary" onClick={() => onRequestPrevention(injury.id)} disabled={preventingId===injury.id}>
-                          {preventingId===injury.id ? 'Generando...' : 'Prevención IA'}
+                        <Button size="sm" variant="secondary" onClick={() => onRequestPrevention(injury.id)} disabled={preventingId === injury.id}>
+                          {preventingId === injury.id ? 'Generando...' : 'Prevención IA'}
                         </Button>
                       </div>
                     </div>
@@ -426,7 +431,7 @@ const InjuriesScreen = () => {
                 </Card>
               ))}
             </div>
-          )}
+              )}
         </TabsContent>
 
         <TabsContent value="prevention" className="space-y-6">
@@ -438,15 +443,19 @@ const InjuriesScreen = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {preventingId ? (
+              {preventingId
+                ? (
                 <div className="text-center py-8">
                   <p className="text-gray-400">Generando plan de prevención con IA…</p>
                 </div>
-              ) : (!prevention) ? (
+                  )
+                : (!prevention)
+                    ? (
                 <div className="text-center py-8">
                   <p className="text-gray-400">Selecciona una lesión en Historial y pulsa "Prevención IA" para generar un plan.</p>
                 </div>
-              ) : (
+                      )
+                    : (
                 <div className="space-y-3 text-sm">
                   {prevention.calentamiento && (
                     <div className="p-3 bg-blue-400/10 rounded border border-blue-400/20">
@@ -454,7 +463,7 @@ const InjuriesScreen = () => {
                       <p className="text-blue-200">{prevention.calentamiento}</p>
                     </div>
                   )}
-                  {Array.isArray(prevention.movilidad) && prevention.movilidad.length>0 && (
+                  {Array.isArray(prevention.movilidad) && prevention.movilidad.length > 0 && (
                     <div className="p-3 bg-green-400/10 rounded border border-green-400/20">
                       <h4 className="text-green-300 font-semibold mb-1">Movilidad</h4>
                       <ul className="list-disc pl-5 text-green-200">
@@ -462,7 +471,7 @@ const InjuriesScreen = () => {
                       </ul>
                     </div>
                   )}
-                  {Array.isArray(prevention.fortalecimiento) && prevention.fortalecimiento.length>0 && (
+                  {Array.isArray(prevention.fortalecimiento) && prevention.fortalecimiento.length > 0 && (
                     <div className="p-3 bg-yellow-400/10 rounded border border-yellow-400/20">
                       <h4 className="text-yellow-300 font-semibold mb-1">Fortalecimiento</h4>
                       <ul className="list-disc pl-5 text-yellow-200">
@@ -470,7 +479,7 @@ const InjuriesScreen = () => {
                       </ul>
                     </div>
                   )}
-                  {Array.isArray(prevention.evitar) && prevention.evitar.length>0 && (
+                  {Array.isArray(prevention.evitar) && prevention.evitar.length > 0 && (
                     <div className="p-3 bg-red-400/10 rounded border border-red-400/20">
                       <h4 className="text-red-300 font-semibold mb-1">Evitar</h4>
                       <ul className="list-disc pl-5 text-red-200">
@@ -484,7 +493,7 @@ const InjuriesScreen = () => {
                   {prevention.duracion_aprox && (
                     <p className="text-gray-300">Duración aproximada: {prevention.duracion_aprox}</p>
                   )}
-                  {Array.isArray(prevention.advertencias) && prevention.advertencias.length>0 && (
+                  {Array.isArray(prevention.advertencias) && prevention.advertencias.length > 0 && (
                     <div className="p-3 bg-orange-400/10 rounded border border-orange-400/20">
                       <h4 className="text-orange-300 font-semibold mb-1">Advertencias</h4>
                       <ul className="list-disc pl-5 text-orange-200">
@@ -493,7 +502,7 @@ const InjuriesScreen = () => {
                     </div>
                   )}
                 </div>
-              )}
+                      )}
 
             </CardContent>
           </Card>
@@ -509,19 +518,19 @@ const InjuriesScreen = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="text-gray-400 text-sm">Título</label>
-              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.titulo} onChange={e=>setForm(f=>({...f,titulo:e.target.value}))} />
+              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.titulo} onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))} />
             </div>
             <div>
               <label className="text-gray-400 text-sm">Zona</label>
-              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.zona} onChange={e=>setForm(f=>({...f,zona:e.target.value}))} />
+              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.zona} onChange={e => setForm(f => ({ ...f, zona: e.target.value }))} />
             </div>
             <div>
               <label className="text-gray-400 text-sm">Tipo</label>
-              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.tipo} onChange={e=>setForm(f=>({...f,tipo:e.target.value}))} />
+              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.tipo} onChange={e => setForm(f => ({ ...f, tipo: e.target.value }))} />
             </div>
             <div>
               <label className="text-gray-400 text-sm">Gravedad</label>
-              <select className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.gravedad} onChange={e=>setForm(f=>({...f,gravedad:e.target.value}))}>
+              <select className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.gravedad} onChange={e => setForm(f => ({ ...f, gravedad: e.target.value }))}>
                 <option value="leve">Leve</option>
                 <option value="moderada">Moderada</option>
                 <option value="grave">Grave</option>
@@ -529,15 +538,15 @@ const InjuriesScreen = () => {
             </div>
             <div className="md:col-span-2">
               <label className="text-gray-400 text-sm">Causa</label>
-              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.causa} onChange={e=>setForm(f=>({...f,causa:e.target.value}))} />
+              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.causa} onChange={e => setForm(f => ({ ...f, causa: e.target.value }))} />
             </div>
             <div className="md:col-span-2">
               <label className="text-gray-400 text-sm">Tratamiento</label>
-              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.tratamiento} onChange={e=>setForm(f=>({...f,tratamiento:e.target.value}))} />
+              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.tratamiento} onChange={e => setForm(f => ({ ...f, tratamiento: e.target.value }))} />
             </div>
             <div>
               <label className="text-gray-400 text-sm">Estado</label>
-              <select className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.estado} onChange={e=>setForm(f=>({...f,estado:e.target.value}))}>
+              <select className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.estado} onChange={e => setForm(f => ({ ...f, estado: e.target.value }))}>
                 <option value="activo">Activo</option>
                 <option value="en recuperación">En recuperación</option>
                 <option value="recuperado">Recuperado</option>
@@ -545,12 +554,12 @@ const InjuriesScreen = () => {
             </div>
             <div>
               <label className="text-gray-400 text-sm">Notas</label>
-              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.notas} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} />
+              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.notas} onChange={e => setForm(f => ({ ...f, notas: e.target.value }))} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="secondary" onClick={()=>setAddOpen(false)}>Cancelar</Button>
-            <Button onClick={onSaveInjury} disabled={saving || !form.titulo}>{saving? 'Guardando...' : 'Guardar'}</Button>
+            <Button variant="secondary" onClick={() => setAddOpen(false)}>Cancelar</Button>
+            <Button onClick={onSaveInjury} disabled={saving || !form.titulo}>{saving ? 'Guardando...' : 'Guardar'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -567,19 +576,19 @@ const InjuriesScreen = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="text-gray-400 text-sm">Título</label>
-              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.titulo} onChange={e=>setForm(f=>({...f,titulo:e.target.value}))} />
+              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.titulo} onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))} />
             </div>
             <div>
               <label className="text-gray-400 text-sm">Zona</label>
-              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.zona} onChange={e=>setForm(f=>({...f,zona:e.target.value}))} />
+              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.zona} onChange={e => setForm(f => ({ ...f, zona: e.target.value }))} />
             </div>
             <div>
               <label className="text-gray-400 text-sm">Tipo</label>
-              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.tipo} onChange={e=>setForm(f=>({...f,tipo:e.target.value}))} />
+              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.tipo} onChange={e => setForm(f => ({ ...f, tipo: e.target.value }))} />
             </div>
             <div>
               <label className="text-gray-400 text-sm">Gravedad</label>
-              <select className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.gravedad} onChange={e=>setForm(f=>({...f,gravedad:e.target.value}))}>
+              <select className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.gravedad} onChange={e => setForm(f => ({ ...f, gravedad: e.target.value }))}>
                 <option value="leve">Leve</option>
                 <option value="moderada">Moderada</option>
                 <option value="grave">Grave</option>
@@ -587,15 +596,15 @@ const InjuriesScreen = () => {
             </div>
             <div className="md:col-span-2">
               <label className="text-gray-400 text-sm">Causa</label>
-              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.causa} onChange={e=>setForm(f=>({...f,causa:e.target.value}))} />
+              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.causa} onChange={e => setForm(f => ({ ...f, causa: e.target.value }))} />
             </div>
             <div className="md:col-span-2">
               <label className="text-gray-400 text-sm">Tratamiento</label>
-              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.tratamiento} onChange={e=>setForm(f=>({...f,tratamiento:e.target.value}))} />
+              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.tratamiento} onChange={e => setForm(f => ({ ...f, tratamiento: e.target.value }))} />
             </div>
             <div>
               <label className="text-gray-400 text-sm">Estado</label>
-              <select className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.estado} onChange={e=>setForm(f=>({...f,estado:e.target.value}))}>
+              <select className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.estado} onChange={e => setForm(f => ({ ...f, estado: e.target.value }))}>
                 <option value="activo">Activo</option>
                 <option value="en recuperación">En recuperación</option>
                 <option value="recuperado">Recuperado</option>
@@ -603,12 +612,12 @@ const InjuriesScreen = () => {
             </div>
             <div>
               <label className="text-gray-400 text-sm">Notas</label>
-              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.notas} onChange={e=>setForm(f=>({...f,notas:e.target.value}))} />
+              <input className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded" value={form.notas} onChange={e => setForm(f => ({ ...f, notas: e.target.value }))} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="secondary" onClick={()=>{setEditOpen(false); setEditingInjury(null);}}>Cancelar</Button>
-            <Button onClick={onUpdateInjury} disabled={saving || !form.titulo}>{saving? 'Actualizando...' : 'Actualizar'}</Button>
+            <Button variant="secondary" onClick={() => { setEditOpen(false); setEditingInjury(null) }}>Cancelar</Button>
+            <Button onClick={onUpdateInjury} disabled={saving || !form.titulo}>{saving ? 'Actualizando...' : 'Actualizar'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -629,20 +638,20 @@ const InjuriesScreen = () => {
             </div>
           )}
           <DialogFooter>
-            <Button variant="secondary" onClick={()=>{setDeleteOpen(false); setDeletingInjury(null);}}>Cancelar</Button>
+            <Button variant="secondary" onClick={() => { setDeleteOpen(false); setDeletingInjury(null) }}>Cancelar</Button>
             <Button
               variant="destructive"
               onClick={onDeleteInjury}
               disabled={saving}
               className="bg-red-600 hover:bg-red-700"
             >
-              {saving? 'Eliminando...' : 'Eliminar'}
+              {saving ? 'Eliminando...' : 'Eliminar'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
-  );
-};
+  )
+}
 
-export default InjuriesScreen;
+export default InjuriesScreen

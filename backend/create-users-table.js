@@ -1,20 +1,20 @@
-import { Pool } from 'pg';
-import bcrypt from 'bcryptjs';
-import dotenv from 'dotenv';
+import { Pool } from 'pg'
+import bcrypt from 'bcryptjs'
+import dotenv from 'dotenv'
 
-dotenv.config();
+dotenv.config()
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
-});
+})
 
-async function createUsersTable() {
+async function createUsersTable () {
   try {
-    const client = await pool.connect();
-    
-    console.log('🔧 Creando tabla de usuarios...');
-    
+    const client = await pool.connect()
+
+    console.log('🔧 Creando tabla de usuarios...')
+
     // Crear tabla users
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -35,20 +35,20 @@ async function createUsersTable() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
-    `);
-    
-    console.log('✅ Tabla users creada');
-    
+    `)
+
+    console.log('✅ Tabla users creada')
+
     // Verificar si ya existe el usuario de prueba
     const existingUser = await client.query(
       'SELECT id FROM users WHERE email = $1',
       ['sergiohernandezlara07@gmail.com']
-    );
-    
+    )
+
     if (existingUser.rows.length === 0) {
       // Crear usuario de prueba
-      const hashedPassword = await bcrypt.hash('1234', 10);
-      
+      const hashedPassword = await bcrypt.hash('1234', 10)
+
       await client.query(`
         INSERT INTO users (
           email, password, nombre, apellido, edad, sexo, 
@@ -65,28 +65,27 @@ async function createUsersTable() {
         175.0,
         'intermedio',
         'Ganar músculo'
-      ]);
-      
-      console.log('✅ Usuario de prueba creado');
-      console.log('📧 Email: sergiohernandezlara07@gmail.com');
-      console.log('🔑 Password: 1234');
+      ])
+
+      console.log('✅ Usuario de prueba creado')
+      console.log('📧 Email: sergiohernandezlara07@gmail.com')
+      console.log('🔑 Password: 1234')
     } else {
-      console.log('ℹ️ Usuario de prueba ya existe');
+      console.log('ℹ️ Usuario de prueba ya existe')
     }
-    
+
     // Verificar usuarios existentes
-    const userCount = await client.query('SELECT COUNT(*) FROM users');
-    console.log(`👥 Total de usuarios: ${userCount.rows[0].count}`);
-    
-    client.release();
-    await pool.end();
-    
-    console.log('🎉 ¡Tabla de usuarios configurada correctamente!');
-    
+    const userCount = await client.query('SELECT COUNT(*) FROM users')
+    console.log(`👥 Total de usuarios: ${userCount.rows[0].count}`)
+
+    client.release()
+    await pool.end()
+
+    console.log('🎉 ¡Tabla de usuarios configurada correctamente!')
   } catch (error) {
-    console.error('❌ Error:', error);
-    await pool.end();
+    console.error('❌ Error:', error)
+    await pool.end()
   }
 }
 
-createUsersTable();
+createUsersTable()

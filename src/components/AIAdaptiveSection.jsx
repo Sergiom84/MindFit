@@ -5,12 +5,12 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import ActivateAdaptiveAI from './ActivateAdaptiveAI'
 import { useUserContext } from '@/contexts/UserContext'
-import { 
-  Brain, 
-  TrendingUp, 
-  Activity, 
-  Target, 
-  Zap, 
+import {
+  Brain,
+  TrendingUp,
+  Activity,
+  Target,
+  Zap,
   BarChart3,
   Clock,
   Heart,
@@ -141,7 +141,7 @@ const AIAdaptiveSection = () => {
             IA Adaptativa Avanzada
           </h1>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            Sistema de inteligencia artificial que analiza tu evolución anatómica y metabólica 
+            Sistema de inteligencia artificial que analiza tu evolución anatómica y metabólica
             en tiempo real para optimizar continuamente tu entrenamiento y nutrición.
           </p>
         </div>
@@ -174,8 +174,8 @@ const AIAdaptiveSection = () => {
         {/* Características Principales */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {aiFeatures.map((feature) => (
-            <Card 
-              key={feature.id} 
+            <Card
+              key={feature.id}
               className={`bg-gray-900 border-yellow-400/20 cursor-pointer transition-all hover:border-yellow-400/40 ${
                 selectedFeature === feature.id ? 'border-yellow-400 bg-yellow-400/5' : ''
               }`}
@@ -195,7 +195,7 @@ const AIAdaptiveSection = () => {
                   }`} />
                 </div>
               </CardHeader>
-              
+
               {selectedFeature === feature.id && (
                 <CardContent>
                   <div className="space-y-4">
@@ -203,7 +203,7 @@ const AIAdaptiveSection = () => {
                       <h4 className="text-white font-semibold mb-2">Descripción</h4>
                       <p className="text-gray-300 text-sm">{feature.details.overview}</p>
                     </div>
-                    
+
                     <div>
                       <h4 className="text-white font-semibold mb-2">Beneficios</h4>
                       <ul className="space-y-1">
@@ -215,7 +215,7 @@ const AIAdaptiveSection = () => {
                         ))}
                       </ul>
                     </div>
-                    
+
                     <div>
                       <h4 className="text-white font-semibold mb-2">Cómo Funciona</h4>
                       <ul className="space-y-1">
@@ -301,7 +301,7 @@ const AIAdaptiveSection = () => {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onResult={(data) => {
-            console.log('Resultado de IA:', data);
+            console.log('Resultado de IA:', data)
             // Los datos ya se actualizan automáticamente a través del contexto
           }}
         />

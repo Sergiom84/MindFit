@@ -67,48 +67,47 @@ export const generateNutritionPlan = async (userProfile) => {
       }
       
       Responde únicamente con el JSON válido, sin texto adicional.
-    `;
+    `
 
-    const r = await fetch(`/api/activar-ia-adaptativa`, {
+    const r = await fetch('/api/activar-ia-adaptativa', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ modo: 'PLAN_NUTRICION', variablesPrompt: { userProfile, prompt } })
-    });
-    const j = await r.json();
-    const content = j?.respuestaIA ? JSON.stringify(j.respuestaIA) : '{}';
-    
-    try {
-      const planData = JSON.parse(content);
-      return planData;
-    } catch (parseError) {
-      console.error('Error parsing OpenAI response:', parseError);
-      throw new Error('Error al procesar la respuesta de la IA');
-    }
+    })
+    const j = await r.json()
+    const content = j?.respuestaIA ? JSON.stringify(j.respuestaIA) : '{}'
 
+    try {
+      const planData = JSON.parse(content)
+      return planData
+    } catch (parseError) {
+      console.error('Error parsing OpenAI response:', parseError)
+      throw new Error('Error al procesar la respuesta de la IA')
+    }
   } catch (error) {
-    console.error('Error generando plan nutricional:', error);
-    throw error;
+    console.error('Error generando plan nutricional:', error)
+    throw error
   }
-};
+}
 
 // Función auxiliar para calcular BMR (Tasa Metabólica Basal)
 export const calculateBMR = (peso, altura, edad, genero) => {
   if (genero === 'masculino') {
-    return 88.362 + (13.397 * peso) + (4.799 * altura) - (5.677 * edad);
+    return 88.362 + (13.397 * peso) + (4.799 * altura) - (5.677 * edad)
   } else {
-    return 447.593 + (9.247 * peso) + (3.098 * altura) - (4.330 * edad);
+    return 447.593 + (9.247 * peso) + (3.098 * altura) - (4.330 * edad)
   }
-};
+}
 
 // Función auxiliar para calcular TDEE (Gasto Energético Total Diario)
 export const calculateTDEE = (bmr, nivelActividad) => {
   const factorActividad = {
-    'sedentario': 1.2,
-    'ligero': 1.375,
-    'moderado': 1.55,
-    'intenso': 1.725,
-    'muy_intenso': 1.9
-  };
-  
-  return bmr * (factorActividad[nivelActividad] || 1.55);
-};
+    sedentario: 1.2,
+    ligero: 1.375,
+    moderado: 1.55,
+    intenso: 1.725,
+    muy_intenso: 1.9
+  }
+
+  return bmr * (factorActividad[nivelActividad] || 1.55)
+}

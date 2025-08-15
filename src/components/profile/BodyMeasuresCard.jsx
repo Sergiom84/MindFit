@@ -1,13 +1,13 @@
-import React from 'react';
-import { Button } from "@/components/ui/button";
+import React from 'react'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Save, Pencil } from "lucide-react";
-import { EditableField } from "../EditableField";
+  CardTitle
+} from '@/components/ui/card'
+import { Save, Pencil } from 'lucide-react'
+import { EditableField } from '../EditableField'
 
 export const BodyMeasuresCard = ({
   userProfile,
@@ -16,9 +16,9 @@ export const BodyMeasuresCard = ({
   startEdit,
   handleSave,
   handleCancel,
-  handleInputChange,
+  handleInputChange
 }) => {
-  const isEditing = editingSection === "bodyMeasures";
+  const isEditing = editingSection === 'bodyMeasures'
 
   return (
     <Card className="bg-gray-900 border-yellow-400/20">
@@ -26,7 +26,8 @@ export const BodyMeasuresCard = ({
         <CardTitle className="text-white flex items-center justify-between">
           <span>Medidas Corporales</span>
           <div className="flex items-center gap-2">
-            {isEditing ? (
+            {isEditing
+              ? (
               <>
                 <Button
                   onClick={handleSave}
@@ -45,25 +46,26 @@ export const BodyMeasuresCard = ({
                   Cancelar
                 </Button>
               </>
-            ) : (
+                )
+              : (
               <button
                 onClick={() =>
-                  startEdit("bodyMeasures", {
+                  startEdit('bodyMeasures', {
                     cintura: userProfile.cintura,
                     pecho: userProfile.pecho,
                     brazos: userProfile.brazos,
                     muslos: userProfile.muslos,
                     cuello: userProfile.cuello,
-                    antebrazos: userProfile.antebrazos,
+                    antebrazos: userProfile.antebrazos
                   })
                 }
-                disabled={editingSection && editingSection !== "bodyMeasures"}
+                disabled={editingSection && editingSection !== 'bodyMeasures'}
                 className="p-2 text-gray-400 hover:text-yellow-400 transition-colors"
                 title="Editar medidas corporales"
               >
                 <Pencil className="w-4 h-4" />
               </button>
-            )}
+                )}
           </div>
         </CardTitle>
       </CardHeader>
@@ -133,5 +135,5 @@ export const BodyMeasuresCard = ({
         </div>
       </CardContent>
     </Card>
-  );
-};
+  )
+}

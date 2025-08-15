@@ -1,14 +1,14 @@
-import pg from 'pg';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
+import pg from 'pg'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+import dotenv from 'dotenv'
 
-dotenv.config();
+dotenv.config()
 
-const { Pool } = pg;
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const { Pool } = pg
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 // Configuración de la base de datos de Render
 const getRenderDbConfig = () => {
@@ -21,20 +21,20 @@ const getRenderDbConfig = () => {
     ssl: {
       rejectUnauthorized: false
     }
-  };
-};
+  }
+}
 
-async function createRenderSchema() {
-  console.log('🚀 Creando esquema en base de datos de Render...');
-  
-  const renderConfig = getRenderDbConfig();
-  const pool = new Pool(renderConfig);
-  let client;
-  
+async function createRenderSchema () {
+  console.log('🚀 Creando esquema en base de datos de Render...')
+
+  const renderConfig = getRenderDbConfig()
+  const pool = new Pool(renderConfig)
+  let client
+
   try {
-    client = await pool.connect();
-    console.log('✅ Conectado a Render');
-    
+    client = await pool.connect()
+    console.log('✅ Conectado a Render')
+
     // Crear esquema basado en el CSV que proporcionaste
     const schemaSQL = `
 -- Eliminar tablas si existen
@@ -161,32 +161,32 @@ CREATE TRIGGER trigger_calculate_imc
     BEFORE INSERT OR UPDATE ON users
     FOR EACH ROW
     EXECUTE FUNCTION calculate_imc();
-`;
+`
 
-    console.log('🔄 Ejecutando script de creación de esquema...');
-    
+    console.log('🔄 Ejecutando script de creación de esquema...')
+
     // Dividir en statements y ejecutar uno por uno
     const statements = schemaSQL
       .split(';')
       .map(stmt => stmt.trim())
-      .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'));
-    
-    let executedCount = 0;
-    
+      .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'))
+
+    let executedCount = 0
+
     for (const statement of statements) {
       if (statement.trim()) {
         try {
-          await client.query(statement);
-          executedCount++;
+          await client.query(statement)
+          executedCount++
         } catch (error) {
-          console.log(`⚠️ Error en statement: ${error.message}`);
-          console.log(`Statement: ${statement.substring(0, 100)}...`);
+          console.log(`⚠️ Error en statement: ${error.message}`)
+          console.log(`Statement: ${statement.substring(0, 100)}...`)
         }
       }
     }
-    
-    console.log(`✅ Esquema creado exitosamente (${executedCount} statements ejecutados)`);
-    
+
+    console.log(`✅ Esquema creado exitosamente (${executedCount} statements ejecutados)`)
+
     // Verificar tablas creadas
     const tablesResult = await client.query(`
       SELECT table_name, 
@@ -195,24 +195,23 @@ CREATE TRIGGER trigger_calculate_imc
       WHERE table_schema = 'public' 
       AND table_type = 'BASE TABLE'
       ORDER BY table_name
-    `);
-    
-    console.log('📊 Tablas creadas en Render:');
+    `)
+
+    console.log('📊 Tablas creadas en Render:')
     for (const table of tablesResult.rows) {
-      console.log(`  📄 ${table.table_name}: ${table.column_count} columnas`);
+      console.log(`  📄 ${table.table_name}: ${table.column_count} columnas`)
     }
-    
   } catch (error) {
-    console.error('❌ Error creando esquema:', error);
+    console.error('❌ Error creando esquema:', error)
   } finally {
-    if (client) client.release();
-    await pool.end();
+    if (client) client.release()
+    await pool.end()
   }
 }
 
 // Ejecutar si se llama directamente
 if (process.argv[1] && process.argv[1].endsWith('create-render-schema.js')) {
-  createRenderSchema();
+  createRenderSchema()
 }
 
-export { createRenderSchema };
+export { createRenderSchema }

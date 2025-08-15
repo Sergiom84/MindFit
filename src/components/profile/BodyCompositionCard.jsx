@@ -1,13 +1,13 @@
-import React from 'react';
-import { Button } from "@/components/ui/button";
+import React from 'react'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Activity, Save, Pencil, Calculator } from "lucide-react";
-import { EditableField } from "../EditableField";
+  CardTitle
+} from '@/components/ui/card'
+import { Activity, Save, Pencil, Calculator } from 'lucide-react'
+import { EditableField } from '../EditableField'
 
 export const BodyCompositionCard = (props) => {
   const {
@@ -19,9 +19,9 @@ export const BodyCompositionCard = (props) => {
     handleCancel,
     handleInputChange,
     setBodyCalcForm,
-    setIsBodyCalcOpen,
-  } = props;
-  const isEditing = editingSection === "bodyComp";
+    setIsBodyCalcOpen
+  } = props
+  const isEditing = editingSection === 'bodyComp'
 
   return (
     <Card className="bg-gray-900 border-yellow-400/20">
@@ -32,7 +32,8 @@ export const BodyCompositionCard = (props) => {
             Corporal Detallada
           </div>
           <div className="flex items-center gap-2">
-            {isEditing ? (
+            {isEditing
+              ? (
               <>
                 <Button
                   onClick={handleSave}
@@ -51,23 +52,24 @@ export const BodyCompositionCard = (props) => {
                   Cancelar
                 </Button>
               </>
-            ) : (
+                )
+              : (
               <button
                 onClick={() =>
-                  startEdit("bodyComp", {
+                  startEdit('bodyComp', {
                     grasa_corporal: userProfile.grasa_corporal,
                     masa_muscular: userProfile.masa_muscular,
                     agua_corporal: userProfile.agua_corporal,
-                    metabolismo_basal: userProfile.metabolismo_basal,
+                    metabolismo_basal: userProfile.metabolismo_basal
                   })
                 }
-                disabled={editingSection && editingSection !== "bodyComp"}
+                disabled={editingSection && editingSection !== 'bodyComp'}
                 className="p-2 text-gray-400 hover:text-yellow-400 transition-colors"
                 title="Editar composición corporal"
               >
                 <Pencil className="w-4 h-4" />
               </button>
-            )}
+                )}
             {/* Botón para abrir el modal de cálculo */}
             {!isEditing && (
               <Button
@@ -76,15 +78,15 @@ export const BodyCompositionCard = (props) => {
                 className="border-gray-600 text-gray-300 hover:bg-gray-700"
                 onClick={() => {
                   setBodyCalcForm({
-                    sexo: userProfile.sexo || "masculino",
-                    edad: userProfile.edad || "",
-                    peso: userProfile.peso || "",
-                    altura: userProfile.altura || "",
-                    cintura: userProfile.cintura || "",
-                    cuello: userProfile.cuello || "",
-                    cadera: userProfile.cadera || "",
-                  });
-                  setIsBodyCalcOpen(true);
+                    sexo: userProfile.sexo || 'masculino',
+                    edad: userProfile.edad || '',
+                    peso: userProfile.peso || '',
+                    altura: userProfile.altura || '',
+                    cintura: userProfile.cintura || '',
+                    cuello: userProfile.cuello || '',
+                    cadera: userProfile.cadera || ''
+                  })
+                  setIsBodyCalcOpen(true)
                 }}
                 title="Calcular automáticamente"
               >
@@ -140,5 +142,5 @@ export const BodyCompositionCard = (props) => {
         </div>
       </CardContent>
     </Card>
-  );
-};
+  )
+}

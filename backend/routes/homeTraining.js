@@ -1,7 +1,26 @@
-import express from 'express';
-import { query } from '../db.js';
+import express from 'express'
+import { query } from '../db.js'
 
-const router = express.Router();
+// --- Helpers ---
+// (Traemos una función de ia.js para obtener el perfil del usuario de forma consistente)
+async function fetchUserProfile (userId) {
+  try {
+    const u = await query('SELECT id, nombre, nivel, created_at FROM users WHERE id = $1 LIMIT 1', [userId])
+    return u?.rows?.[0] || null
+  } catch (e) {
+    console.error(`Error fetching profile for userId=${userId}:`, e)
+    return null
+  }
+}
+
+async function hasColumn (tableName, columnName) {
+  const r = await query(
+    'SELECT 1 FROM information_schema.columns WHERE table_name = $1 AND column_name = $2',
+    [tableName, columnName])
+  return r.rows.length > 0
+}
+
+const router = express.Router()
 
 // Crear nuevo programa de entrenamiento en casa
 router.post('/create-program', async (req, res) => {
@@ -16,16 +35,16 @@ router.post('/create-program', async (req, res) => {
       frecuencia,
       enfoque,
       ejercicios
-    } = req.body;
+    } = req.body
 
-    console.log('📝 Creando programa de entrenamiento:', { userId, titulo, equipamiento, tipoEntrenamiento });
+    console.log('📝 Creando programa de entrenamiento:', { userId, titulo, equipamiento, tipoEntrenamiento })
 
     // Validar datos requeridos
     if (!userId || !titulo || !equipamiento || !tipoEntrenamiento || !ejercicios) {
       return res.status(400).json({
         success: false,
         error: 'Faltan datos requeridos: userId, titulo, equipamiento, tipoEntrenamiento, ejercicios'
-      });
+      })
     }
 
     // Crear programa
@@ -35,20 +54,20 @@ router.post('/create-program', async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_DATE, CURRENT_DATE + INTERVAL '7 days')
        RETURNING id`,
       [userId, titulo, descripcion || 'Entrenamiento personalizado', equipamiento, tipoEntrenamiento, duracionTotal || '30-45 min', frecuencia || '4-5 días/semana', enfoque || 'Entrenamiento funcional']
-    );
+    )
 
-    const programId = programResult.rows[0].id;
-    console.log('✅ Programa creado con ID:', programId);
+    const programId = programResult.rows[0].id
+    console.log('✅ Programa creado con ID:', programId)
 
     // Insertar ejercicios
-    console.log(`📋 Insertando ${ejercicios.length} ejercicios...`);
+    console.log(`📋 Insertando ${ejercicios.length} ejercicios...`)
     for (let i = 0; i < ejercicios.length; i++) {
-      const ejercicio = ejercicios[i];
+      const ejercicio = ejercicios[i]
 
       // Validar datos del ejercicio
       if (!ejercicio.nombre || !ejercicio.series || !ejercicio.tipo) {
-        console.log(`⚠️ Ejercicio ${i + 1} incompleto:`, ejercicio);
-        continue;
+        console.log(`⚠️ Ejercicio ${i + 1} incompleto:`, ejercicio)
+        continue
       }
 
       await query(
@@ -67,40 +86,40 @@ router.post('/create-program', async (req, res) => {
           JSON.stringify(ejercicio.consejos || []),
           i + 1
         ]
-      );
-      console.log(`✅ Ejercicio ${i + 1}: ${ejercicio.nombre}`);
+      )
+      console.log(`✅ Ejercicio ${i + 1}: ${ejercicio.nombre}`)
     }
 
     // Crear días de la semana
-    console.log('📅 Creando calendario semanal...');
-    const diasSemana = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
-    const fechaInicio = new Date();
+    console.log('📅 Creando calendario semanal...')
+    const diasSemana = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+    const fechaInicio = new Date()
 
     // Calcular el lunes de esta semana
-    const monday = new Date(fechaInicio);
-    monday.setDate(fechaInicio.getDate() - fechaInicio.getDay() + 1);
+    const monday = new Date(fechaInicio)
+    monday.setDate(fechaInicio.getDate() - fechaInicio.getDay() + 1)
 
     for (let i = 0; i < 7; i++) {
-      const fecha = new Date(monday);
-      fecha.setDate(monday.getDate() + i);
+      const fecha = new Date(monday)
+      fecha.setDate(monday.getDate() + i)
 
-      const esDescanso = i === 6; // Domingo descanso
-      const ejerciciosIds = [];
+      const esDescanso = i === 6 // Domingo descanso
+      const ejerciciosIds = []
 
       if (!esDescanso) {
         // Distribuir ejercicios a lo largo de la semana
-        const ejerciciosPorDia = Math.ceil(ejercicios.length / 6); // 6 días de entrenamiento
-        const inicio = (i % 6) * ejerciciosPorDia;
-        const fin = Math.min(inicio + ejerciciosPorDia, ejercicios.length);
+        const ejerciciosPorDia = Math.ceil(ejercicios.length / 6) // 6 días de entrenamiento
+        const inicio = (i % 6) * ejerciciosPorDia
+        const fin = Math.min(inicio + ejerciciosPorDia, ejercicios.length)
 
         for (let j = inicio; j < fin; j++) {
-          ejerciciosIds.push(j + 1);
+          ejerciciosIds.push(j + 1)
         }
 
         // Si no hay suficientes ejercicios, usar todos
         if (ejerciciosIds.length === 0) {
           for (let j = 0; j < ejercicios.length; j++) {
-            ejerciciosIds.push(j + 1);
+            ejerciciosIds.push(j + 1)
           }
         }
       }
@@ -117,60 +136,59 @@ router.post('/create-program', async (req, res) => {
           esDescanso,
           JSON.stringify(ejerciciosIds)
         ]
-      );
+      )
 
-      console.log(`✅ ${diasSemana[i]}: ${esDescanso ? 'Descanso' : `${ejerciciosIds.length} ejercicios`}`);
+      console.log(`✅ ${diasSemana[i]}: ${esDescanso ? 'Descanso' : `${ejerciciosIds.length} ejercicios`}`)
     }
 
     res.json({
       success: true,
-      programId: programId,
+      programId,
       message: 'Programa de entrenamiento creado exitosamente'
-    });
-
+    })
   } catch (error) {
-    console.error('Error creando programa:', error);
+    console.error('Error creando programa:', error)
     res.status(500).json({
       success: false,
-      error: 'Error interno del servidor: ' + error.message
-    });
+      error: `Error interno del servidor: ${error.message}`
+    })
   }
-});
+})
 
 // Obtener programa activo del usuario
 router.get('/active-program/:userId', async (req, res) => {
   try {
-    const { userId } = req.params;
+    const { userId } = req.params
 
     const programResult = await query(
       `SELECT * FROM home_training_programs 
        WHERE user_id = $1 AND estado = 'activo' 
        ORDER BY created_at DESC LIMIT 1`,
       [userId]
-    );
+    )
 
     if (programResult.rows.length === 0) {
       return res.json({
         success: true,
         program: null
-      });
+      })
     }
 
-    const program = programResult.rows[0];
+    const program = programResult.rows[0]
 
     // Obtener ejercicios del programa
     const exercisesResult = await query(
       `SELECT * FROM home_training_exercises 
        WHERE program_id = $1 ORDER BY orden`,
       [program.id]
-    );
+    )
 
     // Obtener días del programa
     const daysResult = await query(
       `SELECT * FROM home_training_days 
        WHERE program_id = $1 ORDER BY dia_numero`,
       [program.id]
-    );
+    )
 
     res.json({
       success: true,
@@ -179,30 +197,29 @@ router.get('/active-program/:userId', async (req, res) => {
         ejercicios: exercisesResult.rows,
         dias: daysResult.rows
       }
-    });
-
+    })
   } catch (error) {
-    console.error('Error obteniendo programa:', error);
+    console.error('Error obteniendo programa:', error)
     res.status(500).json({
       success: false,
-      error: 'Error interno del servidor: ' + error.message
-    });
+      error: `Error interno del servidor: ${error.message}`
+    })
   }
-});
+})
 
 // Completar día de entrenamiento
 router.post('/complete-day', async (req, res) => {
   try {
-    const { dayId, userId, duracionMinutos, ejerciciosCompletados, ejerciciosTotales, dificultadPercibida, notas } = req.body;
+    const { dayId, userId, duracionMinutos, ejerciciosCompletados, ejerciciosTotales, dificultadPercibida, notas } = req.body
 
-    console.log('🎯 Completando día de entrenamiento:', { dayId, userId, duracionMinutos, ejerciciosCompletados });
+    console.log('🎯 Completando día de entrenamiento:', { dayId, userId, duracionMinutos, ejerciciosCompletados })
 
     // Validar datos requeridos
     if (!dayId || !userId || !duracionMinutos || ejerciciosCompletados === undefined || ejerciciosTotales === undefined) {
       return res.status(400).json({
         success: false,
         error: 'Faltan datos requeridos: dayId, userId, duracionMinutos, ejerciciosCompletados, ejerciciosTotales'
-      });
+      })
     }
 
     // Verificar que el día existe y pertenece al usuario
@@ -212,23 +229,23 @@ router.post('/complete-day', async (req, res) => {
        JOIN home_training_programs htp ON htd.program_id = htp.id
        WHERE htd.id = $1 AND htp.user_id = $2`,
       [dayId, userId]
-    );
+    )
 
     if (dayCheck.rows.length === 0) {
       return res.status(404).json({
         success: false,
         error: 'Día de entrenamiento no encontrado o no pertenece al usuario'
-      });
+      })
     }
 
-    const day = dayCheck.rows[0];
+    const day = dayCheck.rows[0]
 
     // Verificar que el día no esté ya completado
     if (day.estado === 'completado') {
       return res.status(400).json({
         success: false,
         error: 'Este día ya está completado'
-      });
+      })
     }
 
     // Actualizar día como completado
@@ -242,9 +259,9 @@ router.post('/complete-day', async (req, res) => {
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $4`,
       [ejerciciosCompletados, duracionMinutos, notas || null, dayId]
-    );
+    )
 
-    console.log('✅ Día actualizado como completado');
+    console.log('✅ Día actualizado como completado')
 
     // Registrar sesión para estadísticas
     const sessionResult = await query(
@@ -253,9 +270,9 @@ router.post('/complete-day', async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING id`,
       [userId, day.program_id, dayId, duracionMinutos, ejerciciosCompletados, ejerciciosTotales, dificultadPercibida || null, notas || null]
-    );
+    )
 
-    console.log('✅ Sesión registrada con ID:', sessionResult.rows[0].id);
+    console.log('✅ Sesión registrada con ID:', sessionResult.rows[0].id)
 
     // El trigger automáticamente actualizará el progreso del programa
 
@@ -263,102 +280,108 @@ router.post('/complete-day', async (req, res) => {
       success: true,
       message: 'Día completado exitosamente',
       sessionId: sessionResult.rows[0].id
-    });
-
+    })
   } catch (error) {
-    console.error('❌ Error completando día:', error);
+    console.error('❌ Error completando día:', error)
     res.status(500).json({
       success: false,
-      error: 'Error interno del servidor: ' + error.message
-    });
+      error: `Error interno del servidor: ${error.message}`
+    })
   }
-});
+})
 
 // Obtener estadísticas del usuario
-router.get('/stats/:userId', async (req, res) => {
+router.get('/stats', async (req, res) => {
   try {
-    const { userId } = req.params;
+    const { userId } = req.query
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'Falta el parámetro userId' })
+    }
 
-    console.log('📊 Obteniendo estadísticas para usuario:', userId);
+    console.log('📊 Obteniendo estadísticas para usuario:', userId)
 
-    // Obtener estadísticas generales
-    const statsResult = await query(
+    // Detectar qué esquema de tabla `workout_sessions` usar (legado vs nuevo)
+    const hasNewSchema = await hasColumn('workout_sessions', 'session_status') && await hasColumn('workout_sessions', 'duration_sec')
+
+    let stats, streakDays
+
+    // 1. Obtener estadísticas agregadas
+    if (hasNewSchema) {
+      const result = await query(
+        `SELECT
+          COUNT(*) FILTER (WHERE session_status = 'completed') AS sessions_completed,
+          COALESCE(SUM(duration_sec), 0) AS total_duration_sec
+        FROM workout_sessions WHERE user_id = $1`,
+        [userId]
+      )
+      stats = result.rows[0]
+    } else {
+      // Fallback para esquema antiguo si es necesario
+      const result = await query(
+        `SELECT
+          COUNT(*) FILTER (WHERE status = 'completed') AS sessions_completed,
+          COALESCE(SUM(duracion_real_seg), 0) AS total_duration_sec
+        FROM workout_sessions WHERE user_id = $1`,
+        [userId]
+      )
+      stats = result.rows[0]
+    }
+
+    // 2. Calcular racha de días (streak)
+    const dateColumn = hasNewSchema ? 'fecha_sesion' : 'fecha'
+    const statusColumn = hasNewSchema ? 'session_status' : 'status'
+
+    const datesResult = await query(
       `SELECT
-         COUNT(DISTINCT hts.id) as sesiones_completadas,
-         COUNT(DISTINCT hts.program_id) as programas_participados,
-         COALESCE(SUM(hts.duracion_minutos), 0) as tiempo_total_minutos,
-         COALESCE(AVG(hts.duracion_minutos), 0) as duracion_promedio_sesion,
-         COALESCE(SUM(hts.ejercicios_completados), 0) as ejercicios_totales_completados,
-         COALESCE(AVG(hts.dificultad_percibida), 0) as dificultad_promedio
-       FROM home_training_sessions hts
-       WHERE hts.user_id = $1`,
+         DISTINCT ${dateColumn}::date AS session_date
+       FROM workout_sessions
+       WHERE user_id = $1 AND ${statusColumn} = 'completed' AND ${dateColumn} IS NOT NULL
+       ORDER BY session_date DESC`,
       [userId]
-    );
+    )
 
-    const stats = statsResult.rows[0];
+    const trainingDays = new Set(datesResult.rows.map(r => r.session_date.toISOString().slice(0, 10)))
+    let streak = 0
+    const today = new Date()
 
-    // Obtener estadísticas de días completados
-    const daysResult = await query(
-      `SELECT
-         COUNT(*) as dias_completados,
-         COUNT(*) FILTER (WHERE htd.estado = 'completado' AND htd.fecha >= CURRENT_DATE - INTERVAL '7 days') as dias_esta_semana,
-         COUNT(*) FILTER (WHERE htd.estado = 'completado' AND htd.fecha >= CURRENT_DATE - INTERVAL '30 days') as dias_este_mes
-       FROM home_training_days htd
-       JOIN home_training_programs htp ON htd.program_id = htp.id
-       WHERE htp.user_id = $1 AND htd.estado = 'completado'`,
-      [userId]
-    );
+    // Comprobar si hoy se entrenó
+    if (trainingDays.has(today.toISOString().slice(0, 10))) {
+      streak = 1
+      // Comprobar días anteriores consecutivamente
+      for (let i = 1; i < trainingDays.size + 1; i++) {
+        const prevDay = new Date(today)
+        prevDay.setDate(today.getDate() - i)
+        if (trainingDays.has(prevDay.toISOString().slice(0, 10))) {
+          streak++
+        } else {
+          break // Se rompió la racha
+        }
+      }
+    }
 
-    const dayStats = daysResult.rows[0];
+    // 3. Obtener nivel del usuario
+    const userProfile = await fetchUserProfile(userId)
+    const nivelActual = userProfile?.nivel || 'principiante'
 
-    // Obtener programa activo
-    const activeProgramResult = await query(
-      `SELECT COUNT(*) as programas_activos
-       FROM home_training_programs
-       WHERE user_id = $1 AND estado = 'activo'`,
-      [userId]
-    );
+    const finalStats = {
+      sessions_completed: parseInt(stats.sessions_completed, 10) || 0,
+      total_duration_sec: parseInt(stats.total_duration_sec, 10) || 0,
+      streak_days: streak,
+      nivel_actual: nivelActual
+    }
 
-    const activePrograms = activeProgramResult.rows[0];
-
-    const tiempoTotalMinutos = parseInt(stats.tiempo_total_minutos) || 0;
-    const horas = Math.floor(tiempoTotalMinutos / 60);
-    const minutos = tiempoTotalMinutos % 60;
-
-    const estadisticas = {
-      // Estadísticas principales
-      rutinasCompletadas: parseInt(dayStats.dias_completados) || 0,
-      tiempoTotalEntrenamiento: horas > 0 ? `${horas}h ${minutos}m` : `${minutos}m`,
-      duracionSesion: `${Math.round(parseFloat(stats.duracion_promedio_sesion)) || 30} min`,
-
-      // Estadísticas adicionales
-      sesionesCompletadas: parseInt(stats.sesiones_completadas) || 0,
-      programasParticipados: parseInt(stats.programas_participados) || 0,
-      ejerciciosCompletados: parseInt(stats.ejercicios_totales_completados) || 0,
-      dificultadPromedio: parseFloat(stats.dificultad_promedio) || 0,
-
-      // Estadísticas temporales
-      diasEstaSemana: parseInt(dayStats.dias_esta_semana) || 0,
-      diasEsteMes: parseInt(dayStats.dias_este_mes) || 0,
-
-      // Estado actual
-      programasActivos: parseInt(activePrograms.programas_activos) || 0
-    };
-
-    console.log('✅ Estadísticas calculadas:', estadisticas);
-
+    console.log('✅ Estadísticas calculadas:', finalStats)
     res.json({
       success: true,
-      stats: estadisticas
-    });
-
+      data: finalStats
+    })
   } catch (error) {
-    console.error('❌ Error obteniendo estadísticas:', error);
+    console.error('❌ Error obteniendo estadísticas:', error)
     res.status(500).json({
       success: false,
-      error: 'Error interno del servidor: ' + error.message
-    });
+      error: `Error interno del servidor: ${error.message}`
+    })
   }
-});
+})
 
-export default router;
+export default router

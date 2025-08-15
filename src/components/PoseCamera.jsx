@@ -1,45 +1,59 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  Camera,
+  Square,
+  Play,
+  Pause,
+  AlertTriangle,
+  CheckCircle,
+  Activity,
+  Target
+} from 'lucide-react'
 
 // Componente Webcam simplificado para evitar problemas de build
 const Webcam = React.forwardRef(({ videoConstraints, onUserMedia, onUserMediaError, className, style }, ref) => {
-  const videoRef = useRef(null);
+  const videoRef = useRef(null)
 
   useEffect(() => {
     const startCamera = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia(videoConstraints || { video: true });
+        const stream = await navigator.mediaDevices.getUserMedia(videoConstraints || { video: true })
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+          videoRef.current.srcObject = stream
         }
-        if (onUserMedia) onUserMedia(stream);
+        if (onUserMedia) onUserMedia(stream)
       } catch (error) {
-        console.error('Error accessing camera:', error);
-        if (onUserMediaError) onUserMediaError(error);
+        console.error('Error accessing camera:', error)
+        if (onUserMediaError) onUserMediaError(error)
       }
-    };
+    }
 
-    startCamera();
+    startCamera()
 
     return () => {
       if (videoRef.current && videoRef.current.srcObject) {
-        const tracks = videoRef.current.srcObject.getTracks();
-        tracks.forEach(track => track.stop());
+        const tracks = videoRef.current.srcObject.getTracks()
+        tracks.forEach(track => track.stop())
       }
-    };
-  }, [videoConstraints, onUserMedia, onUserMediaError]);
+    }
+  }, [videoConstraints, onUserMedia, onUserMediaError])
 
   // Exponer el ref para compatibilidad
   React.useImperativeHandle(ref, () => ({
     getScreenshot: () => {
-      if (!videoRef.current) return null;
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
-      ctx.drawImage(videoRef.current, 0, 0);
-      return canvas.toDataURL('image/jpeg');
+      if (!videoRef.current) return null
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      canvas.width = videoRef.current.videoWidth
+      canvas.height = videoRef.current.videoHeight
+      ctx.drawImage(videoRef.current, 0, 0)
+      return canvas.toDataURL('image/jpeg')
     }
-  }));
+  }))
 
   return (
     <video
@@ -50,36 +64,22 @@ const Webcam = React.forwardRef(({ videoConstraints, onUserMedia, onUserMediaErr
       className={className}
       style={style}
     />
-  );
-});
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Camera, 
-  Square, 
-  Play, 
-  Pause,
-  AlertTriangle,
-  CheckCircle,
-  Activity,
-  Target
-} from 'lucide-react';
+  )
+})
 
-const PoseCamera = ({ selectedExercise = "Sentadilla", onPoseData, onFeedback }) => {
-  const camRef = useRef(null);
-  const canvasRef = useRef(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [currentErrors, setCurrentErrors] = useState([]);
+const PoseCamera = ({ selectedExercise = 'Sentadilla', onPoseData, onFeedback }) => {
+  const camRef = useRef(null)
+  const canvasRef = useRef(null)
+  const [isRecording, setIsRecording] = useState(false)
+  const [currentErrors, setCurrentErrors] = useState([])
   const [sessionMetrics, setSessionMetrics] = useState({
     repeticiones: 0,
     erroresDetectados: [],
     precision: 0,
     tiempoSesion: 0
-  });
-  const [feedback, setFeedback] = useState('');
-  const [poseWorker, setPoseWorker] = useState(null);
+  })
+  const [feedback, setFeedback] = useState('')
+  const [poseWorker, setPoseWorker] = useState(null)
 
   // Simulación de MediaPipe Pose (en producción usarías la librería real)
   const initializePoseDetection = useCallback(() => {
@@ -87,17 +87,17 @@ const PoseCamera = ({ selectedExercise = "Sentadilla", onPoseData, onFeedback })
     const mockPoseWorker = {
       evaluate: (landmarks, ejercicio) => {
         // Simulación de análisis de postura
-        const errores = [];
-        const random = Math.random();
-        
+        const errores = []
+        const random = Math.random()
+
         if (random > 0.7) {
-          errores.push("Rodillas hacia adentro");
+          errores.push('Rodillas hacia adentro')
         }
         if (random > 0.8) {
-          errores.push("Falta de profundidad");
+          errores.push('Falta de profundidad')
         }
         if (random > 0.9) {
-          errores.push("Espalda curvada");
+          errores.push('Espalda curvada')
         }
 
         return {
@@ -106,90 +106,90 @@ const PoseCamera = ({ selectedExercise = "Sentadilla", onPoseData, onFeedback })
           anguloMinRodilla: Math.round(70 + Math.random() * 30),
           tempoConc: (1 + Math.random()).toFixed(1),
           tempoEcc: (2 + Math.random() * 2).toFixed(1)
-        };
+        }
       }
-    };
-    
-    setPoseWorker(mockPoseWorker);
-  }, []);
+    }
+
+    setPoseWorker(mockPoseWorker)
+  }, [])
 
   // Análisis en tiempo real
   const analyzePose = useCallback(() => {
-    if (!poseWorker || !isRecording) return;
+    if (!poseWorker || !isRecording) return
 
     // Simulación de landmarks (en producción vendrían de MediaPipe)
     const mockLandmarks = Array(33).fill(0).map(() => [
       Math.random(),
       Math.random(),
       Math.random()
-    ]);
+    ])
 
-    const analysis = poseWorker.evaluate(mockLandmarks, selectedExercise);
-    
-    setCurrentErrors(analysis.errores);
+    const analysis = poseWorker.evaluate(mockLandmarks, selectedExercise)
+
+    setCurrentErrors(analysis.errores)
     setSessionMetrics(prev => ({
       ...prev,
       precision: analysis.precision,
       erroresDetectados: [...new Set([...prev.erroresDetectados, ...analysis.errores])]
-    }));
+    }))
 
     // Feedback háptico si hay errores
     if (analysis.errores.length > 0 && navigator.vibrate) {
-      navigator.vibrate(100);
+      navigator.vibrate(100)
     }
 
     // Enviar datos al componente padre
     if (onPoseData) {
       onPoseData({
         landmarks: mockLandmarks,
-        analysis: analysis
-      });
+        analysis
+      })
     }
-  }, [poseWorker, isRecording, selectedExercise, onPoseData]);
+  }, [poseWorker, isRecording, selectedExercise, onPoseData])
 
   // Loop de análisis
   useEffect(() => {
-    if (!isRecording) return;
+    if (!isRecording) return
 
-    const interval = setInterval(analyzePose, 100); // ~10 FPS
-    return () => clearInterval(interval);
-  }, [isRecording, analyzePose]);
+    const interval = setInterval(analyzePose, 100) // ~10 FPS
+    return () => clearInterval(interval)
+  }, [isRecording, analyzePose])
 
   // Inicializar pose detection
   useEffect(() => {
-    initializePoseDetection();
-  }, [initializePoseDetection]);
+    initializePoseDetection()
+  }, [initializePoseDetection])
 
   // Contador de tiempo de sesión
   useEffect(() => {
-    if (!isRecording) return;
+    if (!isRecording) return
 
-    const startTime = Date.now();
+    const startTime = Date.now()
     const interval = setInterval(() => {
       setSessionMetrics(prev => ({
         ...prev,
         tiempoSesion: Math.floor((Date.now() - startTime) / 1000)
-      }));
-    }, 1000);
+      }))
+    }, 1000)
 
-    return () => clearInterval(interval);
-  }, [isRecording]);
+    return () => clearInterval(interval)
+  }, [isRecording])
 
   const startRecording = () => {
-    setIsRecording(true);
-    setCurrentErrors([]);
+    setIsRecording(true)
+    setCurrentErrors([])
     setSessionMetrics({
       repeticiones: 0,
       erroresDetectados: [],
       precision: 0,
       tiempoSesion: 0
-    });
-    setFeedback('');
-  };
+    })
+    setFeedback('')
+  }
 
   const stopRecording = async () => {
-    setIsRecording(false);
-    
+    setIsRecording(false)
+
     // Simular envío a GPT-4o para feedback
     const metrics = {
       ejercicio: selectedExercise,
@@ -199,28 +199,28 @@ const PoseCamera = ({ selectedExercise = "Sentadilla", onPoseData, onFeedback })
       tempoConc: (1 + Math.random()).toFixed(1),
       tempoEcc: (2 + Math.random() * 2).toFixed(1),
       precision: sessionMetrics.precision
-    };
+    }
 
     // Simulación de respuesta de IA
     setTimeout(() => {
-      const mockFeedback = generateMockFeedback(metrics);
-      setFeedback(mockFeedback);
+      const mockFeedback = generateMockFeedback(metrics)
+      setFeedback(mockFeedback)
       if (onFeedback) {
-        onFeedback(mockFeedback);
+        onFeedback(mockFeedback)
       }
-    }, 1500);
-  };
+    }, 1500)
+  }
 
   const generateMockFeedback = (metrics) => {
     const feedbacks = [
       `Excelente trabajo en ${metrics.ejercicio}! Completaste ${metrics.repeticiones} repeticiones con ${metrics.precision}% de precisión.`,
-      `Buen progreso! Nota: ${metrics.erroresDetectados.length > 0 ? 'Trabaja en: ' + metrics.erroresDetectados.join(', ') : 'Técnica correcta mantenida'}.`,
+      `Buen progreso! Nota: ${metrics.erroresDetectados.length > 0 ? `Trabaja en: ${metrics.erroresDetectados.join(', ')}` : 'Técnica correcta mantenida'}.`,
       `Recomendación: Mantén un tempo más controlado en la fase excéntrica (${metrics.tempoEcc}s está bien).`,
       `Tu ángulo mínimo de rodilla fue ${metrics.anguloMinRodilla}°. Intenta llegar a 90° para mayor activación muscular.`
-    ];
-    
-    return feedbacks.join('\n\n');
-  };
+    ]
+
+    return feedbacks.join('\n\n')
+  }
 
   return (
     <div className="space-y-6">
@@ -243,7 +243,7 @@ const PoseCamera = ({ selectedExercise = "Sentadilla", onPoseData, onFeedback })
               ref={camRef}
               className="w-full h-64 object-cover"
               mirrored
-              videoConstraints={{ facingMode: "user" }}
+              videoConstraints={{ facingMode: 'user' }}
             />
             <canvas
               ref={canvasRef}
@@ -251,7 +251,7 @@ const PoseCamera = ({ selectedExercise = "Sentadilla", onPoseData, onFeedback })
               width="640"
               height="480"
             />
-            
+
             {/* Overlay de errores en tiempo real */}
             {isRecording && currentErrors.length > 0 && (
               <div className="absolute top-4 left-4 space-y-2">
@@ -283,23 +283,25 @@ const PoseCamera = ({ selectedExercise = "Sentadilla", onPoseData, onFeedback })
 
           {/* Controles */}
           <div className="flex justify-center space-x-4 mt-4">
-            {!isRecording ? (
-              <Button 
+            {!isRecording
+              ? (
+              <Button
                 onClick={startRecording}
                 className="bg-green-600 hover:bg-green-700 text-white px-6 py-2"
               >
                 <Play className="w-4 h-4 mr-2" />
                 Iniciar Análisis
               </Button>
-            ) : (
-              <Button 
+                )
+              : (
+              <Button
                 onClick={stopRecording}
                 className="bg-red-600 hover:bg-red-700 text-white px-6 py-2"
               >
                 <Square className="w-4 h-4 mr-2" />
                 Detener y Analizar
               </Button>
-            )}
+                )}
           </div>
         </CardContent>
       </Card>
@@ -321,7 +323,7 @@ const PoseCamera = ({ selectedExercise = "Sentadilla", onPoseData, onFeedback })
         </Card>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default PoseCamera;
+export default PoseCamera

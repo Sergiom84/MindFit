@@ -17,7 +17,7 @@ function addMissingProps(match) {
   }
   
   // Añadir las props faltantes antes del cierre
-  return match + '\n                      editedData={editedData}\n                      onInputChange={handleInputChange}';
+  return `${match  }\n                      editedData={editedData}\n                      onInputChange={handleInputChange}`;
 }
 
 // Reemplazar todas las instancias

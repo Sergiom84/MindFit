@@ -1,22 +1,22 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { getPoseFeedback } from '../api/poseFeedback';
-import { CheckCircle, AlertTriangle, Loader2, Zap } from 'lucide-react';
+import React, { useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { getPoseFeedback } from '../api/poseFeedback'
+import { CheckCircle, AlertTriangle, Loader2, Zap } from 'lucide-react'
 
 const OpenAITest = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [response, setResponse] = useState(null);
-  const [error, setError] = useState(null);
-  const [connectionStatus, setConnectionStatus] = useState('not_tested');
+  const [isLoading, setIsLoading] = useState(false)
+  const [response, setResponse] = useState(null)
+  const [error, setError] = useState(null)
+  const [connectionStatus, setConnectionStatus] = useState('not_tested')
 
   const testOpenAIConnection = async () => {
-    setIsLoading(true);
-    setError(null);
-    setResponse(null);
-    setConnectionStatus('testing');
+    setIsLoading(true)
+    setError(null)
+    setResponse(null)
+    setConnectionStatus('testing')
 
     // Datos de prueba para el análisis
     const testMetrics = {
@@ -27,48 +27,48 @@ const OpenAITest = () => {
       tempoConc: 1.2,
       tempoEcc: 2.8,
       precision: 85
-    };
+    }
 
     const testUserVariables = {
       usuario: 'Usuario de Prueba',
       nivel: 'intermedio',
       objetivo: 'ganar_masa_muscular'
-    };
+    }
 
     try {
-      console.log('🧪 Iniciando prueba de conexión con OpenAI...');
-      const result = await getPoseFeedback(testMetrics, testUserVariables);
-      
+      console.log('🧪 Iniciando prueba de conexión con OpenAI...')
+      const result = await getPoseFeedback(testMetrics, testUserVariables)
+
       if (result.success) {
-        setResponse(result.feedback);
-        setConnectionStatus('success');
-        console.log('✅ Conexión exitosa con OpenAI');
+        setResponse(result.feedback)
+        setConnectionStatus('success')
+        console.log('✅ Conexión exitosa con OpenAI')
       } else {
-        setError(result.error || 'Error desconocido');
-        setConnectionStatus('error');
-        console.log('❌ Error en la conexión:', result.error);
+        setError(result.error || 'Error desconocido')
+        setConnectionStatus('error')
+        console.log('❌ Error en la conexión:', result.error)
       }
     } catch (err) {
-      setError(err.message);
-      setConnectionStatus('error');
-      console.error('❌ Error en la prueba:', err);
+      setError(err.message)
+      setConnectionStatus('error')
+      console.error('❌ Error en la prueba:', err)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const getStatusBadge = () => {
     switch (connectionStatus) {
       case 'success':
-        return <Badge className="bg-green-500 text-white">✅ Conectado</Badge>;
+        return <Badge className="bg-green-500 text-white">✅ Conectado</Badge>
       case 'error':
-        return <Badge className="bg-red-500 text-white">❌ Error</Badge>;
+        return <Badge className="bg-red-500 text-white">❌ Error</Badge>
       case 'testing':
-        return <Badge className="bg-yellow-500 text-black">🔄 Probando...</Badge>;
+        return <Badge className="bg-yellow-500 text-black">🔄 Probando...</Badge>
       default:
-        return <Badge className="bg-gray-500 text-white">⚪ No probado</Badge>;
+        return <Badge className="bg-gray-500 text-white">⚪ No probado</Badge>
     }
-  };
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
@@ -97,7 +97,7 @@ const OpenAITest = () => {
                 </div>
               </div>
             </div>
-            
+
             <div>
               <h3 className="text-white font-semibold mb-2">Datos de Prueba:</h3>
               <div className="space-y-1 text-sm text-gray-300">
@@ -110,22 +110,24 @@ const OpenAITest = () => {
           </div>
 
           <div className="text-center">
-            <Button 
+            <Button
               onClick={testOpenAIConnection}
               disabled={isLoading}
               className="bg-yellow-400 text-black hover:bg-yellow-300 px-6 py-2"
             >
-              {isLoading ? (
+              {isLoading
+                ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Probando Conexión...
                 </>
-              ) : (
+                  )
+                : (
                 <>
                   <Zap className="w-4 h-4 mr-2" />
                   Probar Conexión OpenAI
                 </>
-              )}
+                  )}
             </Button>
           </div>
 
@@ -167,7 +169,7 @@ const OpenAITest = () => {
         </CardContent>
       </Card>
     </div>
-  );
-};
+  )
+}
 
-export default OpenAITest;
+export default OpenAITest

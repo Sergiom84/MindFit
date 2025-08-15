@@ -1,20 +1,20 @@
-import { useState } from 'react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { AlertCircle, CheckCircle, Loader2, Brain, UserPlus, LogIn } from 'lucide-react';
+import { useState } from 'react'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { AlertCircle, CheckCircle, Loader2, Brain, UserPlus, LogIn } from 'lucide-react'
 
 const InitialProfileForm = () => {
   // Estado del formulario
-  const [step, setStep] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState(null);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [step, setStep] = useState(1)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
+  const [submitSuccess, setSubmitSuccess] = useState(false)
 
   // El estado 'data' ahora refleja los campos del perfil
   const [data, setData] = useState({
@@ -49,52 +49,52 @@ const InitialProfileForm = () => {
     comidas_diarias: '',
     suplementacion: '',
     alimentos_excluidos: ''
-  });
+  })
 
   // Handlers (sin cambios)
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setData({ ...data, [name]: value });
-  };
+    const { name, value } = e.target
+    setData({ ...data, [name]: value })
+  }
 
   const handleSelectChange = (name, value) => {
-    setData({ ...data, [name]: value });
-  };
+    setData({ ...data, [name]: value })
+  }
 
-  const next = () => setStep(step + 1);
-  const prev = () => setStep(step - 1);
+  const next = () => setStep(step + 1)
+  const prev = () => setStep(step - 1)
 
   const submit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setSubmitError(null);
+    e.preventDefault()
+    setIsSubmitting(true)
+    setSubmitError(null)
 
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/register`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(data)
-      });
+      })
 
       if (!response.ok) {
-        throw new Error(`Error en el registro: ${response.status}`);
+        throw new Error(`Error en el registro: ${response.status}`)
       }
-      
-      const result = await response.json();
+
+      const result = await response.json()
 
       if (result.success) {
-        setSubmitSuccess(true);
+        setSubmitSuccess(true)
       } else {
-        setSubmitError(result.error || 'Error al registrar usuario');
+        setSubmitError(result.error || 'Error al registrar usuario')
       }
     } catch (error) {
-      setSubmitError('Error de conexión. Inténtalo de nuevo.');
+      setSubmitError('Error de conexión. Inténtalo de nuevo.')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   // Vista de éxito (sin cambios)
   if (submitSuccess) {
@@ -118,7 +118,7 @@ const InitialProfileForm = () => {
           </CardContent>
         </Card>
       </div>
-    );
+    )
   }
 
   // Formulario principal
@@ -169,7 +169,7 @@ const InitialProfileForm = () => {
                 <div><Label htmlFor="apellido">Apellido *</Label><Input id="apellido" name="apellido" value={data.apellido} onChange={handleChange} required /></div>
                 <div><Label htmlFor="email">Email *</Label><Input id="email" name="email" type="email" value={data.email} onChange={handleChange} required /></div>
                 <div><Label htmlFor="password">Contraseña *</Label><Input id="password" name="password" type="password" value={data.password} onChange={handleChange} required /></div>
-                
+
                 {/* Datos personales y físicos */}
                 <div className="md:col-span-2 text-lg font-semibold text-yellow-400 border-b border-yellow-400/20 pb-2 mb-2 mt-4">Datos Personales</div>
                 <div><Label htmlFor="edad">Edad</Label><Input id="edad" name="edad" type="number" value={data.edad} onChange={handleChange} /></div>
@@ -270,7 +270,7 @@ const InitialProfileForm = () => {
         </form>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default InitialProfileForm;
+export default InitialProfileForm

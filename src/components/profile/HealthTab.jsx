@@ -1,13 +1,13 @@
-import React from 'react';
-import { Button } from "@/components/ui/button";
+import React from 'react'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Save, Pencil, FileText } from "lucide-react";
-import { EditableField } from "../EditableField";
+  CardTitle
+} from '@/components/ui/card'
+import { Save, Pencil, FileText } from 'lucide-react'
+import { EditableField } from '../EditableField'
 
 export const HealthTab = (props) => {
   const {
@@ -25,10 +25,10 @@ export const HealthTab = (props) => {
     alergiasList,
     medicamentosList,
     alergiasObjList,
-    medicamentosObjList,
-  } = props;
+    medicamentosObjList
+  } = props
 
-  const isEditing = editingSection === "health";
+  const isEditing = editingSection === 'health'
 
   return (
     <Card className="bg-gray-900 border-yellow-400/20">
@@ -36,7 +36,8 @@ export const HealthTab = (props) => {
         <CardTitle className="text-white flex items-center justify-between">
           <span>Historial Médico y Salud</span>
           <div className="flex items-center gap-2">
-            {isEditing ? (
+            {isEditing
+              ? (
               <>
                 <Button onClick={handleSave} size="sm" className="bg-green-500 hover:bg-green-600 text-white">
                   <Save className="w-4 h-4 mr-1" /> Guardar
@@ -45,26 +46,27 @@ export const HealthTab = (props) => {
                   Cancelar
                 </Button>
               </>
-            ) : (
+                )
+              : (
               <button
                 onClick={() => {
-                  startEdit("health", {
+                  startEdit('health', {
                     alergias: [...alergiasList],
-                    medicamentos: [...medicamentosList],
-                  });
+                    medicamentos: [...medicamentosList]
+                  })
                 }}
-                disabled={!!(editingSection && editingSection !== "health")}
+                disabled={!!(editingSection && editingSection !== 'health')}
                 className="p-2 text-gray-400 hover:text-yellow-400 transition-colors"
                 title="Editar historial médico"
               >
                 <Pencil className="w-4 h-4" />
               </button>
-            )}
+                )}
 
             <Button
               onClick={async () => {
-                await fetchDocs();
-                setDocsOpen(true);
+                await fetchDocs()
+                setDocsOpen(true)
               }}
               size="sm"
               variant="outline"
@@ -86,9 +88,9 @@ export const HealthTab = (props) => {
         accept="application/pdf"
         className="hidden"
         onChange={async (e) => {
-          const file = e.target.files?.[0];
-          await handlePdfUpload(file);
-          e.target.value = '';
+          const file = e.target.files?.[0]
+          await handlePdfUpload(file)
+          e.target.value = ''
         }}
       />
 
@@ -96,9 +98,11 @@ export const HealthTab = (props) => {
         <div className="mb-6">
           <h3 className="text-lg font-semibold text-yellow-400 mb-4">Historial Médico</h3>
           <div className="bg-gray-800/50 rounded-lg p-4 min-h-[150px] flex items-center justify-center">
-            {docs && docs.length > 0 ? (
+            {docs && docs.length > 0
+              ? (
               <p className="text-gray-300">Tienes {docs.length} documento(s) subido(s). Haz clic en 'Documentación' para verlos.</p>
-            ) : (
+                )
+              : (
               <div className="text-center">
                 <FileText className="w-12 h-12 text-gray-500 mx-auto mb-3" />
                 <p className="text-gray-400 mb-4">No hay documentos médicos subidos</p>
@@ -109,7 +113,7 @@ export const HealthTab = (props) => {
                   Subir Documentación
                 </button>
               </div>
-            )}
+                )}
           </div>
         </div>
 
@@ -140,5 +144,5 @@ export const HealthTab = (props) => {
         </div>
       </CardContent>
     </Card>
-  );
-};
+  )
+}

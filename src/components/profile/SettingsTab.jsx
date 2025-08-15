@@ -1,11 +1,11 @@
-import React from 'react';
+import React from 'react'
 import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Settings } from "lucide-react";
+  CardTitle
+} from '@/components/ui/card'
+import { Settings } from 'lucide-react'
 
 export const SettingsTab = () => {
   // Por ahora, este componente es estático y no necesita props.
@@ -28,5 +28,5 @@ export const SettingsTab = () => {
         </div>
       </CardContent>
     </Card>
-  );
-};
+  )
+}

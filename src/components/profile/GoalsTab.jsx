@@ -1,8 +1,8 @@
-import React from 'react';
+import React from 'react'
 
 // Importa las dos tarjetas de la pestaña 'Objetivos'
-import { GoalsCard } from './GoalsCard';
-import { GoalProgressCard } from './GoalProgressCard';
+import { GoalsCard } from './GoalsCard'
+import { GoalProgressCard } from './GoalProgressCard'
 
 // El componente recibe todas las props y las pasa a sus hijos
 export const GoalsTab = (props) => {
@@ -12,5 +12,5 @@ export const GoalsTab = (props) => {
       <GoalsCard {...props} />
       <GoalProgressCard {...props} />
     </div>
-  );
-};
+  )
+}

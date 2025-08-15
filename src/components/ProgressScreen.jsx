@@ -1,23 +1,23 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useUserContext } from '../contexts/UserContext';
-import { 
-  TrendingUp, 
-  BarChart3, 
+import React, { useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useUserContext } from '../contexts/UserContext'
+import {
+  TrendingUp,
+  BarChart3,
   Target,
   Activity,
   Zap,
   Trophy
-} from 'lucide-react';
+} from 'lucide-react'
 
 const ProgressScreen = () => {
-  const [activeProgressTab, setActiveProgressTab] = useState('overview');
-  const { userData } = useUserContext();
-  
+  const [activeProgressTab, setActiveProgressTab] = useState('overview')
+  const { userData } = useUserContext()
+
   // Usar datos dinámicos del usuario actual
-  const progresoUsuario = userData.progreso || {};
+  const progresoUsuario = userData.progreso || {}
 
   const progressData = {
     overview: progresoUsuario.overview || {
@@ -34,34 +34,34 @@ const ProgressScreen = () => {
     },
     strengthProgress: progresoUsuario.strengthProgress || [],
     bodyMetrics: progresoUsuario.bodyMetrics || { measurements: [] }
-  };
+  }
 
   const getTrendIcon = (trend) => {
-    switch(trend) {
-      case 'up': return '↗️';
-      case 'down': return '↘️';
-      case 'excellent': return '🚀';
-      case 'good': return '✅';
-      default: return '➡️';
+    switch (trend) {
+      case 'up': return '↗️'
+      case 'down': return '↘️'
+      case 'excellent': return '🚀'
+      case 'good': return '✅'
+      default: return '➡️'
     }
-  };
+  }
 
   const getTrendColor = (trend) => {
-    switch(trend) {
+    switch (trend) {
       case 'up':
-      case 'excellent': return 'text-green-400';
-      case 'good': return 'text-blue-400';
-      case 'down': return 'text-red-400';
-      default: return 'text-gray-400';
+      case 'excellent': return 'text-green-400'
+      case 'good': return 'text-blue-400'
+      case 'down': return 'text-red-400'
+      default: return 'text-gray-400'
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-black text-white p-6 pb-24">
       <h1 className="text-3xl font-bold mb-6 text-yellow-400">
         Progreso y Análisis - {userData.nombre}
       </h1>
-      
+
       {/* Información general del usuario */}
       <Card className="bg-gray-900 border-yellow-400/20 mb-6">
         <CardContent className="p-4">
@@ -83,7 +83,7 @@ const ProgressScreen = () => {
               <p className="text-gray-400 text-sm">Nivel</p>
             </div>
           </div>
-          
+
           {/* Estado general */}
           <div className="mt-4 text-center">
             <p className="text-gray-400 text-sm">Estado General:</p>
@@ -111,10 +111,13 @@ const ProgressScreen = () => {
               <Card key={key} className="bg-gray-900 border-yellow-400/20">
                 <CardHeader>
                   <CardTitle className="text-white text-lg">
-                    {key === 'weightChange' ? 'Cambio de Peso' :
-                     key === 'bodyFatChange' ? 'Grasa Corporal' :
-                     key === 'muscleGain' ? 'Ganancia Muscular' :
-                     'Ganancia de Fuerza'}
+                    {key === 'weightChange'
+                      ? 'Cambio de Peso'
+                      : key === 'bodyFatChange'
+                        ? 'Grasa Corporal'
+                        : key === 'muscleGain'
+                          ? 'Ganancia Muscular'
+                          : 'Ganancia de Fuerza'}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -153,27 +156,27 @@ const ProgressScreen = () => {
                       <span className="text-white">{progressData.weeklyMetrics.workouts.completed}/{progressData.weeklyMetrics.workouts.planned}</span>
                     </div>
                     <div className="w-full bg-gray-700 rounded-full h-2">
-                      <div 
+                      <div
                         className="h-2 rounded-full bg-green-400"
                         style={{ width: `${progressData.weeklyMetrics.workouts.consistency}%` }}
                       ></div>
                     </div>
                   </div>
-                  
+
                   <div>
                     <div className="flex justify-between mb-2">
                       <span className="text-gray-400">Adherencia Calórica</span>
                       <span className="text-white">{progressData.weeklyMetrics.calories.adherence}%</span>
                     </div>
                     <div className="w-full bg-gray-700 rounded-full h-2">
-                      <div 
+                      <div
                         className="h-2 rounded-full bg-blue-400"
                         style={{ width: `${progressData.weeklyMetrics.calories.adherence}%` }}
                       ></div>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div>
                     <span className="text-gray-400">Sueño Promedio:</span>
@@ -182,7 +185,7 @@ const ProgressScreen = () => {
                       {progressData.weeklyMetrics.sleep.quality}
                     </Badge>
                   </div>
-                  
+
                   <div>
                     <span className="text-gray-400">Recuperación:</span>
                     <span className="text-white ml-2">{progressData.weeklyMetrics.recovery.score}/100</span>
@@ -205,11 +208,13 @@ const ProgressScreen = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {progressData.strengthProgress.length === 0 ? (
+              {progressData.strengthProgress.length === 0
+                ? (
                 <div className="text-center py-8">
                   <p className="text-gray-400">No hay datos de progreso de fuerza registrados.</p>
                 </div>
-              ) : (
+                  )
+                : (
                 <div className="space-y-4">
                   {progressData.strengthProgress.map((exercise, idx) => (
                     <div key={idx} className="p-4 bg-gray-800 rounded-lg">
@@ -226,7 +231,7 @@ const ProgressScreen = () => {
                     </div>
                   ))}
                 </div>
-              )}
+                  )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -240,11 +245,13 @@ const ProgressScreen = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {progressData.bodyMetrics.measurements.length === 0 ? (
+              {progressData.bodyMetrics.measurements.length === 0
+                ? (
                 <div className="text-center py-8">
                   <p className="text-gray-400">No hay medidas corporales registradas.</p>
                 </div>
-              ) : (
+                  )
+                : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {progressData.bodyMetrics.measurements.map((measurement, idx) => (
                     <div key={idx} className="p-4 bg-gray-800 rounded-lg">
@@ -262,13 +269,13 @@ const ProgressScreen = () => {
                     </div>
                   ))}
                 </div>
-              )}
+                  )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
     </div>
-  );
-};
+  )
+}
 
-export default ProgressScreen;
+export default ProgressScreen

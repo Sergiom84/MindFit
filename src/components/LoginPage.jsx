@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useAuth } from '../contexts/AuthContext'
 import {
   Brain,
   Mail,
@@ -15,58 +15,55 @@ import {
   Eye,
   EyeOff,
   LogIn
-} from 'lucide-react';
-
-
+} from 'lucide-react'
 
 const LoginPage = () => {
-  const { login, isLoading } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loginError, setLoginError] = useState(null);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-
+  const { login, isLoading } = useAuth()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loginError, setLoginError] = useState(null)
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
 
-       if (!email || !password) {
-      setLoginError('Por favor completa todos los campos');
-       return;
+    if (!email || !password) {
+      setLoginError('Por favor completa todos los campos')
+      return
     }
 
-    setIsLoggingIn(true);
-    setLoginError(null);
+    setIsLoggingIn(true)
+    setLoginError(null)
 
     try {
-      const result = await login(email, password);
+      const result = await login(email, password)
 
       if (!result.success) {
-        console.log('Login fallido: ' + (result.error || 'desconocido'));
+        console.log(`Login fallido: ${result.error || 'desconocido'}`)
         // Usar debugLog si está disponible
         if (window.debugLog) {
-          window.debugLog('Login fallido: ' + (result.error || 'desconocido'));
+          window.debugLog(`Login fallido: ${result.error || 'desconocido'}`)
         }
       } else {
-        console.log('Login exitoso');
+        console.log('Login exitoso')
         // Usar debugLog si está disponible
         if (window.debugLog) {
-          window.debugLog('Login exitoso');
+          window.debugLog('Login exitoso')
         }
       }
     } catch (error) {
-      setLoginError('Error de conexión. Inténtalo de nuevo.');
-      console.log('Login fallido: Error de conexión');
+      setLoginError('Error de conexión. Inténtalo de nuevo.')
+      console.log('Login fallido: Error de conexión')
       // Usar debugLog si está disponible
       if (window.debugLog) {
-        window.debugLog('Login fallido: Error de conexión');
+        window.debugLog('Login fallido: Error de conexión')
       }
-      console.error('Error en login:', error);
+      console.error('Error en login:', error)
     } finally {
-      setIsLoggingIn(false);
+      setIsLoggingIn(false)
     }
-  };
+  }
 
   return (
     <>
@@ -117,7 +114,7 @@ const LoginPage = () => {
                         type="email"
                         value={email}
                         onChange={(e) => {
-                          setEmail(e.target.value);
+                          setEmail(e.target.value)
                         }}
                         placeholder="tu@email.com"
                         className="login-input bg-gray-800 border-gray-600 text-white pl-12"
@@ -135,7 +132,7 @@ const LoginPage = () => {
                         type={showPassword ? 'text' : 'password'}
                         value={password}
                         onChange={(e) => {
-                          setPassword(e.target.value);
+                          setPassword(e.target.value)
                         }}
                         placeholder="Tu contraseña"
                         className="login-input bg-gray-800 border-gray-600 text-white pl-12 pr-12"
@@ -158,17 +155,19 @@ const LoginPage = () => {
                     disabled={isLoggingIn || isLoading}
                     className="login-button w-full bg-yellow-400 text-black hover:bg-yellow-300 disabled:opacity-50 mt-6"
                     >
-                    {isLoggingIn || isLoading ? (
+                    {isLoggingIn || isLoading
+                      ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         Iniciando sesión...
                       </>
-                    ) : (
+                        )
+                      : (
                       <>
                         <Brain className="w-4 h-4 mr-2" />
                         Iniciar Sesión
                       </>
-                    )}
+                        )}
                   </Button>
                 </form>
               </CardContent>
@@ -181,7 +180,7 @@ const LoginPage = () => {
                 <Button
                   variant="link"
                   onClick={() => {
-                    window.location.href = '/register';
+                    window.location.href = '/register'
                   }}
                   className="login-link text-yellow-400 hover:text-yellow-300 p-0 text-base"
                 >
@@ -193,7 +192,6 @@ const LoginPage = () => {
           </div>
 
 	          </div>
-
 
           {/* Error de login */}
           {loginError && (
@@ -213,7 +211,7 @@ const LoginPage = () => {
         </div>
       </div>
       </>
-  );
-};
+  )
+}
 
-export default LoginPage;
+export default LoginPage

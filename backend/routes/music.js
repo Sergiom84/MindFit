@@ -1,8 +1,8 @@
 // backend/routes/music.js
-import express from 'express';
-import { query } from '../db.js';
+import express from 'express'
+import { query } from '../db.js'
 
-const router = express.Router();
+const router = express.Router()
 
 /**
  * Tabla: user_music_settings
@@ -17,23 +17,23 @@ const router = express.Router();
 // GET /api/music/settings?userId=UID
 router.get('/settings', async (req, res) => {
   try {
-    const userId = req.query.userId;
-    if (!userId) return res.status(400).json({ error: 'Falta userId' });
+    const userId = req.query.userId
+    if (!userId) return res.status(400).json({ error: 'Falta userId' })
 
     const r = await query(
       `SELECT user_id, preferred_provider, connections, adaptive_mode, rules, created_at, updated_at
        FROM user_music_settings
        WHERE user_id = $1`,
       [userId]
-    );
+    )
 
-    if (r.rows.length === 0) return res.status(200).json(null);
-    return res.json(r.rows[0]);
+    if (r.rows.length === 0) return res.status(200).json(null)
+    return res.json(r.rows[0])
   } catch (err) {
-    console.error('GET /music/settings error:', err);
-    return res.status(500).json({ error: 'Error interno' });
+    console.error('GET /music/settings error:', err)
+    return res.status(500).json({ error: 'Error interno' })
   }
-});
+})
 
 // POST /api/music/settings  (upsert)
 router.post('/settings', async (req, res) => {
@@ -44,9 +44,9 @@ router.post('/settings', async (req, res) => {
       connections = {},
       adaptive_mode = 'auto',
       rules = { fuerza: 'alto', cardio: 'medio', movilidad: 'suave' }
-    } = req.body;
+    } = req.body
 
-    if (!user_id) return res.status(400).json({ error: 'Falta user_id' });
+    if (!user_id) return res.status(400).json({ error: 'Falta user_id' })
 
     const r = await query(
       `INSERT INTO user_music_settings
@@ -60,21 +60,21 @@ router.post('/settings', async (req, res) => {
            updated_at         = NOW()
        RETURNING *`,
       [user_id, preferred_provider, connections, adaptive_mode, rules]
-    );
+    )
 
-    return res.status(200).json(r.rows[0]);
+    return res.status(200).json(r.rows[0])
   } catch (err) {
-    console.error('POST /music/settings error:', err);
-    return res.status(500).json({ error: 'Error interno' });
+    console.error('POST /music/settings error:', err)
+    return res.status(500).json({ error: 'Error interno' })
   }
-});
+})
 
 // POST /api/music/connect/:provider   { user_id }
 router.post('/connect/:provider', async (req, res) => {
   try {
-    const { provider } = req.params;
-    const { user_id } = req.body;
-    if (!user_id) return res.status(400).json({ error: 'Falta user_id' });
+    const { provider } = req.params
+    const { user_id } = req.body
+    if (!user_id) return res.status(400).json({ error: 'Falta user_id' })
 
     // Asegura fila
     await query(
@@ -82,7 +82,7 @@ router.post('/connect/:provider', async (req, res) => {
        VALUES ($1, 'device', '{}'::jsonb, 'auto', '{"fuerza":"alto","cardio":"medio","movilidad":"suave"}'::jsonb)
        ON CONFLICT (user_id) DO NOTHING`,
       [user_id]
-    );
+    )
 
     const updated = await query(
       `UPDATE user_music_settings
@@ -91,21 +91,21 @@ router.post('/connect/:provider', async (req, res) => {
        WHERE user_id = $1
        RETURNING *`,
       [user_id, `{${provider}}`]
-    );
+    )
 
-    return res.json(updated.rows[0]);
+    return res.json(updated.rows[0])
   } catch (err) {
-    console.error('POST /music/connect error:', err);
-    return res.status(500).json({ error: 'Error interno' });
+    console.error('POST /music/connect error:', err)
+    return res.status(500).json({ error: 'Error interno' })
   }
-});
+})
 
 // POST /api/music/disconnect/:provider   { user_id }
 router.post('/disconnect/:provider', async (req, res) => {
   try {
-    const { provider } = req.params;
-    const { user_id } = req.body;
-    if (!user_id) return res.status(400).json({ error: 'Falta user_id' });
+    const { provider } = req.params
+    const { user_id } = req.body
+    if (!user_id) return res.status(400).json({ error: 'Falta user_id' })
 
     const updated = await query(
       `UPDATE user_music_settings
@@ -114,13 +114,13 @@ router.post('/disconnect/:provider', async (req, res) => {
        WHERE user_id = $1
        RETURNING *`,
       [user_id, `{${provider}}`]
-    );
+    )
 
-    return res.json(updated.rows[0]);
+    return res.json(updated.rows[0])
   } catch (err) {
-    console.error('POST /music/disconnect error:', err);
-    return res.status(500).json({ error: 'Error interno' });
+    console.error('POST /music/disconnect error:', err)
+    return res.status(500).json({ error: 'Error interno' })
   }
-});
+})
 
-export default router;
+export default router

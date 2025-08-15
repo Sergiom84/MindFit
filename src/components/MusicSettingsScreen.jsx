@@ -1,28 +1,28 @@
 // src/components/MusicSettingsScreen.jsx
-import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
-import { useAuth } from '@/contexts/AuthContext';
-import { useMusic } from '@/contexts/MusicContext.jsx';
+import { useAuth } from '@/contexts/AuthContext'
+import { useMusic } from '@/contexts/MusicContext.jsx'
 
-import { Button } from '@/components/ui/button.jsx';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card.jsx';
-import { Label } from '@/components/ui/label.jsx';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group.jsx';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert.jsx';
+import { Button } from '@/components/ui/button.jsx'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card.jsx'
+import { Label } from '@/components/ui/label.jsx'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group.jsx'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert.jsx'
 
-import { Music, Link as LinkIcon, Unlink, CheckCircle, AlertCircle, Settings } from 'lucide-react';
+import { Music, Link as LinkIcon, Unlink, CheckCircle, AlertCircle, Settings } from 'lucide-react'
 
 const providerLabels = {
   spotify: 'Spotify',
   apple: 'Apple Music',
   youtube: 'YouTube Music',
   device: 'Reproductor del móvil'
-};
+}
 
-export default function MusicSettingsScreen() {
-  const navigate = useNavigate();
-  const { currentUser } = useAuth();
+export default function MusicSettingsScreen () {
+  const navigate = useNavigate()
+  const { currentUser } = useAuth()
   const {
     state,
     setPreferredProvider,
@@ -31,58 +31,58 @@ export default function MusicSettingsScreen() {
     setAdaptiveMode,
     setRule,
     saveToBackend
-  } = useMusic();
+  } = useMusic()
 
-  const [saving, setSaving] = useState(false);
-  const [savedOk, setSavedOk] = useState(false);
-  const [saveError, setSaveError] = useState('');
+  const [saving, setSaving] = useState(false)
+  const [savedOk, setSavedOk] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const canBePreferred = useMemo(() => {
-    const c = state.connections;
-    return { spotify: !!c.spotify, apple: !!c.apple, youtube: !!c.youtube, device: true };
-  }, [state.connections]);
+    const c = state.connections
+    return { spotify: !!c.spotify, apple: !!c.apple, youtube: !!c.youtube, device: true }
+  }, [state.connections])
 
-  function handleConnect(provider) {
-    connect(provider);
+  function handleConnect (provider) {
+    connect(provider)
     // (Opcional) sincronicemos con backend
     fetch(`/api/music/connect/${provider}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id: currentUser?.id })
-    }).catch(() => {});
+    }).catch(() => {})
   }
 
-  function handleDisconnect(provider) {
+  function handleDisconnect (provider) {
     if (state.preferredProvider === provider && provider !== 'device') {
-      setPreferredProvider('device');
+      setPreferredProvider('device')
     }
-    disconnect(provider);
+    disconnect(provider)
     // (Opcional) sincronicemos con backend
     fetch(`/api/music/disconnect/${provider}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id: currentUser?.id })
-    }).catch(() => {});
+    }).catch(() => {})
   }
 
-  async function handleSave() {
-    setSaving(true);
-    setSaveError('');
-    setSavedOk(false);
-    const res = await saveToBackend(currentUser?.id);
-    setSaving(false);
+  async function handleSave () {
+    setSaving(true)
+    setSaveError('')
+    setSavedOk(false)
+    const res = await saveToBackend(currentUser?.id)
+    setSaving(false)
     if (!res.ok) {
-      setSaveError(res.error || 'No se pudieron guardar las preferencias.');
-      return;
+      setSaveError(res.error || 'No se pudieron guardar las preferencias.')
+      return
     }
-    setSavedOk(true);
-    setTimeout(() => setSavedOk(false), 2500);
+    setSavedOk(true)
+    setTimeout(() => setSavedOk(false), 2500)
   }
 
   const ConnectionRow = ({ provider }) => {
-    const connected = !!state.connections[provider];
-    const isPreferred = state.preferredProvider === provider;
-    const label = providerLabels[provider];
+    const connected = !!state.connections[provider]
+    const isPreferred = state.preferredProvider === provider
+    const label = providerLabels[provider]
 
     return (
       <div className="flex items-center justify-between p-3 rounded-lg border border-yellow-400/20 bg-gray-900">
@@ -98,21 +98,23 @@ export default function MusicSettingsScreen() {
         </div>
 
         <div className="flex items-center gap-2">
-          {connected ? (
+          {connected
+            ? (
             <Button variant="outline" onClick={() => handleDisconnect(provider)}>
               <Unlink className="w-4 h-4 mr-2" />
               Desvincular
             </Button>
-          ) : (
+              )
+            : (
             <Button onClick={() => handleConnect(provider)}>
               <LinkIcon className="w-4 h-4 mr-2" />
               Vincular
             </Button>
-          )}
+              )}
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   return (
     <div className="min-h-screen bg-black text-white p-6 pt-20 pb-24">
@@ -146,7 +148,7 @@ export default function MusicSettingsScreen() {
                 onValueChange={setPreferredProvider}
               >
                 {Object.keys(providerLabels).map((p) => {
-                  const disabled = !canBePreferred[p];
+                  const disabled = !canBePreferred[p]
                   return (
                     <div
                       key={p}
@@ -157,7 +159,7 @@ export default function MusicSettingsScreen() {
                       <RadioGroupItem value={p} id={`prov-${p}`} disabled={disabled} />
                       <Label htmlFor={`prov-${p}`} className="text-white">{providerLabels[p]}</Label>
                     </div>
-                  );
+                  )
                 })}
               </RadioGroup>
               {!state.connections[state.preferredProvider] && state.preferredProvider !== 'device' && (
@@ -298,5 +300,5 @@ export default function MusicSettingsScreen() {
         </Card>
       </div>
     </div>
-  );
+  )
 }

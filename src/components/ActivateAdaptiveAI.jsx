@@ -1,114 +1,114 @@
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useUserContext } from '@/contexts/UserContext';
-import { 
-  Loader2, 
-  Brain, 
-  Zap, 
-  Target, 
+import React, { useState } from 'react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useUserContext } from '@/contexts/UserContext'
+import {
+  Loader2,
+  Brain,
+  Zap,
+  Target,
   Settings,
   CheckCircle,
   AlertCircle,
   Info
-} from 'lucide-react';
+} from 'lucide-react'
 
 const ActivateAdaptiveAI = ({ isOpen, onClose, onResult }) => {
-  const { userData, activarIAAdaptativa, isLoading } = useUserContext();
-  const [selectedMode, setSelectedMode] = useState(null);
-  const [error, setError] = useState(null);
+  const { userData, activarIAAdaptativa, isLoading } = useUserContext()
+  const [selectedMode, setSelectedMode] = useState(null)
+  const [error, setError] = useState(null)
 
   const modos = [
     {
-      id: "basico",
-      label: "Básico",
+      id: 'basico',
+      label: 'Básico',
       icon: <Target className="w-5 h-5" />,
-      description: "Ajustes semanales basados en progreso",
+      description: 'Ajustes semanales basados en progreso',
       features: [
-        "Ajustes cada 7 días",
-        "Recomendaciones simples",
-        "Análisis básico de progreso",
-        "Ideal para principiantes"
+        'Ajustes cada 7 días',
+        'Recomendaciones simples',
+        'Análisis básico de progreso',
+        'Ideal para principiantes'
       ],
-      color: "border-green-400",
-      bgColor: "bg-green-400/10"
+      color: 'border-green-400',
+      bgColor: 'bg-green-400/10'
     },
     {
-      id: "avanzado",
-      label: "Avanzado",
+      id: 'avanzado',
+      label: 'Avanzado',
       icon: <Brain className="w-5 h-5" />,
-      description: "Análisis multifactorial cada 3-5 días",
+      description: 'Análisis multifactorial cada 3-5 días',
       features: [
-        "Periodización automática",
-        "Análisis de fatiga neural",
-        "Optimización nutricional",
-        "Ajustes cada 3-5 días"
+        'Periodización automática',
+        'Análisis de fatiga neural',
+        'Optimización nutricional',
+        'Ajustes cada 3-5 días'
       ],
-      color: "border-yellow-400",
-      bgColor: "bg-yellow-400/10"
+      color: 'border-yellow-400',
+      bgColor: 'bg-yellow-400/10'
     },
     {
-      id: "experto",
-      label: "Experto",
+      id: 'experto',
+      label: 'Experto',
       icon: <Zap className="w-5 h-5" />,
-      description: "Adaptación diaria en tiempo real",
+      description: 'Adaptación diaria en tiempo real',
       features: [
-        "Microperiodización diaria",
-        "Análisis hormonal indirecto",
-        "Optimización neural avanzada",
-        "Adaptación en tiempo real"
+        'Microperiodización diaria',
+        'Análisis hormonal indirecto',
+        'Optimización neural avanzada',
+        'Adaptación en tiempo real'
       ],
-      color: "border-red-400",
-      bgColor: "bg-red-400/10"
+      color: 'border-red-400',
+      bgColor: 'bg-red-400/10'
     },
     {
-      id: "personalizado",
-      label: "Personalizado",
+      id: 'personalizado',
+      label: 'Personalizado',
       icon: <Settings className="w-5 h-5" />,
-      description: "Según tus preferencias específicas",
+      description: 'Según tus preferencias específicas',
       features: [
-        "Configuración personalizada",
-        "Frecuencia a medida",
-        "Parámetros específicos",
-        "Máxima flexibilidad"
+        'Configuración personalizada',
+        'Frecuencia a medida',
+        'Parámetros específicos',
+        'Máxima flexibilidad'
       ],
-      color: "border-purple-400",
-      bgColor: "bg-purple-400/10"
+      color: 'border-purple-400',
+      bgColor: 'bg-purple-400/10'
     }
-  ];
+  ]
 
   const handleActivateIA = async () => {
     if (!selectedMode) {
-      setError('Por favor selecciona un modo de adaptación');
-      return;
+      setError('Por favor selecciona un modo de adaptación')
+      return
     }
 
-    setError(null);
-    
+    setError(null)
+
     try {
-      const result = await activarIAAdaptativa(selectedMode);
-      
+      const result = await activarIAAdaptativa(selectedMode)
+
       if (result.success) {
-        onResult(result.data);
-        onClose();
-        setSelectedMode(null);
+        onResult(result.data)
+        onClose()
+        setSelectedMode(null)
       } else {
-        setError(result.error || 'Error al activar IA adaptativa');
+        setError(result.error || 'Error al activar IA adaptativa')
       }
     } catch (err) {
-      setError('Error de conexión con el servidor');
-      console.error('Error:', err);
+      setError('Error de conexión con el servidor')
+      console.error('Error:', err)
     }
-  };
+  }
 
   const handleClose = () => {
-    setSelectedMode(null);
-    setError(null);
-    onClose();
-  };
+    setSelectedMode(null)
+    setError(null)
+    onClose()
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -239,23 +239,25 @@ const ActivateAdaptiveAI = ({ isOpen, onClose, onResult }) => {
               disabled={!selectedMode || isLoading}
               className="flex-1 bg-yellow-400 text-black hover:bg-yellow-300 font-semibold"
             >
-              {isLoading ? (
+              {isLoading
+                ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Analizando...
                 </>
-              ) : (
+                  )
+                : (
                 <>
                   <Zap className="w-4 h-4 mr-2" />
                   Activar IA Adaptativa
                 </>
-              )}
+                  )}
             </Button>
           </div>
         </div>
       </DialogContent>
     </Dialog>
-  );
-};
+  )
+}
 
-export default ActivateAdaptiveAI;
+export default ActivateAdaptiveAI

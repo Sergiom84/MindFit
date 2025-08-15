@@ -1,31 +1,31 @@
 // src/App.jsx
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import React from 'react'
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom'
 
-import { UserProvider } from '@/contexts/UserContext';
-import { AuthProvider, useAuth } from '@/contexts/AuthContext';
-import { MusicProvider } from '@/contexts/MusicContext.jsx';
+import { UserProvider } from '@/contexts/UserContext'
+import { AuthProvider, useAuth } from '@/contexts/AuthContext'
+import { MusicProvider } from '@/contexts/MusicContext.jsx'
 
-import LoginPage from '@/components/LoginPage';
-import InitialProfileForm from '@/components/InitialProfileForm';
-import UserProfile from '@/components/UserProfile';
-import ProfileScreen from '@/components/ProfileScreen';
+import LoginPage from '@/components/LoginPage'
+import InitialProfileForm from '@/components/InitialProfileForm'
+import UserProfile from '@/components/UserProfile'
+import ProfileScreen from '@/components/ProfileScreen'
 
-import HomeScreen from '@/components/HomeScreen';
-import MethodologiesScreen from '@/components/MethodologiesScreen';
-import RoutinesScreen from '@/components/RoutinesScreen';
+import HomeScreen from '@/components/HomeScreen'
+import MethodologiesScreen from '@/components/MethodologiesScreen'
+import RoutinesScreen from '@/components/RoutinesScreen'
 
-import AIAdaptiveSection from '@/components/AIAdaptiveSection';
-import HomeTrainingSection from '@/components/HomeTrainingSection';
-import VideoCorrectionSection from '@/components/VideoCorrectionSection';
-import NutritionScreen from '@/components/NutritionScreen';
-import InjuriesScreen from '@/components/InjuriesScreen';
-import ProgressScreen from '@/components/ProgressScreen';
-import OpenAITest from '@/components/OpenAITest';
+import AIAdaptiveSection from '@/components/AIAdaptiveSection'
+import HomeTrainingSection from '@/components/HomeTrainingSection'
+import VideoCorrectionSection from '@/components/VideoCorrectionSection'
+import NutritionScreen from '@/components/NutritionScreen'
+import InjuriesScreen from '@/components/InjuriesScreen'
+import ProgressScreen from '@/components/ProgressScreen'
+import OpenAITest from '@/components/OpenAITest'
 
-import MusicSettingsScreen from '@/components/MusicSettingsScreen';
+import MusicSettingsScreen from '@/components/MusicSettingsScreen'
 
-import { Card, CardContent } from '@/components/ui/card.jsx';
+import { Card, CardContent } from '@/components/ui/card.jsx'
 
 import {
   Home,
@@ -39,12 +39,12 @@ import {
   ChevronRight,
   Camera,
   Music
-} from 'lucide-react';
+} from 'lucide-react'
 
-import './App.css';
+import './App.css'
 
 const Navigation = () => {
-  const location = useLocation();
+  const location = useLocation()
 
   // Todos los elementos de navegación (ahora en una sola lista)
   const allNavItems = [
@@ -56,7 +56,7 @@ const Navigation = () => {
     { path: '/nutrition', icon: Apple, label: 'Nutrición' },
     { path: '/injuries', icon: Heart, label: 'Lesiones' },
     { path: '/progress', icon: TrendingUp, label: 'Progreso' }
-  ];
+  ]
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-sm border-t border-yellow-400/20 z-40">
@@ -64,8 +64,8 @@ const Navigation = () => {
       <div className="md:hidden overflow-x-auto scrollbar-hide">
         <div className="flex items-center py-2 px-2 min-w-max">
           {allNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
+            const Icon = item.icon
+            const isActive = location.pathname === item.path
             return (
               <Link
                 key={item.path}
@@ -77,7 +77,7 @@ const Navigation = () => {
                 <Icon size={18} />
                 <span className="text-xs mt-1 text-center whitespace-nowrap">{item.label}</span>
               </Link>
-            );
+            )
           })}
         </div>
       </div>
@@ -85,8 +85,8 @@ const Navigation = () => {
       {/* Versión desktop (todos los elementos) */}
       <div className="hidden md:flex justify-around items-center py-2 px-4">
         {allNavItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = location.pathname === item.path;
+          const Icon = item.icon
+          const isActive = location.pathname === item.path
           return (
             <Link
               key={item.path}
@@ -98,12 +98,12 @@ const Navigation = () => {
               <Icon size={20} />
               <span className="text-xs mt-1">{item.label}</span>
             </Link>
-          );
+          )
         })}
       </div>
     </nav>
-  );
-};
+  )
+}
 
 const SettingsScreen = () => {
   return (
@@ -156,12 +156,12 @@ const SettingsScreen = () => {
         </Card>
       </div>
     </div>
-  );
-};
+  )
+}
 
 const AppContent = () => {
-  const { currentUser, isLoading } = useAuth();
-  const location = useLocation();
+  const { currentUser, isLoading } = useAuth()
+  const location = useLocation()
 
   if (isLoading) {
     return (
@@ -171,12 +171,12 @@ const AppContent = () => {
           <p className="text-white text-lg">Cargando MindFit.</p>
         </div>
       </div>
-    );
+    )
   }
 
   if (!currentUser) {
-    if (location.pathname === '/register') return <InitialProfileForm />;
-    return <LoginPage />;
+    if (location.pathname === '/register') return <InitialProfileForm />
+    return <LoginPage />
   }
 
   return (
@@ -211,17 +211,17 @@ const AppContent = () => {
         </div>
       </MusicProvider>
     </UserProvider>
-  );
-};
+  )
+}
 
-function App() {
+function App () {
   return (
     <AuthProvider>
       <Router>
         <AppContent />
       </Router>
     </AuthProvider>
-  );
+  )
 }
 
-export default App;
+export default App

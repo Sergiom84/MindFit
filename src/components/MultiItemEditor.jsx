@@ -1,69 +1,69 @@
-import React, { useMemo, useState, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Plus, Trash2 } from "lucide-react";
+import React, { useMemo, useState, useCallback } from 'react'
+import { Button } from '@/components/ui/button'
+import { Plus, Trash2 } from 'lucide-react'
 
 // items: Array<{ nombre: string, createdAt: string } | string>
 // onChange: (items: Array<{ nombre: string, createdAt: string }>) => void
-export function MultiItemEditor({ label, items = [], onChange, placeholder = "Añade un ítem y pulsa Enter" }) {
+export function MultiItemEditor ({ label, items = [], onChange, placeholder = 'Añade un ítem y pulsa Enter' }) {
   // Normaliza a [{ nombre, createdAt }]
   const normalized = useMemo(() => {
-    if (!Array.isArray(items)) return [];
+    if (!Array.isArray(items)) return []
     return items
       .map((it) => {
-        if (typeof it === "string") return { nombre: it, createdAt: new Date().toISOString() };
-        if (it && typeof it === "object") {
-          const nombre = String(it.nombre ?? "").trim();
-          const createdAt = it.createdAt || new Date().toISOString();
-          return nombre ? { nombre, createdAt } : null;
+        if (typeof it === 'string') return { nombre: it, createdAt: new Date().toISOString() }
+        if (it && typeof it === 'object') {
+          const nombre = String(it.nombre ?? '').trim()
+          const createdAt = it.createdAt || new Date().toISOString()
+          return nombre ? { nombre, createdAt } : null
         }
-        return null;
+        return null
       })
-      .filter(Boolean);
-  }, [items]);
+      .filter(Boolean)
+  }, [items])
 
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState('')
 
   const exists = useCallback(
     (nombre) => normalized.some((it) => it.nombre.toLowerCase() === nombre.toLowerCase()),
     [normalized]
-  );
+  )
 
   const add = useCallback(() => {
-    const nombre = value.trim();
-    if (!nombre) return;
+    const nombre = value.trim()
+    if (!nombre) return
     if (exists(nombre)) {
-      setValue("");
-      return;
+      setValue('')
+      return
     }
-    const next = [...normalized, { nombre, createdAt: new Date().toISOString() }];
-    onChange?.(next);
-    setValue("");
-  }, [value, normalized, onChange, exists]);
+    const next = [...normalized, { nombre, createdAt: new Date().toISOString() }]
+    onChange?.(next)
+    setValue('')
+  }, [value, normalized, onChange, exists])
 
   const removeAt = useCallback(
     (idx) => {
-      const next = normalized.slice();
-      next.splice(idx, 1);
-      onChange?.(next);
+      const next = normalized.slice()
+      next.splice(idx, 1)
+      onChange?.(next)
     },
     [normalized, onChange]
-  );
+  )
 
   const onKeyDown = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      add();
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      add()
     }
-  };
+  }
 
   const formatDate = (iso) => {
     try {
-      const d = new Date(iso);
-      return new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "2-digit" }).format(d);
+      const d = new Date(iso)
+      return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: '2-digit' }).format(d)
     } catch {
-      return iso;
+      return iso
     }
-  };
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -88,9 +88,11 @@ export function MultiItemEditor({ label, items = [], onChange, placeholder = "A�
       <div>
         <label className="text-gray-400 text-sm">Histórico de {label.toLowerCase()}</label>
         <div className="mt-1 border border-gray-700 rounded-lg overflow-hidden">
-          {normalized.length === 0 ? (
+          {normalized.length === 0
+            ? (
             <div className="p-3 text-gray-400 text-sm">Sin {label.toLowerCase()} registradas</div>
-          ) : (
+              )
+            : (
             <table className="w-full text-sm">
               <thead className="bg-gray-800 text-gray-300">
                 <tr>
@@ -118,10 +120,9 @@ export function MultiItemEditor({ label, items = [], onChange, placeholder = "A�
                 ))}
               </tbody>
             </table>
-          )}
+              )}
         </div>
       </div>
     </div>
-  );
+  )
 }
-

@@ -163,7 +163,7 @@ const VideoCorrectionSection = () => {
             Corrección por Video IA
           </h1>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            Análisis de técnica en tiempo real con feedback inmediato para optimizar 
+            Análisis de técnica en tiempo real con feedback inmediato para optimizar
             tu forma y prevenir lesiones durante el entrenamiento.
           </p>
         </div>
@@ -178,7 +178,8 @@ const VideoCorrectionSection = () => {
           </CardHeader>
           <CardContent>
             <div className="aspect-video bg-gray-800 rounded-lg flex items-center justify-center mb-4 relative">
-              {isRecording ? (
+              {isRecording
+                ? (
                 <div className="text-center">
                   <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mb-4 animate-pulse">
                     <Camera className="w-8 h-8 text-white" />
@@ -190,18 +191,19 @@ const VideoCorrectionSection = () => {
                     <Badge className="bg-red-500">Tempo: Lento</Badge>
                   </div>
                 </div>
-              ) : (
+                  )
+                : (
                 <div className="text-center">
                   <Camera className="w-16 h-16 text-gray-600 mb-4" />
                   <p className="text-gray-400">Toca grabar para comenzar el análisis</p>
                 </div>
-              )}
+                  )}
             </div>
-            
+
             <div className="flex justify-center space-x-4">
-              <Button 
+              <Button
                 onClick={() => setIsRecording(!isRecording)}
-                className={isRecording ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}
+                className={isRecording ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}
               >
                 {isRecording ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
                 {isRecording ? 'Detener' : 'Comenzar'} Análisis
@@ -257,15 +259,15 @@ const VideoCorrectionSection = () => {
               {Object.entries(exerciseLibrary).map(([key, exercise]) => (
                 <Button
                   key={key}
-                  variant={selectedExercise === key ? "default" : "outline"}
+                  variant={selectedExercise === key ? 'default' : 'outline'}
                   onClick={() => setSelectedExercise(key)}
-                  className={selectedExercise === key ? "bg-yellow-400 text-black" : "border-yellow-400 text-yellow-400"}
+                  className={selectedExercise === key ? 'bg-yellow-400 text-black' : 'border-yellow-400 text-yellow-400'}
                 >
                   {exercise.name}
                 </Button>
               ))}
             </div>
-            
+
             {selectedExercise && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -282,7 +284,7 @@ const VideoCorrectionSection = () => {
                     ))}
                   </ul>
                 </div>
-                
+
                 <div>
                   <h4 className="text-white font-semibold mb-3 flex items-center">
                     <CheckCircle className="w-4 h-4 mr-2 text-green-400" />

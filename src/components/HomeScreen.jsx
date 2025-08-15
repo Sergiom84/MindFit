@@ -1,22 +1,22 @@
 // src/components/HomeScreen.jsx
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 // Importaciones de componentes de UI e iconos necesarios
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
-import { Brain, Smartphone, Camera } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx'
+import { Brain, Smartphone, Camera } from 'lucide-react'
 
 const HomeScreen = () => {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const navigate = useNavigate();
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+  const navigate = useNavigate()
 
   useEffect(() => {
     const handleMouseMove = (e) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+      setMousePosition({ x: e.clientX, y: e.clientY })
+    }
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [])
 
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden pt-24 pb-24">
@@ -88,7 +88,7 @@ const HomeScreen = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default HomeScreen;
+export default HomeScreen

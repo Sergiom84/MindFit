@@ -2,119 +2,119 @@
 // Integración con OpenAI API (usando fetch para compatibilidad con build)
 
 // Funciones antiguas apuntaban a OpenAI directo; ahora usamos backend
-async function callOpenAI(messages, options = {}) {
-  const response = await fetch(`/api/pose-feedback`, {
+async function callOpenAI (messages, options = {}) {
+  const response = await fetch('/api/pose-feedback', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       metrics: { ejercicio: 'general', erroresDetectados: [], ...options.metrics },
       userVariables: options.userVariables || {}
     })
-  });
-  if (!response.ok) throw new Error(`Backend error: ${response.status}`);
-  const data = await response.json();
-  return { choices: [{ message: { content: data.feedback } }] };
+  })
+  if (!response.ok) throw new Error(`Backend error: ${response.status}`)
+  const data = await response.json()
+  return { choices: [{ message: { content: data.feedback } }] }
 }
 
 // Función para llamar a OpenAI con prompt personalizado
-async function callOpenAIWithPrompt(promptId, version, variables) {
+async function callOpenAIWithPrompt (promptId, version, variables) {
   // Redirigimos también a /api/pose-feedback para unificar
-  return callOpenAI([], { metrics: {}, userVariables: variables });
+  return callOpenAI([], { metrics: {}, userVariables: variables })
 }
 
 // Clase de respaldo para simulación (si no hay API key)
 class MockOpenAI {
-  constructor(config) {
-    this.apiKey = config.apiKey;
+  constructor (config) {
+    this.apiKey = config.apiKey
   }
 
-  async createCompletion(params) {
+  async createCompletion (params) {
     // Simulación de respuesta de GPT-4o
     return new Promise((resolve) => {
       setTimeout(() => {
-        const mockResponse = this.generateMockResponse(params);
+        const mockResponse = this.generateMockResponse(params)
         resolve({
           choices: [{
             message: {
               content: mockResponse
             }
           }]
-        });
-      }, 1500); // Simular latencia de API
-    });
+        })
+      }, 1500) // Simular latencia de API
+    })
   }
 
-  generateMockResponse(params) {
-    const { variables } = params;
-    const ejercicio = variables?.ejercicio_actual || 'ejercicio';
-    const errores = variables?.resumen_errores || '';
-    const datos = variables?.datos_pose || '';
-    const usuario = variables?.usuario || 'usuario';
-    const nivel = variables?.nivel || 'principiante';
+  generateMockResponse (params) {
+    const { variables } = params
+    const ejercicio = variables?.ejercicio_actual || 'ejercicio'
+    const errores = variables?.resumen_errores || ''
+    const datos = variables?.datos_pose || ''
+    const usuario = variables?.usuario || 'usuario'
+    const nivel = variables?.nivel || 'principiante'
 
     // Generar feedback personalizado basado en los datos
-    let feedback = `¡Hola ${usuario}! He analizado tu sesión de ${ejercicio}.\n\n`;
+    let feedback = `¡Hola ${usuario}! He analizado tu sesión de ${ejercicio}.\n\n`
 
     if (errores && errores.length > 0) {
-      feedback += `📊 **Análisis Técnico:**\n`;
-      
+      feedback += '📊 **Análisis Técnico:**\n'
+
       if (errores.includes('Rodillas hacia adentro')) {
-        feedback += `• **Rodillas valgo detectado**: Enfócate en empujar las rodillas hacia afuera durante el descenso. Imagina que hay una banda elástica alrededor de tus rodillas que debes estirar.\n\n`;
+        feedback += '• **Rodillas valgo detectado**: Enfócate en empujar las rodillas hacia afuera durante el descenso. Imagina que hay una banda elástica alrededor de tus rodillas que debes estirar.\n\n'
       }
-      
+
       if (errores.includes('Falta de profundidad')) {
-        feedback += `• **Profundidad insuficiente**: Intenta descender hasta que tus caderas estén por debajo de tus rodillas. Practica con una caja o banco detrás para referencia.\n\n`;
+        feedback += '• **Profundidad insuficiente**: Intenta descender hasta que tus caderas estén por debajo de tus rodillas. Practica con una caja o banco detrás para referencia.\n\n'
       }
-      
+
       if (errores.includes('Espalda curvada')) {
-        feedback += `• **Postura de espalda**: Mantén el pecho alto y los hombros hacia atrás. Activa tu core antes de iniciar el movimiento.\n\n`;
+        feedback += '• **Postura de espalda**: Mantén el pecho alto y los hombros hacia atrás. Activa tu core antes de iniciar el movimiento.\n\n'
       }
     } else {
-      feedback += `✅ **¡Excelente técnica!** No se detectaron errores significativos en tu ejecución.\n\n`;
+      feedback += '✅ **¡Excelente técnica!** No se detectaron errores significativos en tu ejecución.\n\n'
     }
 
     // Agregar datos específicos si están disponibles
     if (datos) {
-      feedback += `📈 **Métricas de Rendimiento:**\n${datos}\n\n`;
+      feedback += `📈 **Métricas de Rendimiento:**\n${datos}\n\n`
     }
 
     // Recomendaciones personalizadas por nivel
-    feedback += `🎯 **Recomendaciones para tu nivel ${nivel}:**\n`;
-    
+    feedback += `🎯 **Recomendaciones para tu nivel ${nivel}:**\n`
+
     switch (nivel.toLowerCase()) {
       case 'principiante':
-        feedback += `• Enfócate en dominar el patrón de movimiento antes que en el peso\n`;
-        feedback += `• Practica el ejercicio sin peso adicional hasta perfeccionar la técnica\n`;
-        feedback += `• Realiza 2-3 series de 8-12 repeticiones\n`;
-        break;
+        feedback += '• Enfócate en dominar el patrón de movimiento antes que en el peso\n'
+        feedback += '• Practica el ejercicio sin peso adicional hasta perfeccionar la técnica\n'
+        feedback += '• Realiza 2-3 series de 8-12 repeticiones\n'
+        break
       case 'intermedio':
-        feedback += `• Mantén la progresión gradual en peso mientras conservas la técnica\n`;
-        feedback += `• Incorpora variaciones del ejercicio para mayor desarrollo\n`;
-        feedback += `• Considera periodización en tus entrenamientos\n`;
-        break;
+        feedback += '• Mantén la progresión gradual en peso mientras conservas la técnica\n'
+        feedback += '• Incorpora variaciones del ejercicio para mayor desarrollo\n'
+        feedback += '• Considera periodización en tus entrenamientos\n'
+        break
       case 'avanzado':
-        feedback += `• Perfecciona los detalles técnicos para maximizar eficiencia\n`;
-        feedback += `• Experimenta con diferentes tempos y rangos de movimiento\n`;
-        feedback += `• Integra técnicas avanzadas como pausa o tempo controlado\n`;
-        break;
+        feedback += '• Perfecciona los detalles técnicos para maximizar eficiencia\n'
+        feedback += '• Experimenta con diferentes tempos y rangos de movimiento\n'
+        feedback += '• Integra técnicas avanzadas como pausa o tempo controlado\n'
+        break
     }
 
-    feedback += `\n💡 **Próximos pasos:**\n`;
-    feedback += `• Continúa practicando con la corrección sugerida\n`;
-    feedback += `• Graba otra sesión en 2-3 entrenamientos para evaluar progreso\n`;
-    feedback += `• Mantén consistencia en tu técnica\n\n`;
-    
-    feedback += `🤖 *Análisis generado por IA adaptativa - Personalizado para ${usuario}*`;
+    feedback += '\n💡 **Próximos pasos:**\n'
+    feedback += '• Continúa practicando con la corrección sugerida\n'
+    feedback += '• Graba otra sesión en 2-3 entrenamientos para evaluar progreso\n'
+    feedback += '• Mantén consistencia en tu técnica\n\n'
 
-    return feedback;
+    feedback += `🤖 *Análisis generado por IA adaptativa - Personalizado para ${usuario}*`
+
+    return feedback
   }
 }
 
 // Función principal para obtener feedback de postura
-export async function getPoseFeedback(metrics, userVariables) {
+export async function getPoseFeedback (metrics, userVariables) {
   try {
     // Verificar si tenemos API key real
-  const hasRealApiKey = true; // usamos backend, no exponemos key en cliente
+    const hasRealApiKey = true // usamos backend, no exponemos key en cliente
 
     // Preparar variables para el prompt
     const promptVariables = {
@@ -124,13 +124,13 @@ export async function getPoseFeedback(metrics, userVariables) {
       ejercicio_actual: metrics.ejercicio || 'ejercicio',
       resumen_errores: metrics.erroresDetectados?.join(', ') || 'ninguno',
       datos_pose: formatPoseData(metrics)
-    };
+    }
 
-    let completion;
+    let completion
 
     if (hasRealApiKey) {
       // ✅ CONEXIÓN REAL A OPENAI CON TU PROMPT ID ESPECÍFICO
-      console.log('🤖 Conectando a OpenAI con prompt personalizado...');
+      console.log('🤖 Conectando a OpenAI con prompt personalizado...')
 
       try {
         // Intentar usar el prompt personalizado primero
@@ -147,19 +147,18 @@ export async function getPoseFeedback(metrics, userVariables) {
           angulo_rodilla: metrics.anguloMinRodilla || 'N/A',
           tempo_concentrico: metrics.tempoConc || 'N/A',
           tempo_excentrico: metrics.tempoEcc || 'N/A'
-        };
+        }
 
-  completion = await callOpenAIWithPrompt('hidden', 1, promptVariablesForAPI);
+        completion = await callOpenAIWithPrompt('hidden', 1, promptVariablesForAPI)
 
-        console.log('✅ Respuesta recibida de OpenAI con prompt personalizado');
-
+        console.log('✅ Respuesta recibida de OpenAI con prompt personalizado')
       } catch (promptError) {
-        console.warn('⚠️ Error con prompt personalizado, usando chat.completions:', promptError.message);
+        console.warn('⚠️ Error con prompt personalizado, usando chat.completions:', promptError.message)
 
         // Fallback a chat.completions si el prompt personalizado falla
         const messages = [
           {
-            role: "system",
+            role: 'system',
             content: `Eres un entrenador personal experto en biomecánica y análisis de movimiento.
                      Analiza los datos de postura del usuario y proporciona feedback constructivo,
                      específico y personalizado. Usa un tono motivador pero técnicamente preciso.
@@ -171,7 +170,7 @@ export async function getPoseFeedback(metrics, userVariables) {
                      💡 **Próximos pasos:** [acciones concretas]`
           },
           {
-            role: "user",
+            role: 'user',
             content: `Analiza esta sesión de entrenamiento:
                      Usuario: ${promptVariables.usuario}
                      Nivel: ${promptVariables.nivel}
@@ -179,121 +178,120 @@ export async function getPoseFeedback(metrics, userVariables) {
                      Errores detectados: ${promptVariables.resumen_errores}
                      Datos técnicos: ${promptVariables.datos_pose}`
           }
-        ];
+        ]
 
-  completion = await callOpenAI(messages, { metrics, userVariables });
+        completion = await callOpenAI(messages, { metrics, userVariables })
 
-        console.log('✅ Respuesta recibida de OpenAI con chat.completions');
+        console.log('✅ Respuesta recibida de OpenAI con chat.completions')
       }
     } else {
       // Usar simulación si no hay API key
-  // Con backend, siempre intentamos IA; como fallback, generamos respuesta básica
-  completion = { choices: [{ message: { content: generateFallbackFeedback(metrics, userVariables) } }] };
+      // Con backend, siempre intentamos IA; como fallback, generamos respuesta básica
+      completion = { choices: [{ message: { content: generateFallbackFeedback(metrics, userVariables) } }] }
     }
 
     return {
       success: true,
       feedback: completion.choices[0].message.content,
       timestamp: new Date().toISOString(),
-      metrics: metrics
-    };
-
+      metrics
+    }
   } catch (error) {
-    console.error('Error getting pose feedback:', error);
-    
+    console.error('Error getting pose feedback:', error)
+
     // Fallback con feedback básico
     return {
       success: false,
       feedback: generateFallbackFeedback(metrics, userVariables),
       timestamp: new Date().toISOString(),
-      metrics: metrics,
+      metrics,
       error: error.message
-    };
+    }
   }
 }
 
 // Formatear datos de postura para el prompt
-function formatPoseData(metrics) {
-  let dataString = '';
-  
+function formatPoseData (metrics) {
+  let dataString = ''
+
   if (metrics.anguloMinRodilla) {
-    dataString += `Ángulo mínimo de rodilla: ${metrics.anguloMinRodilla}°. `;
-  }
-  
-  if (metrics.tempoConc && metrics.tempoEcc) {
-    dataString += `Tempo concéntrico: ${metrics.tempoConc}s, excéntrico: ${metrics.tempoEcc}s. `;
-  }
-  
-  if (metrics.precision) {
-    dataString += `Precisión general: ${metrics.precision}%. `;
-  }
-  
-  if (metrics.repeticiones) {
-    dataString += `Repeticiones completadas: ${metrics.repeticiones}. `;
+    dataString += `Ángulo mínimo de rodilla: ${metrics.anguloMinRodilla}°. `
   }
 
-  return dataString || 'Datos técnicos no disponibles';
+  if (metrics.tempoConc && metrics.tempoEcc) {
+    dataString += `Tempo concéntrico: ${metrics.tempoConc}s, excéntrico: ${metrics.tempoEcc}s. `
+  }
+
+  if (metrics.precision) {
+    dataString += `Precisión general: ${metrics.precision}%. `
+  }
+
+  if (metrics.repeticiones) {
+    dataString += `Repeticiones completadas: ${metrics.repeticiones}. `
+  }
+
+  return dataString || 'Datos técnicos no disponibles'
 }
 
 // Feedback de respaldo si falla la API
-function generateFallbackFeedback(metrics, userVariables) {
-  const ejercicio = metrics.ejercicio || 'ejercicio';
-  const usuario = userVariables.usuario || 'Usuario';
-  
-  let feedback = `¡Hola ${usuario}! He analizado tu sesión de ${ejercicio}.\n\n`;
-  
+function generateFallbackFeedback (metrics, userVariables) {
+  const ejercicio = metrics.ejercicio || 'ejercicio'
+  const usuario = userVariables.usuario || 'Usuario'
+
+  let feedback = `¡Hola ${usuario}! He analizado tu sesión de ${ejercicio}.\n\n`
+
   if (metrics.erroresDetectados && metrics.erroresDetectados.length > 0) {
-    feedback += `Áreas de mejora detectadas:\n`;
+    feedback += 'Áreas de mejora detectadas:\n'
     metrics.erroresDetectados.forEach(error => {
-      feedback += `• ${error}\n`;
-    });
-    feedback += `\n`;
+      feedback += `• ${error}\n`
+    })
+    feedback += '\n'
   } else {
-    feedback += `¡Excelente ejecución! No se detectaron errores significativos.\n\n`;
+    feedback += '¡Excelente ejecución! No se detectaron errores significativos.\n\n'
   }
-  
-  feedback += `Continúa practicando y mantén la consistencia en tu técnica.\n`;
-  feedback += `🤖 Análisis básico - Reintenta para obtener feedback detallado de IA.`;
-  
-  return feedback;
+
+  feedback += 'Continúa practicando y mantén la consistencia en tu técnica.\n'
+  feedback += '🤖 Análisis básico - Reintenta para obtener feedback detallado de IA.'
+
+  return feedback
 }
 
 // Función para enviar métricas al backend (simulada)
-export async function sendMetricsToBackend(metrics, userId) {
+export async function sendMetricsToBackend (metrics, userId) {
   try {
     // En producción, esto sería una llamada real a tu API
     const response = await fetch('/api/pose-metrics', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        Authorization: `Bearer ${localStorage.getItem('authToken')}`
       },
       body: JSON.stringify({
-        userId: userId,
-        metrics: metrics,
+        userId,
+        metrics,
         timestamp: new Date().toISOString()
       })
-    });
+    })
 
     if (response.ok) {
-      const data = await response.json();
-      return { success: true, data };
+      const data = await response.json()
+      return { success: true, data }
     } else {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
     }
   } catch (error) {
-    console.error('Error sending metrics to backend:', error);
-    return { success: false, error: error.message };
+    console.error('Error sending metrics to backend:', error)
+    return { success: false, error: error.message }
   }
 }
 
 // Función para obtener historial de sesiones
-export async function getSessionHistory(userId, limit = 10) {
+export async function getSessionHistory (userId, limit = 10) {
   try {
     // Simulación de datos de historial
     const mockHistory = Array.from({ length: Math.min(limit, 5) }, (_, i) => ({
       id: Date.now() - i * 86400000, // IDs basados en timestamp
-      userId: userId,
+      userId,
       exercise: ['Sentadilla', 'Press de Banca', 'Peso Muerto'][i % 3],
       timestamp: new Date(Date.now() - i * 86400000).toISOString(),
       metrics: {
@@ -302,12 +300,12 @@ export async function getSessionHistory(userId, limit = 10) {
         erroresDetectados: i % 2 === 0 ? ['Rodillas hacia adentro'] : []
       },
       feedback: `Sesión ${i + 1} completada con éxito. Continúa mejorando tu técnica.`
-    }));
+    }))
 
-    return { success: true, history: mockHistory };
+    return { success: true, history: mockHistory }
   } catch (error) {
-    console.error('Error getting session history:', error);
-    return { success: false, error: error.message, history: [] };
+    console.error('Error getting session history:', error)
+    return { success: false, error: error.message, history: [] }
   }
 }
 
@@ -317,7 +315,7 @@ export const webRTCConfig = {
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' }
   ]
-};
+}
 
 // Utilidades para análisis de video
 export const videoUtils = {
@@ -334,18 +332,18 @@ export const videoUtils = {
 
   // Validar soporte del navegador
   checkBrowserSupport: () => {
-    const hasWebcam = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-    const hasWebGL = !!window.WebGLRenderingContext;
-    const hasWorkers = !!window.Worker;
-    
+    const hasWebcam = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+    const hasWebGL = !!window.WebGLRenderingContext
+    const hasWorkers = !!window.Worker
+
     return {
       webcam: hasWebcam,
       webgl: hasWebGL,
       workers: hasWorkers,
       fullSupport: hasWebcam && hasWebGL && hasWorkers
-    };
+    }
   }
-};
+}
 
 export default {
   getPoseFeedback,
@@ -353,4 +351,4 @@ export default {
   getSessionHistory,
   webRTCConfig,
   videoUtils
-};
+}

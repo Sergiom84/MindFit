@@ -1,13 +1,13 @@
-import React from 'react';
-import { Button } from "@/components/ui/button";
+import React from 'react'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Target, Save, Pencil } from "lucide-react";
-import { EditableField } from "../EditableField";
+  CardTitle
+} from '@/components/ui/card'
+import { Target, Save, Pencil } from 'lucide-react'
+import { EditableField } from '../EditableField'
 
 export const GoalsCard = ({
   userProfile,
@@ -18,9 +18,9 @@ export const GoalsCard = ({
   handleCancel,
   handleInputChange,
   getObjetivoLabel,
-  objetivoPrincipalOptions,
+  objetivoPrincipalOptions
 }) => {
-  const isEditing = editingSection === "goals";
+  const isEditing = editingSection === 'goals'
 
   return (
     <Card className="bg-gray-900 border-yellow-400/20">
@@ -30,7 +30,8 @@ export const GoalsCard = ({
             <Target className="mr-2 text-yellow-400" /> Objetivos y Metas
           </div>
           <div className="flex items-center gap-2">
-            {isEditing ? (
+            {isEditing
+              ? (
               <>
                 <Button
                   onClick={handleSave}
@@ -48,22 +49,23 @@ export const GoalsCard = ({
                   Cancelar
                 </Button>
               </>
-            ) : (
+                )
+              : (
               <button
                 onClick={() =>
-                  startEdit("goals", {
+                  startEdit('goals', {
                     objetivo_principal: userProfile.objetivo_principal,
                     meta_peso: userProfile.meta_peso,
-                    meta_grasa: userProfile.meta_grasa,
+                    meta_grasa: userProfile.meta_grasa
                   })
                 }
-                disabled={editingSection && editingSection !== "goals"}
+                disabled={editingSection && editingSection !== 'goals'}
                 className="p-2 text-gray-400 hover:text-yellow-400 transition-colors"
                 title="Editar objetivos y metas"
               >
                 <Pencil className="w-4 h-4" />
               </button>
-            )}
+                )}
           </div>
         </CardTitle>
       </CardHeader>
@@ -150,5 +152,5 @@ export const GoalsCard = ({
         </div>
       </CardContent>
     </Card>
-  );
-};
+  )
+}

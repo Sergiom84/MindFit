@@ -7,12 +7,12 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Camera, 
-  Upload, 
-  FileText, 
-  Loader2, 
-  CheckCircle, 
+import {
+  Camera,
+  Upload,
+  FileText,
+  Loader2,
+  CheckCircle,
   AlertCircle,
   Home,
   Dumbbell,
@@ -201,15 +201,15 @@ const SpaceEvaluationModal = ({ isOpen, onClose }) => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-gray-300">
-                    Sube una foto de tu espacio de entrenamiento y nuestra IA analizará las dimensiones, 
+                    Sube una foto de tu espacio de entrenamiento y nuestra IA analizará las dimensiones,
                     obstáculos y te recomendará los mejores ejercicios para tu espacio.
                   </p>
 
                   {imagePreview && (
                     <div className="relative">
-                      <img 
-                        src={imagePreview} 
-                        alt="Preview" 
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
                         className="w-full max-h-64 object-cover rounded-lg"
                       />
                       <Badge className="absolute top-2 right-2 bg-green-500">
@@ -219,17 +219,17 @@ const SpaceEvaluationModal = ({ isOpen, onClose }) => {
                   )}
 
                   <div className="flex space-x-4">
-                    <Button 
+                    <Button
                       onClick={handleCameraCapture}
-                      variant="outline" 
+                      variant="outline"
                       className="flex-1 border-yellow-400 text-yellow-400"
                     >
                       <Camera className="w-4 h-4 mr-2" />
                       Tomar Foto
                     </Button>
-                    <Button 
+                    <Button
                       onClick={handleFileUpload}
-                      variant="outline" 
+                      variant="outline"
                       className="flex-1 border-yellow-400 text-yellow-400"
                     >
                       <Upload className="w-4 h-4 mr-2" />
@@ -253,22 +253,24 @@ const SpaceEvaluationModal = ({ isOpen, onClose }) => {
                     className="hidden"
                   />
 
-                  <Button 
+                  <Button
                     onClick={evaluateSpaceWithImage}
                     disabled={!selectedImage || isLoading}
                     className="w-full bg-yellow-400 text-black hover:bg-yellow-300"
                   >
-                    {isLoading ? (
+                    {isLoading
+                      ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         Analizando imagen...
                       </>
-                    ) : (
+                        )
+                      : (
                       <>
                         <Target className="w-4 h-4 mr-2" />
                         Analizar Espacio
                       </>
-                    )}
+                        )}
                   </Button>
                 </CardContent>
               </Card>
@@ -284,7 +286,7 @@ const SpaceEvaluationModal = ({ isOpen, onClose }) => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-gray-300">
-                    Responde algunas preguntas sobre tu espacio y recibirás recomendaciones 
+                    Responde algunas preguntas sobre tu espacio y recibirás recomendaciones
                     personalizadas para tu entrenamiento en casa.
                   </p>
 
@@ -365,22 +367,24 @@ const SpaceEvaluationModal = ({ isOpen, onClose }) => {
                     </div>
                   </div>
 
-                  <Button 
+                  <Button
                     onClick={evaluateSpaceWithText}
                     disabled={isLoading}
                     className="w-full bg-yellow-400 text-black hover:bg-yellow-300"
                   >
-                    {isLoading ? (
+                    {isLoading
+                      ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         Generando recomendaciones...
                       </>
-                    ) : (
+                        )
+                      : (
                       <>
                         <Dumbbell className="w-4 h-4 mr-2" />
                         Obtener Recomendaciones
                       </>
-                    )}
+                        )}
                   </Button>
                 </CardContent>
               </Card>
@@ -402,14 +406,14 @@ const SpaceEvaluationModal = ({ isOpen, onClose }) => {
                 </div>
               </div>
               <div className="flex space-x-4 mt-6">
-                <Button 
+                <Button
                   onClick={resetModal}
-                  variant="outline" 
+                  variant="outline"
                   className="border-yellow-400 text-yellow-400"
                 >
                   Nueva Evaluación
                 </Button>
-                <Button 
+                <Button
                   onClick={handleClose}
                   className="bg-yellow-400 text-black hover:bg-yellow-300"
                 >

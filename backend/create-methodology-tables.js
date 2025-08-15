@@ -1,29 +1,29 @@
-import { Pool } from 'pg';
-import fs from 'fs';
-import dotenv from 'dotenv';
+import { Pool } from 'pg'
+import fs from 'fs'
+import dotenv from 'dotenv'
 
-dotenv.config();
+dotenv.config()
 
-function getRenderDbConfig() {
+function getRenderDbConfig () {
   return {
     connectionString: process.env.DATABASE_URL,
     ssl: {
       rejectUnauthorized: false
     }
-  };
+  }
 }
 
 const createMethodologyTables = async () => {
-  console.log('🚀 Ejecutando esquema de metodologías...');
+  console.log('🚀 Ejecutando esquema de metodologías...')
 
-  const renderConfig = getRenderDbConfig();
-  const pool = new Pool(renderConfig);
-  let client;
+  const renderConfig = getRenderDbConfig()
+  const pool = new Pool(renderConfig)
+  let client
 
   try {
-    client = await pool.connect();
-    console.log('✅ Conectado a base de datos');
-    console.log('🗄️ Creando tablas de metodologías...');
+    client = await pool.connect()
+    console.log('✅ Conectado a base de datos')
+    console.log('🗄️ Creando tablas de metodologías...')
 
     // 1. Tabla principal de metodologías seleccionadas
     await client.query(`
@@ -52,8 +52,8 @@ const createMethodologyTables = async () => {
           completed_at TIMESTAMP,
           cancelled_at TIMESTAMP
       )
-    `);
-    console.log('✅ Tabla user_selected_methodologies creada');
+    `)
+    console.log('✅ Tabla user_selected_methodologies creada')
 
     // 2. Tabla de progreso semanal
     await client.query(`
@@ -87,8 +87,8 @@ const createMethodologyTables = async () => {
           
           CONSTRAINT unique_week_per_methodology UNIQUE (methodology_id, semana_numero)
       )
-    `);
-    console.log('✅ Tabla methodology_weekly_progress creada');
+    `)
+    console.log('✅ Tabla methodology_weekly_progress creada')
 
     // 3. Tabla de sesiones de entrenamiento
     await client.query(`
@@ -120,8 +120,8 @@ const createMethodologyTables = async () => {
           
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
-    `);
-    console.log('✅ Tabla methodology_training_sessions creada');
+    `)
+    console.log('✅ Tabla methodology_training_sessions creada')
 
     // 4. Crear índices
     await client.query(`
@@ -136,8 +136,8 @@ const createMethodologyTables = async () => {
       CREATE INDEX IF NOT EXISTS idx_methodology_sessions_user ON methodology_training_sessions(user_id);
       CREATE INDEX IF NOT EXISTS idx_methodology_sessions_methodology ON methodology_training_sessions(methodology_id);
       CREATE INDEX IF NOT EXISTS idx_methodology_sessions_fecha ON methodology_training_sessions(fecha_sesion);
-    `);
-    console.log('✅ Índices creados');
+    `)
+    console.log('✅ Índices creados')
 
     // 5. Crear funciones y triggers
     await client.query(`
@@ -193,7 +193,7 @@ const createMethodologyTables = async () => {
           RETURN COALESCE(NEW, OLD);
       END;
       $$ LANGUAGE plpgsql;
-    `);
+    `)
 
     await client.query(`
       DROP TRIGGER IF EXISTS trigger_update_methodology_progress ON methodology_training_sessions;
@@ -201,7 +201,7 @@ const createMethodologyTables = async () => {
           AFTER INSERT OR UPDATE ON methodology_training_sessions
           FOR EACH ROW
           EXECUTE FUNCTION update_methodology_progress();
-    `);
+    `)
 
     await client.query(`
       CREATE OR REPLACE FUNCTION update_methodology_updated_at()
@@ -211,7 +211,7 @@ const createMethodologyTables = async () => {
           RETURN NEW;
       END;
       $$ LANGUAGE plpgsql;
-    `);
+    `)
 
     await client.query(`
       DROP TRIGGER IF EXISTS trigger_methodology_updated_at ON user_selected_methodologies;
@@ -225,23 +225,22 @@ const createMethodologyTables = async () => {
           BEFORE UPDATE ON methodology_weekly_progress
           FOR EACH ROW
           EXECUTE FUNCTION update_methodology_updated_at();
-    `);
+    `)
 
-    console.log('✅ Funciones y triggers creados');
+    console.log('✅ Funciones y triggers creados')
 
-    console.log('🎉 ¡Todas las tablas de metodologías creadas exitosamente!');
-
+    console.log('🎉 ¡Todas las tablas de metodologías creadas exitosamente!')
   } catch (error) {
-    console.error('❌ Error al crear tablas:', error);
+    console.error('❌ Error al crear tablas:', error)
   } finally {
-    if (client) client.release();
-    await pool.end();
+    if (client) client.release()
+    await pool.end()
   }
-};
+}
 
 // Ejecutar si se llama directamente
 if (import.meta.url === `file://${process.argv[1]}`) {
-  createMethodologyTables();
+  createMethodologyTables()
 }
 
-export { createMethodologyTables };
+export { createMethodologyTables }

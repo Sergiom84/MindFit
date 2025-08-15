@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -7,6 +7,7 @@ import SpaceEvaluationModal from './SpaceEvaluationModal'
 import WorkoutExerciseModal from './WorkoutExerciseModal'
 import IAHomeTraining from '@/components/IAHomeTraining'
 import { useUserContext } from '@/contexts/UserContext'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   Dumbbell,
   Target,
@@ -15,37 +16,55 @@ import {
   Play,
   Calendar,
   TrendingUp,
-  Circle,
-  AlertTriangle,
-  Heart,
   Home
 } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+
+// 🔗 Constantes centralizadas
+import {
+  EQUIPMENT,
+  STYLE,
+  EQUIPMENT_LABELS,
+  STYLE_GUIDELINES
+} from '@/lib/home-training-consts'
+
+// Helper para formatear tiempo
+function toHm (totalSec = 0) {
+  const s = Math.max(0, Number(totalSec) || 0)
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m`
+}
 
 // Evita crashear si el servidor responde 304/204 o body vacío
-async function safeJson(res) {
-  if (res.status === 304 || res.status === 204) return null;
-  const text = await res.text();
-  if (!text) return null;
-  try { return JSON.parse(text); } catch { return null; }
+async function safeJson (res) {
+  if (res.status === 304 || res.status === 204) return null
+  const text = await res.text()
+  if (!text) return null
+  try { return JSON.parse(text) } catch { return null }
 }
 
 // Parsear listas de ejercicios de forma segura
-function parseExercises(content) {
+function parseExercises (content) {
   try {
-    return JSON.parse(content || '[]');
+    return JSON.parse(content || '[]')
   } catch {
-    return [];
+    return []
   }
 }
 
 const HomeTrainingSection = () => {
-  // justo dentro del componente HomeTrainingSection
-  const [equipamiento, setEquipamiento] = useState('minimo');     // 'minimo' | 'basico' | 'avanzado'
-  const [tipo, setTipo] = useState('funcional');                  // 'funcional' | 'hiit' | 'fuerza'
-  const [showIAPlan, setShowIAPlan] = useState(false);
-  const [selectedEquipment, setSelectedEquipment] = useState('minimal')
-  const [selectedTrainingType, setSelectedTrainingType] = useState('functional')
+  // Props para IAHomeTraining (mantén tu contrato actual)
+  const [equipamiento, setEquipamiento] = useState('minimo') // 'minimo' | 'basico' | 'avanzado'
+  const [tipo, setTipo] = useState('funcional') // 'funcional' | 'hiit' | 'fuerza'
+
+  // UI local (tu patrón actual)
+  const [showIAPlan, setShowIAPlan] = useState(false)
+  const [selectedEquipment, setSelectedEquipment] = useState('minimal') // minimal|basic|advanced (UI)
+  const [selectedTrainingType, setSelectedTrainingType] = useState('functional') // functional|hiit|strength (UI)
+
   const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false)
   const [isGeneratingWorkout, setIsGeneratingWorkout] = useState(false)
   const [generatedWorkout, setGeneratedWorkout] = useState(null)
@@ -53,75 +72,115 @@ const HomeTrainingSection = () => {
   const [isExerciseModalOpen, setIsExerciseModalOpen] = useState(false)
   const [activeProgram, setActiveProgram] = useState(null)
   const [weeklyCalendar, setWeeklyCalendar] = useState([])
-  const [homeTrainingStats, setHomeTrainingStats] = useState({
-    rutinasCompletadas: 0,
-    tiempoTotalEntrenamiento: '0h 0m',
-    duracionSesion: '30 min'
-  })
-  const { entrenamientoCasa, userData, progreso } = useUserContext()
 
-  // Determinar equipamiento inicial basado en el usuario
+  // Estado para estadísticas del API
+  const [stats, setStats] = React.useState({
+    sessions_completed: 0,
+    total_duration_sec: 0,
+    streak_days: 0,
+    nivel_actual: 'principiante'
+  })
+  const [statsLoading, setStatsLoading] = React.useState(false)
+
+  const { entrenamientoCasa, userData } = useUserContext()
+  const { getCurrentUserInfo } = useAuth()
+  const user = getCurrentUserInfo()
+
+  // Movemos la lógica de carga a una función que podamos llamar cuando queramos
+  const loadStats = React.useCallback(async () => {
+    if (!user?.id) return
+    try {
+      setStatsLoading(true)
+      const r = await fetch(`/api/home-training/stats?userId=${user.id}`)
+      const j = await r.json()
+      if (j?.success && j?.data) setStats(j.data)
+    } catch (e) {
+      console.error("Error cargando estadísticas:", e)
+    } finally {
+      setStatsLoading(false)
+    }
+  }, [user?.id])
+
+  // useEffect para cargar estadísticas del API la primera vez
+  React.useEffect(() => {
+    loadStats()
+  }, [loadStats])
+
+  // 👤 Perfil mínimo requerido (usa tu naming actual)
+  const edad = userData?.edad
+  const altura = userData?.altura
+  const peso = userData?.peso
+
+  const hasMinProfile = useMemo(() => {
+    // acepta 0 como falsy -> exigimos valores reales > 0
+    const okEdad = Number(edad) > 0
+    const okAltura = Number(altura) > 0
+    const okPeso = Number(peso) > 0
+    return okEdad && okAltura && okPeso
+  }, [edad, altura, peso])
+
+  const isGenerateDisabled =
+    !hasMinProfile ||
+    !selectedEquipment ||
+    !selectedTrainingType
+
+  // Campos que faltan para guiar al usuario
+  const missingFields = useMemo(() => {
+    const m = []
+    if (!(Number(edad) > 0)) m.push('edad')
+    if (!(Number(altura) > 0)) m.push('altura')
+    if (!(Number(peso) > 0)) m.push('peso')
+    if (!selectedEquipment) m.push('equipamiento (mínimo/básico/avanzado)')
+    if (!selectedTrainingType) m.push('tipo de entrenamiento (funcional/HIIT/fuerza)')
+    return m
+  }, [edad, altura, peso, selectedEquipment, selectedTrainingType])
+
+  // Determinar equipamiento inicial basado en el usuario (tu lógica, adaptando a keys UI)
   useEffect(() => {
-    if (entrenamientoCasa.equipoDisponible) {
-      const equipoUsuario = entrenamientoCasa.equipoDisponible.join(' ').toLowerCase();
+    if (entrenamientoCasa?.equipoDisponible?.length) {
+      const equipoUsuario = entrenamientoCasa.equipoDisponible.join(' ').toLowerCase()
       if (equipoUsuario.includes('barra') || equipoUsuario.includes('rack') || equipoUsuario.includes('kettlebell')) {
-        setSelectedEquipment('advanced');
+        setSelectedEquipment('advanced')
+        setEquipamiento(EQUIPMENT.AVANZADO) // para IA
       } else if (equipoUsuario.includes('mancuernas') || equipoUsuario.includes('banda')) {
-        setSelectedEquipment('basic');
+        setSelectedEquipment('basic')
+        setEquipamiento(EQUIPMENT.BASICO)
       } else {
-        setSelectedEquipment('minimal');
+        setSelectedEquipment('minimal')
+        setEquipamiento(EQUIPMENT.MINIMO)
       }
     }
-  }, [entrenamientoCasa.equipoDisponible]);
+  }, [entrenamientoCasa?.equipoDisponible])
 
   // 👉 desactiva efectos cuando showIAPlan = true
   useEffect(() => {
-    // Si el usuario ha lanzado "Generar Mi Entrenamiento" con IA,
-    // no dispares las cargas del programa/estadísticas semanales.
-    if (showIAPlan) return;
-    if (!userData.id) return;
+    if (showIAPlan) return
+    if (!userData?.id) return
 
-    loadActiveProgram(userData.id);
-    loadHomeTrainingStats(userData.id);
-  }, [showIAPlan, userData.id]);
+    loadActiveProgram(userData.id)
+  }, [showIAPlan, userData?.id])
 
-   const loadActiveProgram = async (userId) => {
+  const loadActiveProgram = async (userId) => {
     try {
-      const response = await fetch(`/api/home-training/active-program/${userId}`);
-      const data = await safeJson(response);
-
+      const response = await fetch(`/api/home-training/active-program/${userId}`)
+      const data = await safeJson(response)
       if (data && data.success && data.program) {
-        setActiveProgram(data.program);
-        generateWeeklyCalendar(data.program);
+        setActiveProgram(data.program)
+        generateWeeklyCalendar(data.program)
       }
     } catch (error) {
-      console.error('Error cargando programa activo:', error);
+      console.error('Error cargando programa activo:', error)
     }
-  };
-
-  const loadHomeTrainingStats = async (userId) => {
-    try {
-      const response = await fetch(`/api/home-training/stats/${userId}`);
-      const data = await safeJson(response);
-
-      if (data && data.success) {
-        setHomeTrainingStats(data.stats);
-      }
-    } catch (error) {
-      console.error('Error cargando estadísticas:', error);
-    }
-  };
+  }
 
   const generateWeeklyCalendar = (program) => {
-    // Hacer la función tolerante a data vacío
-    const safeProgram = program || {};
-    const safeDias = Array.isArray(safeProgram.dias) ? safeProgram.dias : [];
+    const safeProgram = program || {}
+    const safeDias = Array.isArray(safeProgram.dias) ? safeProgram.dias : []
 
     if (safeDias.length > 0) {
-      // Usar datos de la base de datos si están disponibles
       const calendar = safeDias.map(day => {
-        const exercises = parseExercises(day.ejercicios_asignados);
-        const exerciseCount = exercises.length;
+        const exercises = parseExercises(day.ejercicios_asignados)
+        const exerciseCount = exercises.length
         return {
           id: day.dia_semana.toLowerCase(),
           dayName: day.dia_semana.charAt(0).toUpperCase() + day.dia_semana.slice(1),
@@ -134,393 +193,94 @@ const HomeTrainingSection = () => {
           total: day.es_descanso ? 0 : exerciseCount,
           status: day.es_descanso ? 'rest' : day.estado,
           isRest: day.es_descanso
-        };
-      });
-      setWeeklyCalendar(calendar);
+        }
+      })
+      setWeeklyCalendar(calendar)
     } else if (generatedWorkout) {
-      // Crear calendario de ejemplo si no hay datos de BD
-      generateMockWeeklyCalendar();
+      generateMockWeeklyCalendar()
     }
-  };
+  }
 
   const generateMockWeeklyCalendar = () => {
-    const today = new Date();
-    const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-    const dayIds = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+    const today = new Date()
+    const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+    const dayIds = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
 
     const calendar = dayNames.map((dayName, index) => {
-      const date = new Date(today);
-      date.setDate(today.getDate() - today.getDay() + 1 + index); // Lunes de esta semana + index
+      const date = new Date(today)
+      date.setDate(today.getDate() - today.getDay() + 1 + index) // Lunes + index
 
-      const isToday = date.toDateString() === today.toDateString();
-      const isRest = index === 6; // Domingo descanso
-      const isPast = date < today && !isToday;
-      const isFuture = date > today;
+      const isToday = date.toDateString() === today.toDateString()
+      const isRest = index === 6 // Domingo descanso
+      const isPast = date < today && !isToday
+      const isFuture = date > today
 
-      let status = 'pendiente';
-      let completed = 0;
-      let total = generatedWorkout?.ejercicios?.length || 5;
+      let status = 'pendiente'
+      let completed = 0
+      let total = generatedWorkout?.ejercicios?.length || 5
 
       if (isRest) {
-        status = 'rest';
-        total = 0;
+        status = 'rest'
+        total = 0
       } else if (isPast) {
-        status = Math.random() > 0.3 ? 'completado' : 'perdido';
-        completed = status === 'completado' ? total : Math.floor(total * 0.6);
+        status = Math.random() > 0.3 ? 'completado' : 'perdido'
+        completed = status === 'completado' ? total : Math.floor(total * 0.6)
       } else if (isToday) {
-        status = 'en_progreso';
-        completed = Math.floor(total * 0.3);
+        status = 'en_progreso'
+        completed = Math.floor(total * 0.3)
       }
 
       return {
         id: dayIds[index],
-        dayName: dayName,
+        dayName,
         dayNumber: date.getDate(),
         date: date.toISOString().split('T')[0],
-        isToday: isToday,
-        exercises: isRest ? [] : Array.from({length: total}, (_, i) => i + 1),
+        isToday,
+        exercises: isRest ? [] : Array.from({ length: total }, (_, i) => i + 1),
         exerciseCount: isRest ? 0 : total,
-        completed: completed,
-        total: total,
-        status: status,
-        isRest: isRest
-      };
-    });
+        completed,
+        total,
+        status,
+        isRest
+      }
+    })
 
-    setWeeklyCalendar(calendar);
-  };
+    setWeeklyCalendar(calendar)
+  }
 
   const calculateMockProgress = () => {
-    if (weeklyCalendar.length === 0) return 0;
+    if (weeklyCalendar.length === 0) return 0
+    const completedDays = weeklyCalendar.filter(day => day.status === 'completado').length
+    const totalWorkoutDays = weeklyCalendar.filter(day => !day.isRest).length
+    return totalWorkoutDays > 0 ? Math.round((completedDays / totalWorkoutDays) * 100) : 0
+  }
 
-    const completedDays = weeklyCalendar.filter(day => day.status === 'completado').length;
-    const totalWorkoutDays = weeklyCalendar.filter(day => !day.isRest).length;
-
-    return totalWorkoutDays > 0 ? Math.round((completedDays / totalWorkoutDays) * 100) : 0;
-  };
-
-  // Función para generar entrenamiento con IA
-  const generateWorkout = async () => {
-    setIsGeneratingWorkout(true);
-
-    try {
-      const equipmentLevel = equipmentLevels[selectedEquipment];
-      const trainingStyle = trainingStyles.find((style, index) => {
-        if (selectedTrainingType === 'functional') return index === 0;
-        if (selectedTrainingType === 'hiit') return index === 1;
-        if (selectedTrainingType === 'strength') return index === 2;
-        return false;
-      });
-      const imc = calculateBMI(userData.peso, userData.altura);
-
-      const response = await fetch('/api/recomendar-metodologia', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          equipamiento: selectedEquipment,
-          tipoEntrenamiento: selectedTrainingType,
-          equipoDisponible: equipmentLevel.equipment,
-          estiloEntrenamiento: trainingStyle,
-          datosUsuario: {
-            nombre: userData.nombre,
-            nivel: userData.nivel || 'intermedio',
-            edad: userData.edad,
-            peso: userData.peso,
-            altura: userData.altura,
-            sexo: userData.sexo,
-            imc,
-            nivel_actividad: userData.nivel_actividad,
-            'años_entrenando': userData['años_entrenando'],
-            objetivo_principal: userData.objetivo_principal || 'mantener_forma',
-            composicion_corporal: {
-              grasa_corporal: userData.grasa_corporal,
-              masa_muscular: userData.masa_muscular,
-              agua_corporal: userData.agua_corporal,
-              metabolismo_basal: userData.metabolismo_basal,
-            },
-            medidas_corporales: {
-              cintura: userData.cintura,
-              pecho: userData.pecho,
-              brazos: userData.brazos,
-              muslos: userData.muslos,
-              cuello: userData.cuello,
-              antebrazos: userData.antebrazos,
-            },
-            limitaciones: userData.limitaciones || []
-          }
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al generar entrenamiento');
-      }
-
-      const data = await safeJson(response);
-      if (!data) {
-        throw new Error('Respuesta vacía del servidor');
-      }
-      setGeneratedWorkout(data.entrenamiento);
-      setCurrentExerciseIndex(0);
-
-      // Crear programa en la base de datos si se indica
-      if (data.shouldCreateProgram && data.entrenamiento) {
-        await createProgramInDatabase(data.entrenamiento);
-      } else {
-        // Si no se puede crear en BD, generar calendario mock
-        generateMockWeeklyCalendar();
-      }
-
-    } catch (error) {
-      console.error('Error generando entrenamiento:', error);
-      alert('Error al generar entrenamiento. Por favor, inténtalo de nuevo.');
-    } finally {
-      setIsGeneratingWorkout(false);
-    }
-  };
-
-  const createProgramInDatabase = async (entrenamiento) => {
-    // 👉 No crear programas en BD si estamos usando el componente IA
-    if (showIAPlan) return;
-
-    try {
-      const response = await fetch('/api/home-training/create-program', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: userData.id,
-          titulo: entrenamiento.titulo,
-          descripcion: entrenamiento.descripcion,
-          equipamiento: selectedEquipment,
-          tipoEntrenamiento: selectedTrainingType,
-          duracionTotal: entrenamiento.duracionTotal,
-          frecuencia: entrenamiento.frecuencia,
-          enfoque: entrenamiento.enfoque,
-          ejercicios: entrenamiento.ejercicios
-        })
-      });
-
-      const data = await safeJson(response);
-
-      if (data && data.success) {
-        // Recargar programa activo
-        await loadActiveProgram(userData.id);
-        console.log('Programa creado exitosamente');
-      }
-    } catch (error) {
-      console.error('Error creando programa:', error);
-    }
-  };
-
-  const startWorkout = () => {
-    if (generatedWorkout && generatedWorkout.ejercicios && generatedWorkout.ejercicios.length > 0) {
-      setCurrentExerciseIndex(0);
-      setIsExerciseModalOpen(true);
-    }
-  };
-
-  const nextExercise = async () => {
-    if (currentExerciseIndex < generatedWorkout.ejercicios.length - 1) {
-      setCurrentExerciseIndex(currentExerciseIndex + 1);
-    } else {
-      // Entrenamiento completado
-      setIsExerciseModalOpen(false);
-
-      // Registrar progreso si es parte de un programa activo
-      if (activeProgram) {
-        await completeWorkoutDay();
-      }
-
-      setGeneratedWorkout(null);
-      alert('¡Entrenamiento completado! ¡Excelente trabajo!');
-    }
-  };
-
-  const completeWorkoutDay = async () => {
-    // 👉 No hacer nada si estamos usando el componente IA
-    if (showIAPlan) return;
-
-    try {
-      // Encontrar el día actual en el calendario
-      const today = new Date().toDateString();
-      const currentDay = weeklyCalendar.find(day =>
-        new Date(day.date).toDateString() === today
-      );
-
-      if (currentDay && currentDay.status !== 'completado') {
-        if (activeProgram) {
-          // Si hay programa activo, usar API
-          const duracionEstimada = generatedWorkout.ejercicios.reduce((total, ejercicio) => {
-            const tiempoEjercicio = ejercicio.tipo === 'tiempo' ? ejercicio.duracion : 30;
-            return total + tiempoEjercicio + ejercicio.descanso;
-          }, 0) / 60;
-
-          const response = await fetch('/api/home-training/complete-day', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              dayId: currentDay.id,
-              userId: userData.id,
-              duracionMinutos: Math.round(duracionEstimada),
-              ejerciciosCompletados: generatedWorkout.ejercicios.length,
-              ejerciciosTotales: generatedWorkout.ejercicios.length
-            })
-          });
-
-          const data = await safeJson(response);
-          if (data && response.ok) {
-            await loadActiveProgram(userData.id);
-            await loadHomeTrainingStats(userData.id);
-          }
-        } else {
-          // Actualizar calendario mock localmente
-          const updatedCalendar = weeklyCalendar.map(day => {
-            if (day.id === currentDay.id) {
-              return {
-                ...day,
-                status: 'completado',
-                completed: day.total
-              };
-            }
-            return day;
-          });
-
-          setWeeklyCalendar(updatedCalendar);
-
-          // Actualizar estadísticas mock
-          const completedSessions = updatedCalendar.filter(d => d.status === 'completado').length;
-          setHomeTrainingStats(prev => ({
-            ...prev,
-            rutinasCompletadas: completedSessions,
-            tiempoTotalEntrenamiento: `${completedSessions * 30}m`
-          }));
-        }
-      }
-    } catch (error) {
-      console.error('Error completando día:', error);
-    }
-  };
-
-  const closeExerciseModal = () => {
-    setIsExerciseModalOpen(false);
-    setCurrentExerciseIndex(0);
-  };
-
-  const handleDayClick = (day) => {
-    if (day.isRest) {
-      alert('Este es un día de descanso. ¡Disfruta tu recuperación!');
-      return;
-    }
-
-    if (day.status === 'completado') {
-      alert('Ya has completado este día. ¡Excelente trabajo!');
-      return;
-    }
-
-    if (day.status === 'perdido') {
-      alert('Este día ya pasó. ¡Enfócate en los días siguientes!');
-      return;
-    }
-
-    // Obtener ejercicios para este día
-    let ejerciciosDelDia = [];
-
-    if (activeProgram && activeProgram.ejercicios) {
-      // Usar ejercicios de la base de datos
-      ejerciciosDelDia = activeProgram.ejercicios.filter((_, idx) =>
-        day.exercises.includes(idx + 1)
-      );
-    } else if (generatedWorkout && generatedWorkout.ejercicios) {
-      // Usar ejercicios del entrenamiento generado
-      ejerciciosDelDia = generatedWorkout.ejercicios;
-    }
-
-    if (ejerciciosDelDia.length > 0) {
-      // Configurar entrenamiento para este día específico
-      setGeneratedWorkout({
-        ...(activeProgram || generatedWorkout),
-        ejercicios: ejerciciosDelDia
-      });
-      setCurrentExerciseIndex(0);
-      setIsExerciseModalOpen(true);
-    } else {
-      alert('No hay ejercicios disponibles para este día.');
-    }
-  };
-
+  // 🧭 UI: definición de niveles (apoyándonos en EQUIPMENT_LABELS)
   const equipmentLevels = {
     minimal: {
       name: 'Equipamiento Mínimo',
       icon: <Home className="w-5 h-5 sm:w-6 sm:h-6" />,
-      equipment: ['Peso corporal', 'Toallas', 'Silla/Sofá', 'Pared'],
+      equipment: EQUIPMENT_LABELS[EQUIPMENT.MINIMO],
       workouts: ['Flexiones variadas', 'Sentadillas', 'Plancha', 'Burpees'],
       color: 'border-green-400'
     },
     basic: {
       name: 'Equipamiento Básico',
       icon: <Dumbbell className="w-5 h-5 sm:w-6 sm:h-6" />,
-      equipment: ['Mancuernas ajustables', 'Bandas elásticas', 'Esterilla', 'Banco/Step'],
+      equipment: EQUIPMENT_LABELS[EQUIPMENT.BASICO],
       workouts: ['Press de pecho', 'Remo con banda', 'Peso muerto', 'Curl bíceps'],
       color: 'border-yellow-400'
     },
     advanced: {
       name: 'Equipamiento Avanzado',
       icon: <Target className="w-5 h-5 sm:w-6 sm:h-6" />,
-      equipment: ['Barra dominadas', 'Kettlebells', 'TRX', 'Discos olímpicos'],
+      equipment: EQUIPMENT_LABELS[EQUIPMENT.AVANZADO],
       workouts: ['Dominadas', 'Swing kettlebell', 'Sentadilla goblet', 'Turkish get-up'],
       color: 'border-red-400'
     }
   }
 
-  const trainingStyles = [
-    {
-      name: 'Funcional en Casa',
-      description: 'Movimientos naturales adaptados al hogar',
-      duration: '30-45 min',
-      frequency: '4-5 días/semana',
-      focus: 'Fuerza funcional y movilidad',
-      exercises: [
-        'Sentadillas con peso corporal',
-        'Flexiones en diferentes ángulos',
-        'Plancha y variaciones',
-        'Estocadas multidireccionales'
-      ]
-    },
-    {
-      name: 'HIIT Doméstico',
-      description: 'Alta intensidad en espacios reducidos',
-      duration: '20-30 min',
-      frequency: '3-4 días/semana',
-      focus: 'Quema de grasa y resistencia',
-      exercises: [
-        'Burpees',
-        'Mountain climbers',
-        'Jumping jacks',
-        'Squat jumps'
-      ]
-    },
-    {
-      name: 'Fuerza con Bandas',
-      description: 'Entrenamiento de resistencia variable',
-      duration: '40-50 min',
-      frequency: '4-5 días/semana',
-      focus: 'Hipertrofia y fuerza',
-      exercises: [
-        'Press de pecho con banda',
-        'Remo horizontal',
-        'Sentadilla con resistencia',
-        'Extensiones de tríceps'
-      ]
-    }
-  ]
-
-
-
+  // 🔁 Render
   return (
     <div className="min-h-screen bg-black text-white p-6 pb-24">
       <div className="max-w-6xl mx-auto">
@@ -529,7 +289,7 @@ const HomeTrainingSection = () => {
             Entrenamiento en Casa
           </h1>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            Modalidad multifuncional diseñada para maximizar resultados con el equipamiento 
+            Modalidad multifuncional diseñada para maximizar resultados con el equipamiento
             que tengas disponible, adaptándose a tu espacio y nivel.
           </p>
         </div>
@@ -545,11 +305,11 @@ const HomeTrainingSection = () => {
                   : 'border-gray-600 hover:border-yellow-400/50'
               }`}
               onClick={() => {
-                setSelectedEquipment(key);
-                // Mapear valores para el componente IA
-                if (key === 'minimal') setEquipamiento('minimo');
-                else if (key === 'basic') setEquipamiento('basico');
-                else if (key === 'advanced') setEquipamiento('avanzado');
+                setSelectedEquipment(key)
+                // Mapea a valores del contrato IA
+                if (key === 'minimal') setEquipamiento(EQUIPMENT.MINIMO)
+                else if (key === 'basic') setEquipamiento(EQUIPMENT.BASICO)
+                else if (key === 'advanced') setEquipamiento(EQUIPMENT.AVANZADO)
               }}
             >
               <CardHeader>
@@ -563,8 +323,8 @@ const HomeTrainingSection = () => {
                   <div>
                     <h4 className="text-sm font-semibold text-gray-300 mb-2">Equipamiento:</h4>
                     <div className="flex flex-wrap gap-1">
-                      {level.equipment.map((item, idx) => (
-                        <Badge key={idx} variant="outline" className="text-xs">
+                      {level.equipment.map((item) => (
+                        <Badge key={item} variant="outline" className="text-xs">
                           {item}
                         </Badge>
                       ))}
@@ -588,13 +348,17 @@ const HomeTrainingSection = () => {
         </div>
 
         {/* Estilos de Entrenamiento */}
-        <Tabs value={selectedTrainingType} onValueChange={(value) => {
-          setSelectedTrainingType(value);
-          // Mapear valores para el componente IA
-          if (value === 'functional') setTipo('funcional');
-          else if (value === 'hiit') setTipo('hiit');
-          else if (value === 'strength') setTipo('fuerza');
-        }} className="mb-8">
+        <Tabs
+          value={selectedTrainingType}
+          onValueChange={(value) => {
+            setSelectedTrainingType(value)
+            // Mapea UI -> contrato IA
+            if (value === 'functional') setTipo(STYLE.FUNCIONAL)
+            else if (value === 'hiit') setTipo(STYLE.HIIT)
+            else if (value === 'strength') setTipo(STYLE.FUERZA)
+          }}
+          className="mb-8"
+        >
           <TabsList className="grid w-full grid-cols-3 bg-gray-900">
             <TabsTrigger value="functional">Funcional</TabsTrigger>
             <TabsTrigger value="hiit">HIIT</TabsTrigger>
@@ -602,166 +366,193 @@ const HomeTrainingSection = () => {
           </TabsList>
         </Tabs>
 
+        {/* Guías del estilo elegido */}
+        {tipo && (
+          <section className="mt-6">
+            <div className="bg-gray-900 border border-yellow-400/20 rounded-lg p-6">
+              <h4 className="text-white font-semibold mb-3">Guías para {tipo.toUpperCase()}</h4>
+              <ul className="list-disc pl-6 space-y-1 text-sm text-gray-300">
+                {STYLE_GUIDELINES[tipo]?.map((g) => (
+                  <li key={g}>{g}</li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        )}
+
         {/* Botón para Generar Entrenamiento con IA */}
-        <div className="text-center mb-8">
+        <div className="text-center my-8">
           <div className="bg-gray-900 border border-yellow-400/20 rounded-lg p-6">
             <h3 className="text-white text-xl font-semibold mb-4">
               Generar Entrenamiento Personalizado
             </h3>
             <p className="text-gray-400 mb-6">
               Basado en tu equipamiento: <span className="text-yellow-400 font-semibold">
-                {equipmentLevels[selectedEquipment].name}
+                {selectedEquipment === 'minimal'
+                  ? 'Equipamiento Mínimo'
+                  : selectedEquipment === 'basic' ? 'Equipamiento Básico' : 'Equipamiento Avanzado'}
               </span> y tipo de entrenamiento: <span className="text-yellow-400 font-semibold">
-                {selectedTrainingType === 'functional' ? 'Funcional' :
-                 selectedTrainingType === 'hiit' ? 'HIIT' : 'Fuerza'}
+                {selectedTrainingType === 'functional'
+                  ? 'Funcional'
+                  : selectedTrainingType === 'hiit' ? 'HIIT' : 'Fuerza'}
               </span>
             </p>
             <Button
-              onClick={() => {
-                // Opcional: si quieres reiniciar cuando el usuario cambia de selección:
-                // setShowIAPlan(false);
-                setShowIAPlan(true);
-              }}
-              className="bg-yellow-400 text-black hover:bg-yellow-300 px-8 py-3 text-lg font-semibold"
+              disabled={isGenerateDisabled}
+              onClick={() => setShowIAPlan(true)}
+              className="bg-yellow-400 text-black hover:bg-yellow-300 px-8 py-3 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Target className="w-5 h-5 mr-2" />
               Generar Mi Entrenamiento
             </Button>
+            {isGenerateDisabled && (
+              <div className="mt-4">
+                <Alert className="border-red-400/40 bg-red-500/10">
+                  <AlertTitle className="text-red-300">Faltan datos para generar tu plan</AlertTitle>
+                  <AlertDescription className="text-red-200/90">
+                    Para entregar la tabla de entrenamiento, completa:{' '}
+                    <span className="font-medium">
+                      {missingFields.join(', ')}
+                    </span>.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Render condicional (sustituye el bloque antiguo) */}
+        {/* Render condicional */}
         {showIAPlan ? (
-          // 👉 El nuevo player de la sesión de HOY
           <IAHomeTraining
             key={`${equipamiento}-${tipo}`}
             equipamiento={equipamiento}
             tipo={tipo}
             autoStart
+            onSessionComplete={loadStats} // <-- ¡LA MAGIA! Pasamos la función para refrescar
           />
         ) : (
-          // 👉 Tu contenido previo de selección / explicación / cards
-          // (deja aquí el grid con Mínimo/Básico/Avanzado, tabs Funcional/HIIT/Fuerza,
-          // y el botón "Generar Mi Entrenamiento")
-          <div>
-            {/* Entrenamiento Generado */}
-            {generatedWorkout && (
-              <Card className="bg-gray-900 border-yellow-400/20 mb-8">
-                <CardHeader>
-                  <CardTitle className="text-white text-xl">
-                    {generatedWorkout.titulo || 'Entrenamiento Personalizado'}
-                  </CardTitle>
-                  <CardDescription className="text-gray-400">
-                    {generatedWorkout.descripcion || 'Entrenamiento adaptado a tu equipamiento'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {/* Información del entrenamiento */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div className="text-center bg-gray-800 rounded-lg p-4">
-                      <Clock className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
-                      <div className="text-white font-semibold">{generatedWorkout.duracionTotal || '30-45 min'}</div>
-                      <div className="text-gray-400 text-sm">Duración</div>
-                    </div>
-                    <div className="text-center bg-gray-800 rounded-lg p-4">
-                      <Calendar className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
-                      <div className="text-white font-semibold">{generatedWorkout.frecuencia || '4-5 días/semana'}</div>
-                      <div className="text-gray-400 text-sm">Frecuencia</div>
-                    </div>
-                    <div className="text-center bg-gray-800 rounded-lg p-4">
-                      <Target className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
-                      <div className="text-white font-semibold">{generatedWorkout.enfoque || 'Fuerza funcional y movilidad'}</div>
-                      <div className="text-gray-400 text-sm">Enfoque</div>
-                    </div>
+          // Dejas tu contenido de selección / cards / etc.
+          generatedWorkout && (
+            <Card className="bg-gray-900 border-yellow-400/20 mb-8">
+              <CardHeader>
+                <CardTitle className="text-white text-xl">
+                  {generatedWorkout.titulo || 'Entrenamiento Personalizado'}
+                </CardTitle>
+                <CardDescription className="text-gray-400">
+                  {generatedWorkout.descripcion || 'Entrenamiento adaptado a tu equipamiento'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {/* Información del entrenamiento */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="text-center bg-gray-800 rounded-lg p-4">
+                    <Clock className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
+                    <div className="text-white font-semibold">{generatedWorkout.duracionTotal || '30-45 min'}</div>
+                    <div className="text-gray-400 text-sm">Duración</div>
                   </div>
+                  <div className="text-center bg-gray-800 rounded-lg p-4">
+                    <Calendar className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
+                    <div className="text-white font-semibold">{generatedWorkout.frecuencia || '4-5 días/semana'}</div>
+                    <div className="text-gray-400 text-sm">Frecuencia</div>
+                  </div>
+                  <div className="text-center bg-gray-800 rounded-lg p-4">
+                    <Target className="w-6 h-6 text-yellow-400 mx-auto mb-2" />
+                    <div className="text-white font-semibold">{generatedWorkout.enfoque || 'Fuerza funcional y movilidad'}</div>
+                    <div className="text-gray-400 text-sm">Enfoque</div>
+                  </div>
+                </div>
 
-                  {/* Lista de ejercicios */}
-                  <div className="mb-6">
-                    <h3 className="text-white font-semibold mb-4 flex items-center">
-                      <Play className="w-5 h-5 mr-2 text-green-400" />
-                      Ejercicios Principales:
-                    </h3>
-                    <div className="space-y-3">
-                      {generatedWorkout.ejercicios && generatedWorkout.ejercicios.map((ejercicio, idx) => (
-                        <div key={idx} className="flex items-center justify-between bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-black font-bold">
-                              {idx + 1}
-                            </div>
-                            <div>
-                              <h4 className="text-white font-semibold">{ejercicio.nombre}</h4>
-                              <p className="text-gray-400 text-sm">
-                                {ejercicio.series} series × {ejercicio.tipo === 'tiempo' ? `${ejercicio.duracion}s` : `${ejercicio.repeticiones} reps`}
-                              </p>
-                            </div>
+                {/* Lista de ejercicios */}
+                <div className="mb-6">
+                  <h3 className="text-white font-semibold mb-4 flex items-center">
+                    <Play className="w-5 h-5 mr-2 text-green-400" />
+                    Ejercicios Principales:
+                  </h3>
+                  <div className="space-y-3">
+                    {generatedWorkout.ejercicios?.map((ejercicio, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-black font-bold">
+                            {idx + 1}
                           </div>
-                          <Badge variant="outline" className="text-yellow-400 border-yellow-400">
-                            {ejercicio.descanso}s descanso
-                          </Badge>
+                          <div>
+                            <h4 className="text-white font-semibold">{ejercicio.nombre}</h4>
+                            <p className="text-gray-400 text-sm">
+                              {ejercicio.series} series × {ejercicio.tipo === 'tiempo' ? `${ejercicio.duracion}s` : `${ejercicio.repeticiones} reps`}
+                            </p>
+                          </div>
                         </div>
-                      ))}
-                    </div>
+                        <Badge variant="outline" className="text-yellow-400 border-yellow-400">
+                          {ejercicio.descanso}s descanso
+                        </Badge>
+                      </div>
+                    ))}
                   </div>
 
                   <div className="flex justify-center">
                     <Button
-                      onClick={startWorkout}
+                      onClick={() => {
+                        if (generatedWorkout?.ejercicios?.length) {
+                          setCurrentExerciseIndex(0)
+                          setIsExerciseModalOpen(true)
+                        }
+                      }}
                       className="bg-yellow-400 text-black hover:bg-yellow-300 px-8 py-3 text-lg font-semibold"
                     >
                       <Play className="w-5 h-5 mr-2" />
                       Comenzar Entrenamiento
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                </div>
+              </CardContent>
+            </Card>
+          )
         )}
 
-
-
-        {/* Estadísticas Personales del Usuario */}
+        {/* Estadísticas / Info (sin cambios estructurales) */}
         <Card className="bg-gray-900 border-yellow-400/20 mb-8">
           <CardHeader>
             <CardTitle className="text-white flex items-center">
               <TrendingUp className="w-5 h-5 mr-2 text-yellow-400" />
-              Tu Progreso en Casa - {userData.nombre}
+              Tu Progreso en Casa - {userData?.nombre}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-400">{homeTrainingStats.rutinasCompletadas}</div>
+                <div className="text-2xl font-bold text-green-400">
+                  {statsLoading ? '…' : stats.sessions_completed}
+                </div>
                 <div className="text-sm text-gray-400">Rutinas Completadas</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-400">{homeTrainingStats.tiempoTotalEntrenamiento}</div>
+                <div className="text-2xl font-bold text-blue-400">
+                  {statsLoading ? '…' : toHm(stats.total_duration_sec)}
+                </div>
                 <div className="text-sm text-gray-400">Tiempo Total</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-yellow-400">{entrenamientoCasa.nivelDificultad || 'Básico'}</div>
+                <div className="text-2xl font-bold text-yellow-400">
+                  {statsLoading ? '…' : (stats.nivel_actual?.charAt(0).toUpperCase() + stats.nivel_actual?.slice(1))}
+                </div>
                 <div className="text-sm text-gray-400">Nivel Actual</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-purple-400">{homeTrainingStats.duracionSesion}</div>
-                <div className="text-sm text-gray-400">Duración Sesión</div>
+                <div className="text-2xl font-bold text-purple-400">
+                  {statsLoading ? '…' : `${stats.streak_days} ${stats.streak_days === 1 ? 'día' : 'días'}`}
+                </div>
+                <div className="text-sm text-gray-400">Racha Actual</div>
               </div>
             </div>
 
-            {/* Información adicional del usuario */}
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="mt-6 grid grid-cols-1 gap-4">
               <div>
                 <h4 className="text-white font-semibold mb-2">Tu Espacio de Entrenamiento:</h4>
-                <p className="text-gray-300 text-sm">{entrenamientoCasa.espacioDisponible || 'No especificado'}</p>
-              </div>
-              <div>
-                <h4 className="text-white font-semibold mb-2">Horario Preferido:</h4>
-                <p className="text-gray-300 text-sm">{entrenamientoCasa.horarioPreferido || 'Flexible'}</p>
+                <p className="text-gray-300 text-sm">{entrenamientoCasa?.espacioDisponible || 'No especificado'}</p>
               </div>
             </div>
 
-            {/* Ejercicios favoritos del usuario */}
-            {entrenamientoCasa.ejerciciosFavoritos && entrenamientoCasa.ejerciciosFavoritos.length > 0 && (
+            {entrenamientoCasa?.ejerciciosFavoritos?.length > 0 && (
               <div className="mt-4">
                 <h4 className="text-white font-semibold mb-2">Tus Ejercicios Favoritos:</h4>
                 <div className="flex flex-wrap gap-2">
@@ -775,10 +566,6 @@ const HomeTrainingSection = () => {
             )}
           </CardContent>
         </Card>
-
-
-
-
 
         <div className="text-center">
           <Button
@@ -795,15 +582,24 @@ const HomeTrainingSection = () => {
           onClose={() => setIsEvaluationModalOpen(false)}
         />
 
-
-
         {/* Modal de Ejercicio Individual */}
         <WorkoutExerciseModal
           exercise={generatedWorkout?.ejercicios?.[currentExerciseIndex]}
           exerciseIndex={currentExerciseIndex}
           totalExercises={generatedWorkout?.ejercicios?.length || 0}
-          onNext={nextExercise}
-          onClose={closeExerciseModal}
+          onNext={() => {
+            if (currentExerciseIndex < (generatedWorkout?.ejercicios?.length || 0) - 1) {
+              setCurrentExerciseIndex((i) => i + 1)
+            } else {
+              setIsExerciseModalOpen(false)
+              setGeneratedWorkout(null)
+              alert('¡Entrenamiento completado! ¡Excelente trabajo!')
+            }
+          }}
+          onClose={() => {
+            setIsExerciseModalOpen(false)
+            setCurrentExerciseIndex(0)
+          }}
           isOpen={isExerciseModalOpen}
         />
       </div>

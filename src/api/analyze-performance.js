@@ -56,27 +56,29 @@ Responde en formato JSON:
     const content = j?.respuestaIA ? JSON.stringify(j.respuestaIA) : '{"shouldAdjust":false,"recommendation":"maintain","confidence":0.5,"suggestions":{}}'
     const analysis = JSON.parse(content)
     return analysis
-
   } catch (error) {
     console.error('Error in AI analysis:', error)
-    
+
     // Fallback logic if AI fails
     const fallbackAnalysis = {
       shouldAdjust: userFeedback === 'too_easy' || userFeedback === 'too_hard',
-      recommendation: userFeedback === 'too_easy' ? 'increase' : 
-                    userFeedback === 'too_hard' ? 'decrease' : 'maintain',
+      recommendation: userFeedback === 'too_easy'
+        ? 'increase'
+        : userFeedback === 'too_hard' ? 'decrease' : 'maintain',
       confidence: 0.6,
       suggestions: {
-        weight: userFeedback === 'too_easy' ? '+2.5kg' : 
-               userFeedback === 'too_hard' ? '-2.5kg' : '0kg',
-        reps: userFeedback === 'too_easy' ? '+1' : 
-              userFeedback === 'too_hard' ? '-1' : '0',
+        weight: userFeedback === 'too_easy'
+          ? '+2.5kg'
+          : userFeedback === 'too_hard' ? '-2.5kg' : '0kg',
+        reps: userFeedback === 'too_easy'
+          ? '+1'
+          : userFeedback === 'too_hard' ? '-1' : '0',
         sets: '0',
         rest: userFeedback === 'too_hard' ? '+30s' : '0s'
       },
       reasoning: 'Análisis basado en feedback directo del usuario (modo fallback)'
     }
-    
+
     return fallbackAnalysis
   }
 }
@@ -84,9 +86,9 @@ Responde en formato JSON:
 // Mock API endpoint function (since we can't create actual API routes in Vite)
 export const mockAnalyzePerformanceAPI = async (requestData) => {
   const { exercise, feedback, userProfile, methodology } = requestData
-  
+
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 1000))
-  
+
   return analyzePerformance(exercise, feedback, userProfile, methodology)
 }

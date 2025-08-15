@@ -1,10 +1,10 @@
 // db.js
-import pg from 'pg';
-import dotenv from 'dotenv';
+import pg from 'pg'
+import dotenv from 'dotenv'
 
-dotenv.config();
+dotenv.config()
 
-const { Pool } = pg;
+const { Pool } = pg
 
 /** Decide configuración según variables de entorno */
 const getDatabaseConfig = () => {
@@ -13,8 +13,8 @@ const getDatabaseConfig = () => {
     return {
       connectionString: process.env.DATABASE_URL,
       ssl: { rejectUnauthorized: false },
-      application_name: 'mindfit-backend-render',
-    };
+      application_name: 'mindfit-backend-render'
+    }
   }
 
   // 2) Si DB_ENVIRONMENT=render con campos separados
@@ -26,8 +26,8 @@ const getDatabaseConfig = () => {
       password: process.env.RENDER_PGPASSWORD,
       port: Number(process.env.RENDER_PGPORT || 5432),
       ssl: { rejectUnauthorized: false },
-      application_name: 'mindfit-backend-render',
-    };
+      application_name: 'mindfit-backend-render'
+    }
   }
 
   // 3) Local por defecto
@@ -37,23 +37,23 @@ const getDatabaseConfig = () => {
     database: process.env.PGDATABASE || 'mindfit',
     password: process.env.PGPASSWORD || 'postgres',
     port: Number(process.env.PGPORT || 5432),
-    application_name: 'mindfit-backend-local',
-  };
-};
+    application_name: 'mindfit-backend-local'
+  }
+}
 
-const dbConfig = getDatabaseConfig();
-const pool = new Pool(dbConfig);
+const dbConfig = getDatabaseConfig()
+const pool = new Pool(dbConfig)
 
 /** Forzar search_path a public para evitar confusiones con otros esquemas */
 pool.on('connect', (client) => {
   client
-    .query("SET search_path TO public")
-    .catch((e) => console.error('❌ No se pudo fijar search_path=public:', e.message));
-});
+    .query('SET search_path TO public')
+    .catch((e) => console.error('❌ No se pudo fijar search_path=public:', e.message))
+})
 
 /** Log de errores del pool (evita procesos colgados) */
 pool.on('error', (err) => {
-  console.error('🛑 PG Pool error:', err);
+  console.error('🛑 PG Pool error:', err)
 });
 
 /** Chequeo inmediato al arrancar: imprime BD/usuario/IP y search_path */
@@ -66,48 +66,78 @@ pool.on('error', (err) => {
         inet_server_addr()   AS server_ip,
         inet_client_addr()   AS client_ip,
         current_setting('search_path') AS search_path
-    `);
+    `)
 
-    const info = rows[0];
+    const info = rows[0]
     const mode =
-      dbConfig.application_name?.includes('render') ? 'render' : 'local';
+      dbConfig.application_name?.includes('render') ? 'render' : 'local'
 
     console.log(
       `✅ PostgreSQL conectado (${mode}) → db=${info.db} user=${info.usr} server_ip=${info.server_ip} client_ip=${info.client_ip} search_path=${info.search_path}`
-    );
+    )
   } catch (e) {
-    console.error('❌ Error en DB CHECK:', e.message);
+    console.error('❌ Error en DB CHECK:', e.message)
   }
-})();
+})()
 
 /** Comprobación explícita (si quieres llamarla desde server.js) */
 export const testConnection = async () => {
   try {
-    await pool.query('SELECT 1');
-    return true;
+    await pool.query('SELECT 1')
+    return true
   } catch (e) {
-    console.error('❌ Error conectando a PostgreSQL:', e.message);
-    return false;
+    console.error('❌ Error conectando a PostgreSQL:', e.message)
+    return false
   }
-};
+}
 
 /** Helper para queries con log de duración y filas */
 export const query = async (text, params) => {
-  const start = Date.now();
+  const start = Date.now()
   try {
-    const res = await pool.query(text, params);
-    const duration = Date.now() - start;
+    const res = await pool.query(text, params)
+    const duration = Date.now() - start
     console.log('✅ Executed query', {
       text,
       duration,
-      rows: res.rowCount,
-    });
-    return res;
+      rows: res.rowCount
+    })
+    return res
   } catch (error) {
-    console.error('❌ Database query error:', error.message);
-    throw error;
+    console.error('❌ Database query error:', error.message)
+    throw error
   }
 };
 
-export default pool;
-export { pool };
+// --- DEBUG: introspección de base de datos al arrancar ---
+(async function logDbIntrospection () {
+  try {
+    const basic = await pool.query(`
+      SELECT
+        current_database()   AS db,
+        current_schema()     AS schema,
+        current_setting('search_path') AS search_path
+    `)
+    console.log('🔎 DB basic:', basic.rows[0])
+
+    const cols = await pool.query(`
+      SELECT column_name, data_type, is_nullable
+      FROM information_schema.columns
+      WHERE table_name = 'workout_sessions'
+      ORDER BY ordinal_position
+    `)
+    console.log('🔎 workout_sessions columns (desde backend):', cols.rows)
+
+    const ex = await pool.query(`
+      SELECT COUNT(*) AS total
+      FROM information_schema.tables
+      WHERE table_name = 'workout_session_exercises'
+    `)
+    console.log('🔎 workout_session_exercises existe?:', ex.rows[0])
+  } catch (e) {
+    console.error('❌ Introspección DB falló:', e)
+  }
+})()
+
+export default pool
+export { pool }

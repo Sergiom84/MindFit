@@ -1,9 +1,9 @@
-import React from 'react';
+import React from 'react'
 
 // 1. Importa las tres tarjetas que acabamos de crear
-import { BasicInfoCard } from './BasicInfoCard';
-import { ExperienceCard } from './ExperienceCard';
-import { PreferencesCard } from './PreferencesCard';
+import { BasicInfoCard } from './BasicInfoCard'
+import { ExperienceCard } from './ExperienceCard'
+import { PreferencesCard } from './PreferencesCard'
 
 // 2. Este componente recibe todas las props y las pasa hacia abajo
 export const BasicInfoTab = (props) => {
@@ -16,5 +16,5 @@ export const BasicInfoTab = (props) => {
       <ExperienceCard {...props} />
       <PreferencesCard {...props} />
     </div>
-  );
-};
+  )
+}

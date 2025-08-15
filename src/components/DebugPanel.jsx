@@ -1,36 +1,36 @@
-import { useRef, useState } from 'react';
+import { useRef, useState } from 'react'
 
-export default function DebugPanel() {
-  const [logs, setLogs] = useState([]);
-  const logRef = useRef([]);
+export default function DebugPanel () {
+  const [logs, setLogs] = useState([])
+  const logRef = useRef([])
 
   // Añadir log
   const addLog = (text) => {
-    setLogs(l => [...l, `[${new Date().toLocaleTimeString()}] ${text}`]);
-    logRef.current.push(`[${new Date().toLocaleTimeString()}] ${text}`);
+    setLogs(l => [...l, `[${new Date().toLocaleTimeString()}] ${text}`])
+    logRef.current.push(`[${new Date().toLocaleTimeString()}] ${text}`)
     // También a consola
-    console.log(`[DEBUG] ${text}`);
-  };
+    console.log(`[DEBUG] ${text}`)
+  }
 
   // Limpiar logs
   const clearLogs = () => {
-    setLogs([]);
-    logRef.current = [];
-  };
+    setLogs([])
+    logRef.current = []
+  }
 
   // Exportar logs
   const exportLogs = () => {
-    const blob = new Blob([logRef.current.join('\n')], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `mindfit-debug-${Date.now()}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+    const blob = new Blob([logRef.current.join('\n')], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `mindfit-debug-${Date.now()}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   // Exponer función global para debug rápido (llamar window.debugLog('texto'))
-  window.debugLog = addLog;
+  window.debugLog = addLog
 
   return (
     <div className="fixed right-0 top-0 z-50 w-80 h-screen bg-black/90 text-white border-l border-yellow-400 flex flex-col">
@@ -45,5 +45,5 @@ export default function DebugPanel() {
         {logs.map((l, i) => <div key={i}>{l}</div>)}
       </div>
     </div>
-  );
+  )
 }

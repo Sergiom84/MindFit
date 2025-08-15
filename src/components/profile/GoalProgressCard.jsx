@@ -1,13 +1,13 @@
-import React from 'react';
-import { Button } from "@/components/ui/button";
+import React from 'react'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Activity, Save, Pencil } from "lucide-react";
-import { EditableField } from "../EditableField";
+  CardTitle
+} from '@/components/ui/card'
+import { Activity, Save, Pencil } from 'lucide-react'
+import { EditableField } from '../EditableField'
 
 export const GoalProgressCard = ({
   userProfile,
@@ -16,9 +16,9 @@ export const GoalProgressCard = ({
   startEdit,
   handleSave,
   handleCancel,
-  handleInputChange,
+  handleInputChange
 }) => {
-  const isEditing = editingSection === "goalProgress";
+  const isEditing = editingSection === 'goalProgress'
 
   return (
     <Card className="bg-gray-900 border-yellow-400/20">
@@ -28,7 +28,8 @@ export const GoalProgressCard = ({
             <Activity className="mr-2 text-yellow-400" /> Seguimiento de Progreso
           </div>
           <div className="flex items-center gap-2">
-            {isEditing ? (
+            {isEditing
+              ? (
               <>
                 <Button
                   onClick={handleSave}
@@ -47,22 +48,23 @@ export const GoalProgressCard = ({
                   Cancelar
                 </Button>
               </>
-            ) : (
+                )
+              : (
               <button
                 onClick={() =>
-                  startEdit("goalProgress", {
+                  startEdit('goalProgress', {
                     fecha_inicio_objetivo: userProfile.fecha_inicio_objetivo,
                     fecha_meta_objetivo: userProfile.fecha_meta_objetivo,
-                    notas_progreso: userProfile.notas_progreso,
+                    notas_progreso: userProfile.notas_progreso
                   })
                 }
-                disabled={editingSection && editingSection !== "goalProgress"}
+                disabled={editingSection && editingSection !== 'goalProgress'}
                 className="p-2 text-gray-400 hover:text-yellow-400 transition-colors"
                 title="Editar seguimiento de progreso"
               >
                 <Pencil className="w-4 h-4" />
               </button>
-            )}
+                )}
           </div>
         </CardTitle>
       </CardHeader>
@@ -131,5 +133,5 @@ export const GoalProgressCard = ({
         )}
       </CardContent>
     </Card>
-  );
-};
+  )
+}

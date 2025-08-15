@@ -2,24 +2,24 @@ import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Play, 
-  Pause, 
-  SkipForward, 
-  Clock, 
-  Target, 
+import {
+  Play,
+  Pause,
+  SkipForward,
+  Clock,
+  Target,
   Calendar,
   CheckCircle,
   RotateCcw
 } from 'lucide-react'
 
-const WorkoutExerciseModal = ({ 
-  exercise, 
-  exerciseIndex, 
-  totalExercises, 
-  onNext, 
-  onClose, 
-  isOpen 
+const WorkoutExerciseModal = ({
+  exercise,
+  exerciseIndex,
+  totalExercises,
+  onNext,
+  onClose,
+  isOpen
 }) => {
   const [currentPhase, setCurrentPhase] = useState('info') // 'info', 'countdown', 'exercise', 'rest'
   const [timeLeft, setTimeLeft] = useState(0)
@@ -38,12 +38,12 @@ const WorkoutExerciseModal = ({
 
   // Timer effect
   useEffect(() => {
-    let interval = null;
-    
+    let interval = null
+
     if (isActive && timeLeft > 0) {
       interval = setInterval(() => {
-        setTimeLeft(timeLeft - 1);
-      }, 1000);
+        setTimeLeft(timeLeft - 1)
+      }, 1000)
     } else if (timeLeft === 0 && isActive) {
       // Timer finished
       if (currentPhase === 'countdown') {
@@ -78,8 +78,8 @@ const WorkoutExerciseModal = ({
       }
     }
 
-    return () => clearInterval(interval);
-  }, [isActive, timeLeft, currentPhase, currentSet, exercise]);
+    return () => clearInterval(interval)
+  }, [isActive, timeLeft, currentPhase, currentSet, exercise])
 
   const startCountdown = () => {
     setCurrentPhase('countdown')
@@ -167,7 +167,7 @@ const WorkoutExerciseModal = ({
               <div className="bg-gray-800 rounded-lg p-6 mb-6">
                 <h3 className="text-white font-semibold mb-3">Descripción:</h3>
                 <p className="text-gray-300 mb-4">{exercise.descripcion}</p>
-                
+
                 {exercise.consejos && exercise.consejos.length > 0 && (
                   <>
                     <h4 className="text-white font-semibold mb-2">Consejos de Técnica:</h4>
@@ -213,15 +213,17 @@ const WorkoutExerciseModal = ({
                 Serie {currentSet} de {exercise.series}
               </h3>
               <h4 className="text-yellow-400 text-xl mb-6">{exercise.nombre}</h4>
-              
-              {exercise.tipo === 'tiempo' ? (
+
+              {exercise.tipo === 'tiempo'
+                ? (
                 <>
                   <div className="text-6xl font-bold text-green-400 mb-4">
                     {formatTime(timeLeft)}
                   </div>
                   <p className="text-gray-400">¡Mantén la posición!</p>
                 </>
-              ) : (
+                  )
+                : (
                 <>
                   <div className="text-4xl font-bold text-green-400 mb-4">
                     {exercise.repeticiones} repeticiones
@@ -235,7 +237,7 @@ const WorkoutExerciseModal = ({
                     Serie Completada
                   </Button>
                 </>
-              )}
+                  )}
             </div>
           )}
 
@@ -262,9 +264,10 @@ const WorkoutExerciseModal = ({
               <p className="text-gray-400 mb-6">
                 Has completado todas las series de {exercise.nombre}
               </p>
-              
+
               <div className="flex justify-center space-x-4">
-                {exerciseIndex < totalExercises - 1 ? (
+                {exerciseIndex < totalExercises - 1
+                  ? (
                   <Button
                     onClick={nextExercise}
                     className="bg-yellow-400 text-black hover:bg-yellow-300 px-6 py-3"
@@ -272,7 +275,8 @@ const WorkoutExerciseModal = ({
                     <SkipForward className="w-5 h-5 mr-2" />
                     Siguiente Ejercicio
                   </Button>
-                ) : (
+                    )
+                  : (
                   <Button
                     onClick={onClose}
                     className="bg-green-500 text-white hover:bg-green-400 px-6 py-3"
@@ -280,7 +284,7 @@ const WorkoutExerciseModal = ({
                     <CheckCircle className="w-5 h-5 mr-2" />
                     Finalizar Entrenamiento
                   </Button>
-                )}
+                    )}
               </div>
             </div>
           )}

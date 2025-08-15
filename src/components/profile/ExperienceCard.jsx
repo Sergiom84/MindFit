@@ -1,16 +1,16 @@
-import React from 'react';
-import { Button } from "@/components/ui/button";
+import React from 'react'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Save, Pencil } from "lucide-react";
+  CardTitle
+} from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Save, Pencil } from 'lucide-react'
 
 // De nuevo, asumimos que 'EditableField' es un componente que podemos importar.
-import { EditableField } from "../EditableField";
+import { EditableField } from '../EditableField'
 
 export const ExperienceCard = ({
   userProfile,
@@ -20,10 +20,10 @@ export const ExperienceCard = ({
   handleSave,
   handleCancel,
   handleInputChange,
-  getMetodologiaLabel,
+  getMetodologiaLabel
 }) => {
   // La lógica de edición ahora se comprueba con 'experience'
-  const isEditing = editingSection === "experience";
+  const isEditing = editingSection === 'experience'
 
   return (
     <Card className="bg-gray-900 border-yellow-400/20">
@@ -53,15 +53,15 @@ export const ExperienceCard = ({
             ) : (
               <button
                 onClick={() =>
-                  startEdit("experience", {
+                  startEdit('experience', {
                     // Campos específicos de esta tarjeta
                     nivel: userProfile.nivel,
                     años_entrenando: userProfile.años_entrenando,
                     metodologia_preferida: userProfile.metodologia_preferida,
-                    frecuencia_semanal: userProfile.frecuencia_semanal,
+                    frecuencia_semanal: userProfile.frecuencia_semanal
                   })
                 }
-                disabled={editingSection && editingSection !== "experience"}
+                disabled={editingSection && editingSection !== 'experience'}
                 className="p-2 text-gray-400 hover:text-yellow-400 transition-colors"
                 title="Editar experiencia en entrenamiento"
               >
@@ -83,9 +83,9 @@ export const ExperienceCard = ({
               editedData={editedData}
               onInputChange={handleInputChange}
               options={[
-                { value: "principiante", label: "Principiante" },
-                { value: "intermedio", label: "Intermedio" },
-                { value: "avanzado", label: "Avanzado" },
+                { value: 'principiante', label: 'Principiante' },
+                { value: 'intermedio', label: 'Intermedio' },
+                { value: 'avanzado', label: 'Avanzado' }
               ]}
             />
           ) : (
@@ -94,14 +94,14 @@ export const ExperienceCard = ({
               <label className="text-gray-400 block mb-2">Nivel Actual</label>
               <Badge
                 className={`${
-                  userProfile.nivel === "principiante"
-                    ? "bg-green-400 text-black"
-                    : userProfile.nivel === "intermedio"
-                    ? "bg-yellow-400 text-black"
-                    : "bg-red-400 text-black"
+                  userProfile.nivel === 'principiante'
+                    ? 'bg-green-400 text-black'
+                    : userProfile.nivel === 'intermedio'
+                    ? 'bg-yellow-400 text-black'
+                    : 'bg-red-400 text-black'
                 }`}
               >
-                {userProfile.nivel || "No especificado"}
+                {userProfile.nivel || 'No especificado'}
               </Badge>
             </div>
           )}
@@ -125,13 +125,13 @@ export const ExperienceCard = ({
             editedData={editedData}
             onInputChange={handleInputChange}
             options={[
-              { value: "powerlifting", label: "Powerlifting" },
-              { value: "bodybuilding", label: "Bodybuilding" },
-              { value: "crossfit", label: "CrossFit" },
-              { value: "calistenia", label: "Calistenia" },
-              { value: "entrenamiento_casa", label: "Entrenamiento en Casa" },
-              { value: "heavy_duty", label: "Heavy Duty" },
-              { value: "funcional", label: "Entrenamiento Funcional" },
+              { value: 'powerlifting', label: 'Powerlifting' },
+              { value: 'bodybuilding', label: 'Bodybuilding' },
+              { value: 'crossfit', label: 'CrossFit' },
+              { value: 'calistenia', label: 'Calistenia' },
+              { value: 'entrenamiento_casa', label: 'Entrenamiento en Casa' },
+              { value: 'heavy_duty', label: 'Heavy Duty' },
+              { value: 'funcional', label: 'Entrenamiento Funcional' }
             ]}
           />
           <EditableField
@@ -147,5 +147,5 @@ export const ExperienceCard = ({
         </div>
       </CardContent>
     </Card>
-  );
-};
+  )
+}

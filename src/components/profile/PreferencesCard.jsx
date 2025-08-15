@@ -1,13 +1,13 @@
-import React from 'react';
-import { Button } from "@/components/ui/button";
+import React from 'react'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Save, Pencil } from "lucide-react";
-import { EditableField } from "../EditableField";
+  CardTitle
+} from '@/components/ui/card'
+import { Save, Pencil } from 'lucide-react'
+import { EditableField } from '../EditableField'
 
 export const PreferencesCard = ({
   userProfile,
@@ -24,9 +24,9 @@ export const PreferencesCard = ({
   suplementacionList,
   alimentosList,
   suplementacionObjList,
-  alimentosObjList,
+  alimentosObjList
 }) => {
-  const isEditing = editingSection === "preferences";
+  const isEditing = editingSection === 'preferences'
 
   return (
     <Card className="bg-gray-900 border-yellow-400/20">
@@ -56,16 +56,16 @@ export const PreferencesCard = ({
             ) : (
               <button
                 onClick={() =>
-                  startEdit("preferences", {
+                  startEdit('preferences', {
                     enfoque: userProfile.enfoque,
                     horario_preferido: userProfile.horario_preferido,
                     comidas_diarias: userProfile.comidas_diarias,
                     // Es importante pasar una copia de las listas
                     suplementacion: [...suplementacionList],
-                    alimentos_excluidos: [...alimentosList],
+                    alimentos_excluidos: [...alimentosList]
                   })
                 }
-                disabled={editingSection && editingSection !== "preferences"}
+                disabled={editingSection && editingSection !== 'preferences'}
                 className="p-2 text-gray-400 hover:text-yellow-400 transition-colors"
                 title="Editar preferencias de entrenamiento"
               >
@@ -138,5 +138,5 @@ export const PreferencesCard = ({
         </div>
       </CardContent>
     </Card>
-  );
-};
+  )
+}

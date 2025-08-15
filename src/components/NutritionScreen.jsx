@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useUserContext } from '../contexts/UserContext';
-import { generateNutritionPlan } from '../api/nutrition-ai';
+  CardDescription
+} from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useUserContext } from '../contexts/UserContext'
+import { generateNutritionPlan } from '../api/nutrition-ai'
 import {
   BarChart3,
   CheckCircle,
@@ -17,35 +17,35 @@ import {
   ShoppingCart,
   Utensils,
   Plus,
-  Minus,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+  Minus
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 const NutritionScreen = () => {
-  const [activeNutritionTab, setActiveNutritionTab] = useState('overview');
-  const [selectedMealPlan, setSelectedMealPlan] = useState('maintenance');
-  const [mealsPerDay, setMealsPerDay] = useState(4);
-  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
-  const [generatedPlan, setGeneratedPlan] = useState(null);
-  const { userData } = useUserContext();
+  const [activeNutritionTab, setActiveNutritionTab] = useState('overview')
+  const [selectedMealPlan, setSelectedMealPlan] = useState('maintenance')
+  const [mealsPerDay, setMealsPerDay] = useState(4)
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false)
+  const [generatedPlan, setGeneratedPlan] = useState(null)
+  const { userData } = useUserContext()
 
   const mealPlans = [
     {
       id: 'deficit',
       name: 'Déficit Calórico',
-      description: 'Para perder grasa manteniendo músculo',
+      description: 'Para perder grasa manteniendo músculo'
     },
     {
       id: 'maintenance',
       name: 'Mantenimiento',
-      description: 'Equilibrio energético para mantener peso',
+      description: 'Equilibrio energético para mantener peso'
     },
     {
       id: 'surplus',
       name: 'Superávit',
-      description: 'Aumento de masa muscular con más calorías',
-    },
-  ];
+      description: 'Aumento de masa muscular con más calorías'
+    }
+  ]
 
   const sampleMeals = [
     {
@@ -90,48 +90,48 @@ const NutritionScreen = () => {
         { name: 'Aguacate (50g)', calories: 100 }
       ]
     }
-  ];
-   
+  ]
+
   // Usar datos dinámicos del usuario actual
-  const nutricionUsuario = userData.nutricion || {};
+  const nutricionUsuario = userData.nutricion || {}
 
   // Calcular datos dinámicos basados en el usuario
   const calcularMacros = () => {
-    const calorias = nutricionUsuario.calorias || 2000;
-    const macros = nutricionUsuario.distribucionMacros || { proteinas: 25, carbohidratos: 50, grasas: 25 };
-    
+    const calorias = nutricionUsuario.calorias || 2000
+    const macros = nutricionUsuario.distribucionMacros || { proteinas: 25, carbohidratos: 50, grasas: 25 }
+
     return {
-      protein: { 
-        current: Math.round((calorias * macros.proteinas / 100) / 4), 
-        target: Math.round((calorias * macros.proteinas / 100) / 4 * 1.1), 
+      protein: {
+        current: Math.round((calorias * macros.proteinas / 100) / 4),
+        target: Math.round((calorias * macros.proteinas / 100) / 4 * 1.1),
         percentage: Math.round(Math.random() * 20 + 80) // Simular adherencia
       },
-      carbs: { 
-        current: Math.round((calorias * macros.carbohidratos / 100) / 4), 
-        target: Math.round((calorias * macros.carbohidratos / 100) / 4 * 1.1), 
+      carbs: {
+        current: Math.round((calorias * macros.carbohidratos / 100) / 4),
+        target: Math.round((calorias * macros.carbohidratos / 100) / 4 * 1.1),
         percentage: Math.round(Math.random() * 20 + 80)
       },
-      fats: { 
-        current: Math.round((calorias * macros.grasas / 100) / 9), 
-        target: Math.round((calorias * macros.grasas / 100) / 9 * 1.1), 
+      fats: {
+        current: Math.round((calorias * macros.grasas / 100) / 9),
+        target: Math.round((calorias * macros.grasas / 100) / 9 * 1.1),
         percentage: Math.round(Math.random() * 20 + 80)
       }
-    };
-  };
+    }
+  }
 
   const getSupplementsData = () => {
-    const suplementos = nutricionUsuario.suplementos || [];
+    const suplementos = nutricionUsuario.suplementos || []
     return suplementos.map(sup => ({
       name: sup.nombre,
       dosage: sup.dosis,
       timing: sup.momento,
       benefits: sup.beneficios
-    }));
-  };
+    }))
+  }
 
   const generatePersonalizedPlan = async () => {
-    setIsGeneratingPlan(true);
-    
+    setIsGeneratingPlan(true)
+
     try {
       // Preparar datos del usuario para la IA
       const userProfile = {
@@ -147,41 +147,40 @@ const NutritionScreen = () => {
         rutinaActual: userData.rutinaActual || 'No seleccionada actualmente',
         tipoDieta: selectedMealPlan,
         comidasPorDia: mealsPerDay
-      };
+      }
 
-      console.log('Generando plan nutricional para:', userProfile);
+      console.log('Generando plan nutricional para:', userProfile)
 
-      const planGenerado = await generateNutritionPlan(userProfile);
-      
-      setGeneratedPlan(planGenerado);
-      
+      const planGenerado = await generateNutritionPlan(userProfile)
+
+      setGeneratedPlan(planGenerado)
+
       // Actualizar las comidas mostradas con el plan generado
       if (planGenerado.comidas) {
         // Aquí podrías actualizar el estado de sampleMeals con las nuevas comidas
-        console.log('Plan nutricional generado:', planGenerado);
+        console.log('Plan nutricional generado:', planGenerado)
       }
-      
     } catch (error) {
-      console.error('Error al generar plan:', error);
-      alert('Error al generar el plan nutricional. Por favor, intenta de nuevo.');
+      console.error('Error al generar plan:', error)
+      alert('Error al generar el plan nutricional. Por favor, intenta de nuevo.')
     } finally {
-      setIsGeneratingPlan(false);
+      setIsGeneratingPlan(false)
     }
-  };
- 
-   const nutritionData = {
-     dailyCalories: nutricionUsuario.calorias || 2000,
-     targetCalories: (nutricionUsuario.calorias || 2000) + 50,
-     macros: calcularMacros(),
-     supplements: getSupplementsData()
-   };
- 
-   return (
+  }
+
+  const nutritionData = {
+    dailyCalories: nutricionUsuario.calorias || 2000,
+    targetCalories: (nutricionUsuario.calorias || 2000) + 50,
+    macros: calcularMacros(),
+    supplements: getSupplementsData()
+  }
+
+  return (
      <div className="min-h-screen bg-black text-white p-6 pt-20 pb-24">
        <h1 className="text-3xl font-bold mb-6 text-yellow-400">
          Nutrición IA - {userData.nombre}
        </h1>
- 
+
        {/* Información general del usuario */}
        <Card className="bg-gray-900 border-yellow-400/20 mb-6">
          <CardContent className="p-4">
@@ -205,7 +204,7 @@ const NutritionScreen = () => {
            </div>
          </CardContent>
        </Card>
- 
+
        <Tabs value={activeNutritionTab} onValueChange={setActiveNutritionTab} className="space-y-6">
         <TabsList className="w-full bg-gray-800 overflow-x-auto whitespace-nowrap rounded-lg no-scrollbar">
            <TabsTrigger value="overview" className="px-4 shrink-0 data-[state=active]:bg-yellow-400 data-[state=active]:text-black">
@@ -221,7 +220,7 @@ const NutritionScreen = () => {
              Suplementos
            </TabsTrigger>
          </TabsList>
- 
+
          <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card className="bg-gray-900 border-yellow-400/20">
@@ -339,22 +338,24 @@ const NutritionScreen = () => {
                   </div>
                 ))}
               </div>
-              
+
               {/* Botón Generar Plan Personalizado */}
               <div className="text-center">
-                <Button 
+                <Button
                   onClick={generatePersonalizedPlan}
                   disabled={isGeneratingPlan}
                   className="bg-yellow-400 text-black hover:bg-yellow-300 px-8 py-2 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isGeneratingPlan ? (
+                  {isGeneratingPlan
+                    ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
                       Generando Plan...
                     </>
-                  ) : (
-                    'Generar Plan Personalizado'
-                  )}
+                      )
+                    : (
+                        'Generar Plan Personalizado'
+                      )}
                 </Button>
                 <p className="text-gray-400 text-sm mt-2">
                   Plan basado en tu perfil y tipo de dieta seleccionada: <span className="text-yellow-400 font-medium">{mealPlans.find(p => p.id === selectedMealPlan)?.name}</span>
@@ -394,7 +395,7 @@ const NutritionScreen = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   {generatedPlan.comidas?.map((meal, idx) => (
                     <div key={idx} className="bg-gray-800 rounded-lg border border-gray-700">
                       <div className="flex items-center justify-between p-4 border-b border-gray-700">
@@ -402,15 +403,15 @@ const NutritionScreen = () => {
                           <h3 className="text-white text-lg font-semibold">{meal.nombre}</h3>
                           <p className="text-gray-400 text-sm">{meal.hora} • {meal.totalCalorias} kcal</p>
                         </div>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           className="bg-transparent border-yellow-400 text-yellow-400 hover:bg-yellow-400 hover:text-black"
                         >
                           Personalizar
                         </Button>
                       </div>
-                      
+
                       <div className="p-4">
                         <div className="grid grid-cols-1 gap-2">
                           {meal.alimentos?.map((food, foodIdx) => (
@@ -423,7 +424,7 @@ const NutritionScreen = () => {
                       </div>
                     </div>
                   ))}
-                  
+
                   {generatedPlan.notas && (
                     <div className="mt-4 p-4 bg-blue-900/20 border border-blue-400/20 rounded-lg">
                       <h4 className="text-blue-400 font-semibold mb-2">Notas del Nutricionista IA</h4>
@@ -441,15 +442,15 @@ const NutritionScreen = () => {
                           <h3 className="text-white text-lg font-semibold">{meal.name}</h3>
                           <p className="text-gray-400 text-sm">{meal.time} • {meal.totalCalories} kcal</p>
                         </div>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           className="bg-transparent border-yellow-400 text-yellow-400 hover:bg-yellow-400 hover:text-black"
                         >
                           Personalizar
                         </Button>
                       </div>
-                      
+
                       <div className="p-4">
                         <div className="grid grid-cols-1 gap-2">
                           {meal.foods.map((food, foodIdx) => (
@@ -467,7 +468,7 @@ const NutritionScreen = () => {
             </CardContent>
           </Card>
          </TabsContent>
- 
+
          <TabsContent value="tracking" className="space-y-6">
            <Card className="bg-gray-900 border-yellow-400/20">
              <CardHeader>
@@ -488,7 +489,7 @@ const NutritionScreen = () => {
                      <p className="text-gray-400 text-sm">adherencia promedio</p>
                    </div>
                  </div>
-                 
+
                  {/* Gráfico de macros */}
                  <div className="space-y-3">
                    <h3 className="text-lg font-semibold text-white">Progreso de Macros Hoy</h3>
@@ -499,7 +500,7 @@ const NutritionScreen = () => {
                          <span className="text-yellow-400">{macro.current}g / {macro.target}g</span>
                        </div>
                        <div className="w-full bg-gray-700 rounded-full h-2">
-                         <div 
+                         <div
                            className={`h-2 rounded-full ${key === 'protein' ? 'bg-blue-400' : key === 'carbs' ? 'bg-green-400' : 'bg-purple-400'}`}
                            style={{ width: `${macro.percentage}%` }}
                          ></div>
@@ -535,7 +536,7 @@ const NutritionScreen = () => {
                    </p>
                    <p className="text-yellow-400 text-sm">Post-Entreno</p>
                  </div>
-                 
+
                  <div className="p-4 bg-gray-800 rounded-lg">
                    <div className="flex items-center justify-between mb-2">
                      <h4 className="font-semibold text-white">Creatina</h4>
@@ -546,7 +547,7 @@ const NutritionScreen = () => {
                    </p>
                    <p className="text-yellow-400 text-sm">Cualquier momento</p>
                  </div>
-                 
+
                  <div className="p-4 bg-gray-800 rounded-lg">
                    <div className="flex items-center justify-between mb-2">
                      <h4 className="font-semibold text-white">Omega-3</h4>
@@ -557,7 +558,7 @@ const NutritionScreen = () => {
                    </p>
                    <p className="text-yellow-400 text-sm">Con comidas</p>
                  </div>
-                 
+
                  <div className="p-4 bg-gray-800 rounded-lg">
                    <div className="flex items-center justify-between mb-2">
                      <h4 className="font-semibold text-white">Multivitamínico</h4>
@@ -569,7 +570,7 @@ const NutritionScreen = () => {
                    <p className="text-yellow-400 text-sm">Desayuno</p>
                  </div>
                </div>
-               
+
                <Button className="mt-4 bg-yellow-400 text-black hover:bg-yellow-300 w-full">
                  <ShoppingCart className="w-4 h-4 mr-2" />
                  Ver Tienda de Suplementos
@@ -579,7 +580,7 @@ const NutritionScreen = () => {
          </TabsContent>
        </Tabs>
      </div>
-   );
- };
+  )
+}
 
- export default NutritionScreen;
+export default NutritionScreen

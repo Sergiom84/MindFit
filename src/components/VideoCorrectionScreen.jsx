@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useUserContext } from '../contexts/UserContext';
-import PoseCamera from './PoseCamera';
-import { 
-  Video, 
-  Brain, 
+import React, { useState, useEffect } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useUserContext } from '../contexts/UserContext'
+import PoseCamera from './PoseCamera'
+import {
+  Video,
+  Brain,
   Target,
   Activity,
   TrendingUp,
@@ -16,18 +16,18 @@ import {
   CheckCircle,
   Settings,
   Zap
-} from 'lucide-react';
+} from 'lucide-react'
 
 const VideoCorrectionScreen = () => {
-  const [activeTab, setActiveTab] = useState('camera');
-  const [selectedExercise, setSelectedExercise] = useState('Sentadilla');
-  const [sessionHistory, setSessionHistory] = useState([]);
+  const [activeTab, setActiveTab] = useState('camera')
+  const [selectedExercise, setSelectedExercise] = useState('Sentadilla')
+  const [sessionHistory, setSessionHistory] = useState([])
   const [aiSettings, setAiSettings] = useState({
     sensitivity: 'medium',
     feedback_type: 'visual_audio',
     analysis_frequency: 10
-  });
-  const { userData } = useUserContext();
+  })
+  const { userData } = useUserContext()
 
   // Ejercicios disponibles basados en el perfil del usuario
   const availableExercises = [
@@ -37,13 +37,13 @@ const VideoCorrectionScreen = () => {
     'Press Militar',
     'Remo con Barra',
     'Dominadas'
-  ];
+  ]
 
   // Manejar datos de pose del componente PoseCamera
   const handlePoseData = (poseData) => {
     // Aquí puedes procesar los datos de pose en tiempo real
-    console.log('Pose data received:', poseData);
-  };
+    console.log('Pose data received:', poseData)
+  }
 
   // Manejar feedback de IA
   const handleAIFeedback = (feedback) => {
@@ -51,12 +51,12 @@ const VideoCorrectionScreen = () => {
       id: Date.now(),
       exercise: selectedExercise,
       timestamp: new Date().toISOString(),
-      feedback: feedback,
+      feedback,
       user: userData.nombre
-    };
-    
-    setSessionHistory(prev => [newSession, ...prev.slice(0, 9)]); // Mantener últimas 10 sesiones
-  };
+    }
+
+    setSessionHistory(prev => [newSession, ...prev.slice(0, 9)]) // Mantener últimas 10 sesiones
+  }
 
   // Enviar feedback a API (simulado)
   const sendFeedbackToAPI = async (metrics) => {
@@ -65,7 +65,7 @@ const VideoCorrectionScreen = () => {
       const response = await fetch('/api/pose-feedback', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           metrics,
@@ -76,19 +76,19 @@ const VideoCorrectionScreen = () => {
             ejercicio_actual: selectedExercise
           }
         })
-      });
+      })
 
       if (response.ok) {
-        const data = await response.json();
-        return data.feedback;
+        const data = await response.json()
+        return data.feedback
       }
     } catch (error) {
-      console.error('Error sending feedback to API:', error);
+      console.error('Error sending feedback to API:', error)
     }
-    
+
     // Fallback con feedback simulado
-    return `Análisis completado para ${selectedExercise}. Mantén la técnica y continúa progresando.`;
-  };
+    return `Análisis completado para ${selectedExercise}. Mantén la técnica y continúa progresando.`
+  }
 
   return (
     <div className="min-h-screen bg-black text-white p-6 pb-24">
@@ -154,10 +154,10 @@ const VideoCorrectionScreen = () => {
                 {availableExercises.map((exercise) => (
                   <Button
                     key={exercise}
-                    variant={selectedExercise === exercise ? "default" : "outline"}
+                    variant={selectedExercise === exercise ? 'default' : 'outline'}
                     className={`${
-                      selectedExercise === exercise 
-                        ? 'bg-yellow-400 text-black hover:bg-yellow-300' 
+                      selectedExercise === exercise
+                        ? 'bg-yellow-400 text-black hover:bg-yellow-300'
                         : 'border-gray-600 text-gray-300 hover:border-yellow-400 hover:text-yellow-400'
                     }`}
                     onClick={() => setSelectedExercise(exercise)}
@@ -170,7 +170,7 @@ const VideoCorrectionScreen = () => {
           </Card>
 
           {/* Componente de cámara */}
-          <PoseCamera 
+          <PoseCamera
             selectedExercise={selectedExercise}
             onPoseData={handlePoseData}
             onFeedback={handleAIFeedback}
@@ -186,12 +186,14 @@ const VideoCorrectionScreen = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {sessionHistory.length === 0 ? (
+              {sessionHistory.length === 0
+                ? (
                 <div className="text-center py-8">
                   <p className="text-gray-400">No hay sesiones registradas aún.</p>
                   <p className="text-gray-500 text-sm mt-2">Inicia una sesión de análisis para ver tu historial.</p>
                 </div>
-              ) : (
+                  )
+                : (
                 <div className="space-y-4">
                   {sessionHistory.map((session) => (
                     <div key={session.id} className="p-4 bg-gray-800 rounded-lg border border-gray-700">
@@ -212,7 +214,7 @@ const VideoCorrectionScreen = () => {
                     </div>
                   ))}
                 </div>
-              )}
+                  )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -283,10 +285,10 @@ const VideoCorrectionScreen = () => {
                     {['low', 'medium', 'high'].map((level) => (
                       <Button
                         key={level}
-                        variant={aiSettings.sensitivity === level ? "default" : "outline"}
+                        variant={aiSettings.sensitivity === level ? 'default' : 'outline'}
                         className={`${
-                          aiSettings.sensitivity === level 
-                            ? 'bg-yellow-400 text-black' 
+                          aiSettings.sensitivity === level
+                            ? 'bg-yellow-400 text-black'
                             : 'border-gray-600 text-gray-300'
                         }`}
                         onClick={() => setAiSettings(prev => ({ ...prev, sensitivity: level }))}
@@ -308,10 +310,10 @@ const VideoCorrectionScreen = () => {
                     ].map((type) => (
                       <Button
                         key={type.key}
-                        variant={aiSettings.feedback_type === type.key ? "default" : "outline"}
+                        variant={aiSettings.feedback_type === type.key ? 'default' : 'outline'}
                         className={`${
-                          aiSettings.feedback_type === type.key 
-                            ? 'bg-yellow-400 text-black' 
+                          aiSettings.feedback_type === type.key
+                            ? 'bg-yellow-400 text-black'
                             : 'border-gray-600 text-gray-300'
                         }`}
                         onClick={() => setAiSettings(prev => ({ ...prev, feedback_type: type.key }))}
@@ -325,7 +327,7 @@ const VideoCorrectionScreen = () => {
                 <Alert className="border-blue-400 bg-blue-400/10">
                   <Zap className="w-4 h-4" />
                   <AlertDescription className="text-blue-300">
-                    <strong>IA Adaptativa:</strong> El sistema aprende de tus patrones de movimiento y 
+                    <strong>IA Adaptativa:</strong> El sistema aprende de tus patrones de movimiento y
                     ajusta automáticamente la sensibilidad según tu progreso y nivel de experiencia.
                   </AlertDescription>
                 </Alert>
@@ -335,7 +337,7 @@ const VideoCorrectionScreen = () => {
         </TabsContent>
       </Tabs>
     </div>
-  );
-};
+  )
+}
 
-export default VideoCorrectionScreen;
+export default VideoCorrectionScreen

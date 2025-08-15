@@ -1,8 +1,8 @@
-import React from 'react';
+import React from 'react'
 
 // Importa las dos tarjetas de la pestaña 'Composición'
-import { BodyCompositionCard } from './BodyCompositionCard';
-import { BodyMeasuresCard } from './BodyMeasuresCard';
+import { BodyCompositionCard } from './BodyCompositionCard'
+import { BodyMeasuresCard } from './BodyMeasuresCard'
 
 // El componente recibe todas las props y las pasa a sus hijos
 export const BodyCompositionTab = (props) => {
@@ -14,5 +14,5 @@ export const BodyCompositionTab = (props) => {
       <BodyCompositionCard {...props} />
       <BodyMeasuresCard {...props} />
     </div>
-  );
-};
+  )
+}

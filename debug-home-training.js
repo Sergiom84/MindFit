@@ -86,7 +86,7 @@ try {
     // Crear request simulado
     const mockReq = {
       body: {
-        userId: userId,
+        userId,
         equipamiento: 'minimo',
         tipoEntrenamiento: 'hiit'
       }

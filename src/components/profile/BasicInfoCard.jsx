@@ -1,16 +1,16 @@
-import React from 'react';
-import { Button } from "@/components/ui/button";
+import React from 'react'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { User, Save, Pencil } from "lucide-react";
+  CardTitle
+} from '@/components/ui/card'
+import { User, Save, Pencil } from 'lucide-react'
 
 // NOTA: Asumimos que has movido el componente 'EditableField' a su propio archivo.
 // Si no lo has hecho, este import fallará. Lo solucionaremos en el siguiente paso si es necesario.
-import { EditableField } from "../EditableField";
+import { EditableField } from '../EditableField'
 
 export const BasicInfoCard = ({
   userProfile,
@@ -26,10 +26,10 @@ export const BasicInfoCard = ({
   getNivelActividadLabel,
   calculateIMC,
   getIMCCategory,
-  getIMCCategoryColor,
+  getIMCCategoryColor
 }) => {
   // Esta constante ahora es local al componente y determina si SU sección está en modo edición.
-  const isEditing = editingSection === "basic";
+  const isEditing = editingSection === 'basic'
 
   return (
     <Card className="bg-gray-900 border-yellow-400/20">
@@ -61,7 +61,7 @@ export const BasicInfoCard = ({
             ) : (
               <button
                 onClick={() =>
-                  startEdit("basic", {
+                  startEdit('basic', {
                     // Aquí defines exactamente qué campos pertenecen a esta tarjeta
                     nombre: userProfile.nombre,
                     apellido: userProfile.apellido,
@@ -69,10 +69,10 @@ export const BasicInfoCard = ({
                     peso: userProfile.peso,
                     altura: userProfile.altura,
                     sexo: userProfile.sexo,
-                    nivel_actividad: userProfile.nivel_actividad,
+                    nivel_actividad: userProfile.nivel_actividad
                   })
                 }
-                disabled={editingSection && editingSection !== "basic"}
+                disabled={editingSection && editingSection !== 'basic'}
                 className="p-2 text-gray-400 hover:text-yellow-400 transition-colors"
                 title="Editar datos básicos"
               >
@@ -156,19 +156,21 @@ export const BasicInfoCard = ({
             <label className="text-gray-400">IMC</label>
             <p className="text-white font-semibold">
               {(() => {
-                const imc = calculateIMC(userProfile.peso, userProfile.altura);
-                const category = getIMCCategory(imc);
-                const colorClass = getIMCCategoryColor(imc);
-                return imc ? (
+                const imc = calculateIMC(userProfile.peso, userProfile.altura)
+                const category = getIMCCategory(imc)
+                const colorClass = getIMCCategoryColor(imc)
+                return imc
+                  ? (
                   <>
                     {imc}
                     <span className={`${colorClass} text-sm ml-1`}>
                       ({category})
                     </span>
                   </>
-                ) : (
-                  "No calculado"
-                );
+                    )
+                  : (
+                      'No calculado'
+                    )
               })()}
             </p>
           </div>
@@ -181,15 +183,15 @@ export const BasicInfoCard = ({
             editedData={editedData}
             onInputChange={handleInputChange}
             options={[
-              { value: "sedentario", label: "Sedentario" },
-              { value: "ligero", label: "Ligero" },
-              { value: "moderado", label: "Moderado" },
-              { value: "activo", label: "Activo" },
-              { value: "muy_activo", label: "Muy Activo" },
+              { value: 'sedentario', label: 'Sedentario' },
+              { value: 'ligero', label: 'Ligero' },
+              { value: 'moderado', label: 'Moderado' },
+              { value: 'activo', label: 'Activo' },
+              { value: 'muy_activo', label: 'Muy Activo' }
             ]}
           />
         </div>
       </CardContent>
     </Card>
-  );
-};
+  )
+}

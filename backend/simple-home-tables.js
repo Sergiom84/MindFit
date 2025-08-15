@@ -1,20 +1,20 @@
-import { Pool } from 'pg';
-import dotenv from 'dotenv';
+import { Pool } from 'pg'
+import dotenv from 'dotenv'
 
-dotenv.config();
+dotenv.config()
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
-});
+})
 
-async function createSimpleTables() {
-  console.log('🚀 Creando tablas básicas de entrenamiento en casa...');
-  
+async function createSimpleTables () {
+  console.log('🚀 Creando tablas básicas de entrenamiento en casa...')
+
   try {
-    const client = await pool.connect();
-    console.log('✅ Conectado a base de datos');
-    
+    const client = await pool.connect()
+    console.log('✅ Conectado a base de datos')
+
     // 1. Tabla principal de programas
     await client.query(`
       CREATE TABLE IF NOT EXISTS home_training_programs (
@@ -34,9 +34,9 @@ async function createSimpleTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
-    `);
-    console.log('✅ Tabla home_training_programs creada');
-    
+    `)
+    console.log('✅ Tabla home_training_programs creada')
+
     // 2. Tabla de ejercicios
     await client.query(`
       CREATE TABLE IF NOT EXISTS home_training_exercises (
@@ -53,9 +53,9 @@ async function createSimpleTables() {
         orden INTEGER NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
-    `);
-    console.log('✅ Tabla home_training_exercises creada');
-    
+    `)
+    console.log('✅ Tabla home_training_exercises creada')
+
     // 3. Tabla de días
     await client.query(`
       CREATE TABLE IF NOT EXISTS home_training_days (
@@ -74,9 +74,9 @@ async function createSimpleTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
-    `);
-    console.log('✅ Tabla home_training_days creada');
-    
+    `)
+    console.log('✅ Tabla home_training_days creada')
+
     // 4. Tabla de sesiones
     await client.query(`
       CREATE TABLE IF NOT EXISTS home_training_sessions (
@@ -93,37 +93,36 @@ async function createSimpleTables() {
         notas TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
-    `);
-    console.log('✅ Tabla home_training_sessions creada');
-    
+    `)
+    console.log('✅ Tabla home_training_sessions creada')
+
     // 5. Crear índices básicos
-    await client.query('CREATE INDEX IF NOT EXISTS idx_home_programs_user ON home_training_programs(user_id)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_home_exercises_program ON home_training_exercises(program_id)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_home_days_program ON home_training_days(program_id)');
-    await client.query('CREATE INDEX IF NOT EXISTS idx_home_sessions_user ON home_training_sessions(user_id)');
-    console.log('✅ Índices básicos creados');
-    
+    await client.query('CREATE INDEX IF NOT EXISTS idx_home_programs_user ON home_training_programs(user_id)')
+    await client.query('CREATE INDEX IF NOT EXISTS idx_home_exercises_program ON home_training_exercises(program_id)')
+    await client.query('CREATE INDEX IF NOT EXISTS idx_home_days_program ON home_training_days(program_id)')
+    await client.query('CREATE INDEX IF NOT EXISTS idx_home_sessions_user ON home_training_sessions(user_id)')
+    console.log('✅ Índices básicos creados')
+
     // Verificar tablas
     const result = await client.query(`
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_name LIKE 'home_training%'
       ORDER BY table_name
-    `);
-    
-    console.log('\n📋 Tablas creadas:');
+    `)
+
+    console.log('\n📋 Tablas creadas:')
     result.rows.forEach(row => {
-      console.log(`  📄 ${row.table_name}`);
-    });
-    
-    client.release();
-    console.log('\n🎉 Tablas básicas creadas exitosamente!');
-    
+      console.log(`  📄 ${row.table_name}`)
+    })
+
+    client.release()
+    console.log('\n🎉 Tablas básicas creadas exitosamente!')
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error('❌ Error:', error)
   } finally {
-    await pool.end();
+    await pool.end()
   }
 }
 
-createSimpleTables();
+createSimpleTables()
