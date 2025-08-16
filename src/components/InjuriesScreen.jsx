@@ -511,7 +511,7 @@ const InjuriesScreen = () => {
 
       {/* Modal para añadir lesión */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="bg-gray-900 border-yellow-400/20 text-white">
+        <DialogContent className="bg-gray-900 border-yellow-400/20 text-white w-full max-w-[calc(100vw-1rem)] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Nueva Lesión</DialogTitle>
           </DialogHeader>
@@ -566,7 +566,7 @@ const InjuriesScreen = () => {
 
       {/* Modal para editar lesión */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="bg-gray-900 border-yellow-400/20 text-white">
+        <DialogContent className="bg-gray-900 border-yellow-400/20 text-white w-full max-w-[calc(100vw-1rem)] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Editar Lesión</DialogTitle>
             <DialogDescription className="text-gray-400">
@@ -624,7 +624,7 @@ const InjuriesScreen = () => {
 
       {/* Modal para confirmar eliminación */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent className="bg-gray-900 border-red-400/20 text-white">
+        <DialogContent className="bg-gray-900 border-red-400/20 text-white w-full max-w-[calc(100vw-1rem)] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-red-400">Eliminar Lesión</DialogTitle>
             <DialogDescription className="text-gray-400">

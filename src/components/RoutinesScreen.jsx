@@ -365,7 +365,7 @@ const RoutinesScreen = () => {
 
       {/* Modal de cuenta atrás de descanso */}
       <Dialog open={restOpen} onOpenChange={(open) => { if (!open) closeRest() }}>
-        <DialogContent className="max-w-sm bg-gray-900 border-yellow-400/20">
+        <DialogContent className="w-full max-w-[calc(100vw-1rem)] sm:max-w-sm bg-gray-900 border-yellow-400/20">
           <DialogHeader>
             <DialogTitle className="text-yellow-400 flex items-center gap-2">
               <Timer className="w-4 h-4" /> {restLabel}
