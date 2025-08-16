@@ -115,8 +115,8 @@ const WorkoutExerciseModal = ({
   if (!isOpen || !exercise) return null
 
   return (
-    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 border border-yellow-400/20 rounded-lg max-w-2xl w-full">
+    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-gray-900 border border-yellow-400/20 rounded-lg w-full max-w-[calc(100vw-1rem)] sm:max-w-2xl max-h-[calc(100vh-1rem)] overflow-y-auto">
         <div className="p-6">
           {/* Header */}
           <div className="flex justify-between items-start mb-6">

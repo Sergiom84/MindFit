@@ -17,6 +17,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert.jsx'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group.jsx'
 import { Label } from '@/components/ui/label.jsx'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.jsx'
+import { Progress } from '@/components/ui/progress.jsx'
 
 // Iconos
 import {
@@ -33,7 +34,11 @@ import {
   Target,
   Home,
   User,
-  Play
+  Play,
+  Calendar,
+  BarChart3,
+  X,
+  CheckCircle2
 } from 'lucide-react'
 
 // Convierte strings numéricos a números y deja el resto igual
@@ -308,8 +313,8 @@ const METHODOLOGIES = [
 
 export default function MethodologiesScreen () {
   const navigate = useNavigate()
-  const { currentUser } = useAuth()
-  const { userData, activarIAAdaptativa, isLoading: contextLoading, setMetodologiaActiva } = useUserContext()
+  const { currentUser, updateUserData } = useAuth()
+  const { userData, activarIAAdaptativa, isLoading: contextLoading, setMetodologiaActiva, metodologiaActiva, completarEntrenamiento, updateMetodologiaProgress } = useUserContext()
 
   // UI state
   const [selectionMode, setSelectionMode] = useState('automatico') // 'automatico' | 'manual'
@@ -319,6 +324,7 @@ export default function MethodologiesScreen () {
   const [showDetails, setShowDetails] = useState(false)
   const [detailsMethod, setDetailsMethod] = useState(null)
   const [successData, setSuccessData] = useState(null)
+  const [showFinishConfirm, setShowFinishConfirm] = useState(false)
 
   // Handlers independientes para cada modo (DESPUÉS de setSuccessData)
   const automaticHandler = useAutomaticAIHandler(currentUser, activarIAAdaptativa, setSuccessData, setError)
@@ -504,6 +510,22 @@ export default function MethodologiesScreen () {
     return baseExercises
   }
 
+  // Handler para finalizar entrenamiento
+  const handleFinishTraining = async () => {
+    if (!metodologiaActiva) return
+
+    try {
+      // Clear the active methodology by setting it to null
+      await updateUserData('metodologiaActiva', null)
+      
+      // Clear any error messages
+      setError(null)
+    } catch (error) {
+      console.error('Error finishing training:', error)
+      setError('Error al finalizar el entrenamiento')
+    }
+  }
+
   return (
     <div className="p-6 bg-black text-white min-h-screen pt-20 pb-24">
       <h1 className="text-3xl font-bold text-yellow-400 mb-2">Metodologías de Entrenamiento</h1>
@@ -597,6 +619,107 @@ export default function MethodologiesScreen () {
         </CardContent>
       </Card>
 
+      {/* Active AI Methodology Card - Only show if there's an active AI-generated methodology */}
+      {metodologiaActiva && metodologiaActiva.generadaPorIA && (
+        <Card className="bg-gradient-to-r from-yellow-400/10 to-yellow-600/10 border-yellow-400/30 mb-6 shadow-lg shadow-yellow-400/20">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Brain className="w-6 h-6 text-yellow-400" />
+                <div>
+                  <CardTitle className="text-white text-lg">
+                    Metodología IA Activa
+                  </CardTitle>
+                  <CardDescription className="text-gray-300 mt-1">
+                    Entrenamiento generado por IA en progreso
+                  </CardDescription>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowFinishConfirm(true)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 border border-red-400/40 rounded-lg text-red-400 text-sm transition-colors"
+                title="Finalizar entrenamiento actual"
+              >
+                <X className="w-4 h-4" />
+                Finalizar entrenamiento
+              </button>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Tipología */}
+              <div className="flex items-center gap-3">
+                <Target className="w-5 h-5 text-yellow-400" />
+                <div>
+                  <p className="text-gray-400 text-sm">Tipología</p>
+                  <p className="text-white font-semibold">
+                    {metodologiaActiva.methodology_name || 'IA Adaptativa'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Fecha de inicio */}
+              <div className="flex items-center gap-3">
+                <Calendar className="w-5 h-5 text-yellow-400" />
+                <div>
+                  <p className="text-gray-400 text-sm">Fecha de inicio</p>
+                  <p className="text-white font-semibold">
+                    {metodologiaActiva.fechaInicio 
+                      ? new Date(metodologiaActiva.fechaInicio).toLocaleDateString('es-ES', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric'
+                        })
+                      : 'No especificada'
+                    }
+                  </p>
+                </div>
+              </div>
+
+              {/* Progreso */}
+              <div className="flex items-center gap-3">
+                <BarChart3 className="w-5 h-5 text-yellow-400" />
+                <div className="flex-1">
+                  <div className="flex justify-between items-center mb-2">
+                    <p className="text-gray-400 text-sm">Progreso</p>
+                    <p className="text-white text-sm font-semibold">
+                      {Math.round(metodologiaActiva.progreso || 0)}%
+                    </p>
+                  </div>
+                  <Progress 
+                    value={metodologiaActiva.progreso || 0} 
+                    className="h-2 bg-gray-700"
+                    indicatorClassName="bg-gradient-to-r from-yellow-400 to-yellow-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Additional info */}
+            <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-700/50">
+              <div className="flex items-center gap-4 text-gray-400">
+                <span>
+                  Entrenamientos completados: {metodologiaActiva.entrenamientosCompletados || 0}
+                </span>
+                {metodologiaActiva.fechaFin && (
+                  <span>
+                    Finaliza: {new Date(metodologiaActiva.fechaFin).toLocaleDateString('es-ES', {
+                      day: '2-digit',
+                      month: '2-digit'
+                    })}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1 text-green-400">
+                <CheckCircle2 className="w-4 h-4" />
+                <span className="text-sm">Activo</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Grid de metodologías */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {METHODOLOGIES.map((m) => {
@@ -680,7 +803,7 @@ export default function MethodologiesScreen () {
 
       {/* Modal de selección manual */}
       <Dialog open={manualHandler.showManualSelectionModal} onOpenChange={manualHandler.cancelManualSelection}>
-        <DialogContent className="max-w-md bg-gray-900 border-yellow-400/20 text-white">
+        <DialogContent className="w-full max-w-[calc(100vw-1rem)] sm:max-w-md bg-gray-900 border-yellow-400/20 text-white">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center">
               <UserIcon className="w-5 h-5 mr-2 text-yellow-400" />
@@ -712,7 +835,7 @@ export default function MethodologiesScreen () {
 
       {/* Modal de Detalles Mejorado */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="max-w-4xl bg-gray-900 border-yellow-400/20 text-white max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-full max-w-[calc(100vw-1rem)] sm:max-w-2xl md:max-w-4xl bg-gray-900 border-yellow-400/20 text-white max-h-[calc(100vh-1rem)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center">
               {detailsMethod?.icon && React.createElement(detailsMethod.icon, { className: 'w-6 h-6 mr-3 text-yellow-400' })}
@@ -843,7 +966,7 @@ export default function MethodologiesScreen () {
 
       {/* --- POPUP: Cargando IA --- */}
       <Dialog open={isLoading}>
-        <DialogContent className="max-w-sm bg-gray-900 border-yellow-400/20">
+        <DialogContent className="w-full max-w-[calc(100vw-1rem)] sm:max-w-sm bg-gray-900 border-yellow-400/20">
           <div className="flex items-center gap-3">
             <Loader2 className="w-5 h-5 text-yellow-400 animate-spin" />
             <DialogTitle className="text-yellow-400">La IA está comprobando tu perfil…</DialogTitle>
@@ -860,7 +983,7 @@ export default function MethodologiesScreen () {
           open={!!successData}
           onOpenChange={(open) => { if (!open) handleCloseSuccessDialog() }}
         >
-          <DialogContent className="max-w-xl bg-gray-900 border-yellow-400/20">
+          <DialogContent className="w-full max-w-[calc(100vw-1rem)] sm:max-w-xl bg-gray-900 border-yellow-400/20">
             <DialogHeader>
               <DialogTitle className="text-yellow-400 flex items-center gap-2">
                 <Brain className="w-4 h-4 text-yellow-400" />
@@ -917,6 +1040,53 @@ export default function MethodologiesScreen () {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Confirmation Dialog for Finishing Training */}
+      <Dialog open={showFinishConfirm} onOpenChange={setShowFinishConfirm}>
+        <DialogContent className="max-w-md bg-gray-900 border-red-400/20">
+          <DialogHeader>
+            <DialogTitle className="text-red-400 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" />
+              Confirmar finalización
+            </DialogTitle>
+            <DialogDescription className="text-gray-300 mt-2">
+              ¿Estás seguro de que quieres finalizar el entrenamiento actual?
+              Esta acción eliminará tu progreso y tendrás que empezar una nueva metodología.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex items-center gap-3 p-3 bg-yellow-400/10 border border-yellow-400/30 rounded-lg mt-4">
+            <Brain className="w-5 h-5 text-yellow-400" />
+            <div>
+              <p className="text-white font-semibold text-sm">
+                {metodologiaActiva?.methodology_name || 'Metodología IA'}
+              </p>
+              <p className="text-gray-400 text-xs">
+                Progreso actual: {Math.round(metodologiaActiva?.progreso || 0)}%
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-6 gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowFinishConfirm(false)}
+              className="border-gray-600 text-gray-300 hover:bg-gray-800"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                handleFinishTraining()
+                setShowFinishConfirm(false)
+              }}
+              className="bg-red-500 text-white hover:bg-red-600"
+            >
+              Sí, finalizar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

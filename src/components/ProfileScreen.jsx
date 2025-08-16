@@ -380,7 +380,7 @@ useEffect(() => {
 
             {/* ---- MODALES ---- */}
             <Dialog open={isBodyCalcOpen} onOpenChange={setIsBodyCalcOpen}>
-                <DialogContent className="bg-gray-900 text-white border-yellow-400/30 max-w-md">
+                <DialogContent className="bg-gray-900 text-white border-yellow-400/30 w-full max-w-[calc(100vw-1rem)] sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle>Calculadora de Composición Corporal</DialogTitle>
                         <DialogDescription>
@@ -479,7 +479,7 @@ useEffect(() => {
             </Dialog>
 
             <Dialog open={docsOpen} onOpenChange={setDocsOpen}>
-                <DialogContent className="bg-gray-900 text-white border-yellow-400/30 max-w-2xl">
+                <DialogContent className="bg-gray-900 text-white border-yellow-400/30 w-full max-w-[calc(100vw-1rem)] sm:max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>Documentación Médica</DialogTitle>
                         <DialogDescription>Aquí puedes ver, eliminar y analizar tus documentos subidos.</DialogDescription>
@@ -542,7 +542,7 @@ useEffect(() => {
             </Dialog>
 
             <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-                <DialogContent className="bg-gray-900 text-white border-yellow-400/30 max-w-4xl h-[90vh] flex flex-col">
+                <DialogContent className="bg-gray-900 text-white border-yellow-400/30 w-full max-w-[calc(100vw-1rem)] sm:max-w-4xl max-h-[calc(100vh-1rem)] flex flex-col overflow-hidden">
                     <DialogHeader>
                         <DialogTitle>Previsualización de Documento</DialogTitle>
                         <p className="text-sm text-gray-400">URL: {previewUrl}</p>
