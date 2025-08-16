@@ -101,6 +101,12 @@ const HomeTrainingSection = () => {
     }
   }, [user?.id])
 
+  // Callback que combina cargar estadísticas y resetear UI para permitir nueva selección
+  const handleSessionComplete = React.useCallback(async () => {
+    await loadStats()
+    setShowIAPlan(false) // Reset para permitir nueva selección de equipamiento y estilo
+  }, [loadStats])
+
   // useEffect para cargar estadísticas del API la primera vez
   React.useEffect(() => {
     loadStats()
@@ -428,7 +434,7 @@ const HomeTrainingSection = () => {
             equipamiento={equipamiento}
             tipo={tipo}
             autoStart
-            onSessionComplete={loadStats} // <-- ¡LA MAGIA! Pasamos la función para refrescar
+            onSessionComplete={handleSessionComplete} // Reset UI state after session completion
           />
         ) : (
           // Dejas tu contenido de selección / cards / etc.
