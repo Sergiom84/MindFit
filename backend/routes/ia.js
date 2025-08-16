@@ -120,6 +120,20 @@ function repairModelJson (text = '') {
   }
   // **********************************************************
 
+  // NUEVAS REGLAS DE LIMPIEZA:
+  // Eliminar strings sueltos con forma "clave: valor" dentro de objetos
+  s = s.replace(/([,{])\s*"(?:[^"\\]|\\.)+:\s*(?:[^"\\]|\\.)*"\s*(?=,|})/g, '$1');
+
+  // Cerrar claves con comilla de apertura sin cierre ('descansSeg:0)
+  s = s.replace(/'([A-Za-z0-9_]+)\s*:/g, '"$1":');
+
+  // Normalizar variantes de nombres de clave
+  s = s.replace(/"descans(?:o|a)?(?:_)?seg"\s*:/gi, '"descanso_seg":');
+  s = s.replace(/"duraci(?:o|ó)n(?:_)?seg"\s*:/gi, '"duracion_seg":');
+
+  // Eliminar caracteres basura (|, ^)
+  s = s.replace(/[|^]/g, '');
+
   // 2) Quita comas colgantes ,] y ,}
   s = s.replace(/,\s*([\]}])/g, '$1')
 
@@ -261,6 +275,20 @@ function cleanAndParseJson (raw) {
     text = text.replace(/"([A-Za-z0-9_$]+)""\s*:/g, '"$1":');
     // Arregla la variante que nace de comillas simples duplicadas "'series'':"
     text = text.replace(/'([A-Za-z0-9_$]+)''\s*:/g, '"$1":');
+
+    // NUEVAS REGLAS DE REFUERZO ANTES DEL PARSEO:
+    // Eliminar strings sueltos con forma "clave: valor" dentro de objetos
+    text = text.replace(/([,{])\s*"(?:[^"\\]|\\.)+:\s*(?:[^"\\]|\\.)*"\s*(?=,|})/g, '$1');
+
+    // Cerrar claves con comilla de apertura sin cierre ('descansSeg:0)
+    text = text.replace(/'([A-Za-z0-9_]+)\s*:/g, '"$1":');
+
+    // Normalizar variantes de nombres de clave
+    text = text.replace(/"descans(?:o|a)?(?:_)?seg"\s*:/gi, '"descanso_seg":');
+    text = text.replace(/"duraci(?:o|ó)n(?:_)?seg"\s*:/gi, '"duracion_seg":');
+
+    // Eliminar caracteres basura (|, ^)
+    text = text.replace(/[|^]/g, '');
 
     // Paso 10: Parsear
     let parsed = JSON.parse(text)
