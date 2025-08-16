@@ -224,8 +224,9 @@ function repairModelJson (text = '') {
   })
 
   // 4.b) ESPECÍFICO para el bug de iPhone: Manejar objetos con mezcla de comillas
-  // Patrón: "notas": "", 'patron': 'valor' -> "notas": "", "patron": "valor"
-  // Este regex busca el patrón específico que causa el fallo
+  // Patrón problemático: "notas": "", 'patron': 'valor' -> "notas": "", "patron": "valor"
+  // Este regex busca el patrón específico que causa el fallo en móviles iOS
+  // Detecta propiedades con comillas dobles seguidas de propiedades con comillas simples
   s = s.replace(/("[\w$]+":\s*"[^"]*",?\s*)'([\w$]+)'\s*:\s*'([^']*)'/g, '$1"$2": "$3"')
 
   // 5) Números entre comillas → números reales  : "180" → : 180
