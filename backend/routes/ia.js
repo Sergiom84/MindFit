@@ -80,13 +80,82 @@ function extractJsonBlock (raw = '') {
   const start = raw.indexOf('{')
   if (start === -1) return ''
   let depth = 0
+  let inString = false
+  let escape = false
+  
   for (let i = start; i < raw.length; i++) {
     const ch = raw[i]
-    if (ch === '{') depth++
-    else if (ch === '}') depth--
-    if (depth === 0) return raw.slice(start, i + 1)
+    
+    if (inString) {
+      if (escape) {
+        escape = false
+      } else if (ch === '\\') {
+        escape = true
+      } else if (ch === '"') {
+        inString = false
+      }
+    } else {
+      if (ch === '"') {
+        inString = true
+      } else if (ch === '{') {
+        depth++
+      } else if (ch === '}') {
+        depth--
+        if (depth === 0) return raw.slice(start, i + 1)
+      }
+    }
   }
-  return raw.slice(start) // última esperanza
+  
+  // Si llegamos aquí, el JSON está incompleto - intentar repararlo
+  let incomplete = raw.slice(start)
+  console.log('⚠️ JSON incompleto detectado, intentando reparar...')
+  
+  // Cerrar strings abiertas
+  if (inString) {
+    incomplete += '"'
+  }
+  
+  // Cerrar objetos/arrays abiertos
+  while (depth > 0) {
+    incomplete += '}'
+    depth--
+  }
+  
+  return incomplete
+}
+
+// Función para reparar JSON incompletos de arrays de ejercicios
+function repairIncompleteExerciseJson(jsonStr) {
+  if (!jsonStr) return jsonStr
+  
+  // Si el JSON termina abruptamente en un ejercicio incompleto
+  // Buscar la última coma y truncar desde ahí, luego cerrar el array
+  const lastCommaInExercises = jsonStr.lastIndexOf(',', jsonStr.lastIndexOf('"ejercicios"'))
+  if (lastCommaInExercises > -1) {
+    let truncated = jsonStr.substring(0, lastCommaInExercises)
+    
+    // Contar llaves abiertas y cerradas para balancear
+    let openBraces = (truncated.match(/\{/g) || []).length
+    let closeBraces = (truncated.match(/\}/g) || []).length
+    let openBrackets = (truncated.match(/\[/g) || []).length
+    let closeBrackets = (truncated.match(/\]/g) || []).length
+    
+    // Cerrar arrays primero
+    while (openBrackets > closeBrackets) {
+      truncated += ']'
+      closeBrackets++
+    }
+    
+    // Cerrar objetos
+    while (openBraces > closeBraces) {
+      truncated += '}'
+      closeBraces++
+    }
+    
+    return truncated
+  }
+  
+  return jsonStr
 }
 
 // Reparador fuerte para JSON "IA-style"
@@ -104,6 +173,9 @@ function repairModelJson (text = '') {
 
   // 1) Quédate solo con el bloque { ... } más exterior
   s = extractJsonBlock(s)
+  
+  // 1.5) Intentar reparar JSON incompleto de ejercicios
+  s = repairIncompleteExerciseJson(s)
 
   // NUEVO: Eliminar claves "basura" extremadamente largas que no son seguidas por un ':'
   // Esto ataca directamente el problema principal de la "alucinación" del modelo.
@@ -160,10 +232,10 @@ function repairModelJson (text = '') {
   // 7) Tokens tipo 'reps'/'time' que hayan quedado entrecomillados simples
   s = s.replace(/"tipo"\s*:\s*"'(reps|time)'"/gi, '"tipo": "$1"')
 
-  // 7.b) Normaliza sinónimos de tipo: "tiempo" -> "time"
-  s = s.replace(/("tipo"\s*:\s*")\s*(tiempo|time|reps)\s*(")/gi, (_, p1, val, p3) => {
+  // 7.b) Normaliza sinónimos de tipo: "tiempo" -> "time", "intervalo" -> "time"
+  s = s.replace(/("tipo"\s*:\s*")\s*(tiempo|time|reps|intervalo)\s*(")/gi, (_, p1, val, p3) => {
     const v = String(val).toLowerCase();
-    return p1 + (v === 'tiempo' ? 'time' : v) + p3;
+    return p1 + (v === 'tiempo' || v === 'intervalo' ? 'time' : v) + p3;
   });
 
   // 8) Limpia comillas simples "decorativas" dentro de valores de texto
@@ -339,8 +411,11 @@ function cleanQuotes (s = '') {
 
 function sanitizeExercise (e = {}) {
   const nombre = cleanQuotes(e.nombre || 'Ejercicio')
-  // Determinar tipo fiable
+  // Determinar tipo fiable - normalizar "intervalo" a "time"
   let tipo = String(e.tipo || '').toLowerCase()
+  if (tipo === 'intervalo' || tipo === 'tiempo') {
+    tipo = 'time'
+  }
   if (tipo !== 'time' && tipo !== 'reps') {
     tipo = (e.duracion_seg != null && e.duracion_seg !== '') ? 'time' : 'reps'
   }
@@ -838,6 +913,11 @@ FORMATO EXACTO del JSON de salida (sin comentarios):
     }
   ]
 }
+
+IMPORTANTE sobre el campo "tipo":
+- SOLO usa "time" o "reps" (no uses "intervalo", "tiempo", ni otros valores)
+- "time": ejercicio por tiempo con duracion_seg (repeticiones = null)
+- "reps": ejercicio por repeticiones con repeticiones (duracion_seg = null)
 
 Reglas generales:
 - Genera 4–6 ejercicios.
