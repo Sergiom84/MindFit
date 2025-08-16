@@ -1,11 +1,16 @@
-# MindFit — Instrucciones para GitHub Copilot (Repositorio)
+# MindFit — Instr- **Backend**: Node/Express monolito (sirve SPA en prod). **PostgreSQL**. API bajo `/api/*` (auth, ia, iaAdaptativa, injuries, methodologies, music, pose, homeTraining, etc.).
+- **Auth**: email/contraseña (bcrypt). **Sin** JWT/sesión persistente (estado en el cliente).
+- **Objetivo clave**: "Generar mi entrenamiento" debe usar perfil + lesiones + preferencias y llamar **solo** a endpoints backend.
+- **Módulos principales**: Metodologías, Rutinas, Entrenamiento en casa, IA Adaptativa, Lesiones, Perfil.iones para GitHub Copilot (Repositorio)
 
 ## 0) Autoridad y referencias
 - **Arquitectura**: `ARCHITECTURE.md` (autoridad sobre capas, flujos y módulos).
 - **Decisiones**: `DECISIONS.md` (reglas vigentes).
+- **Features**: `docs/FEATURE_HOME_TRAINING.md`, `docs/FEATURE_METHODOLOGIES.md`, `docs/FEATURE_ROUTINES.md` (especificaciones).
 - **Glosario** (resumen): 
   - *Entrenamiento en casa*: planificación semanal adaptada a perfil + material doméstico.
   - *Metodología*: enfoque preferido (p. ej., fuerza, HIIT, Híbrido, etc.).
+  - *Rutinas*: entrenamientos específicos generados basados en metodología activa.
   - *Lesiones activas*: restricciones que excluyen ejercicios concretos.
   - *Perfil mínimo*: ver sección 5.1.
 > Cuando respondas, **cita** los archivos que usaste de estas referencias.
@@ -71,3 +76,31 @@ _Request_ (ejemplo):
     {"area": "knee", "constraint": "avoid-deep-squat"}
   ]
 }
+```
+_Response_: `{ success: boolean, plan: object, message?: string }`
+
+## 6) Módulos específicos
+### 6.1 Metodologías (`/methodologies`)
+- **Componente**: `MethodologiesScreen.jsx`
+- **API**: `/api/methodologies` (POST crear, GET obtener activa)
+- **Función**: selección de enfoque de entrenamiento (Hipertrofia, Fuerza, HIIT, etc.)
+- **Estado**: una metodología activa por usuario, cancelando automáticamente la anterior
+
+### 6.2 Rutinas (`/routines`)
+- **Componente**: `RoutinesScreen.jsx`
+- **API**: usa IA Adaptativa para generar entrenamientos
+- **Función**: muestra entrenamientos específicos basados en metodología activa
+- **Requisito**: perfil completo + metodología seleccionada
+
+### 6.3 Entrenamiento en casa (`/home-training`)
+- **Componente**: `HomeTrainingScreen.jsx`
+- **API**: `/api/home-training` (POST crear programa)
+- **Función**: planes adaptados a equipamiento doméstico disponible
+- **Equipamiento**: `minimo|basico|avanzado`
+- **Estilos**: `funcional|hiit|fuerza`
+
+## 7) Flujos críticos de validación
+- **Perfil incompleto**: redirigir a `/profile` con mensaje específico
+- **Sin metodología**: redirigir a `/methodologies` desde `/routines`
+- **Lesiones activas**: siempre consultar `/api/injuries` antes de generar entrenamientos
+- **Material doméstico**: validar disponibilidad antes de crear planes caseros
