@@ -223,6 +223,12 @@ function repairModelJson (text = '') {
     return `: "${esc}"`
   })
 
+  // 4.b) ESPECÍFICO para el bug de iPhone: Manejar objetos con mezcla de comillas
+  // Patrón problemático: "notas": "", 'patron': 'valor' -> "notas": "", "patron": "valor"
+  // Este regex busca el patrón específico que causa el fallo en móviles iOS
+  // Detecta propiedades con comillas dobles seguidas de propiedades con comillas simples
+  s = s.replace(/("[\w$]+":\s*"[^"]*",?\s*)'([\w$]+)'\s*:\s*'([^']*)'/g, '$1"$2": "$3"')
+
   // 5) Números entre comillas → números reales  : "180" → : 180
   s = s.replace(/:\s*"(-?\d+(?:\.\d+)?)"\s*([,}\]])/g, ': $1$2')
 
@@ -314,8 +320,16 @@ function cleanAndParseJson (raw) {
     // Paso 3: Eliminar comentarios de bloque (/* comentario */)
     text = text.replace(/\/\*[\s\S]*?\*\//g, '')
 
-    // Paso 4: Reemplazar comillas simples por dobles para JSON válido
-    text = text.replace(/'/g, '"')
+    // Paso 4: Reemplazar comillas simples por dobles para JSON válido (contexto inteligente)
+    // Reemplazar propiedades: 'key': -> "key":
+    text = text.replace(/'([a-zA-Z_][a-zA-Z0-9_]*)'\s*:/g, '"$1":')
+    
+    // Reemplazar valores string: : 'value' -> : "value" 
+    text = text.replace(/:\s*'([^']*)'\s*([,}])/g, (match, value, ending) => {
+      // Escapar comillas dobles existentes en el valor
+      const escapedValue = value.replace(/"/g, '\\"')
+      return `: "${escapedValue}"${ending}`
+    })
 
     // Paso 5: Eliminar dobles comillas en exceso (ej: ""reps"")
     text = text.replace(/"{2,}/g, '"')
@@ -989,8 +1003,27 @@ router.post('/home-training/generate-today', async (req, res) => {
         const modelText = typeof rawText === 'string' ? rawText : String(rawText || '')
         console.log('📄 Respuesta del modelo:', modelText)
 
-        plan = tryParseModelJsonStrong(modelText)   // intenta extraer+reparar
-          || cleanAndParseJson(modelText);     // última red
+        // Intentar parseo con estrategia robusta
+        plan = tryParseModelJsonStrong(modelText)
+        
+        if (plan) {
+          console.log('✅ tryParseModelJsonStrong succeeded')
+          console.log('📊 Plan structure check:', {
+            hasPlan: !!plan,
+            hasEjercicios: !!plan.ejercicios,
+            isEjerciciosArray: Array.isArray(plan.ejercicios),
+            ejerciciosLength: plan.ejercicios?.length || 0
+          })
+        } else {
+          console.log('❌ tryParseModelJsonStrong failed, trying cleanAndParseJson...')
+          plan = cleanAndParseJson(modelText)
+          
+          if (plan) {
+            console.log('✅ cleanAndParseJson succeeded as fallback')
+          } else {
+            console.log('❌ cleanAndParseJson also failed')
+          }
+        }
 
         let metaSource = 'openai'
         // Si aún así no hay plan válido → fallback
