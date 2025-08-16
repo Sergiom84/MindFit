@@ -680,7 +680,7 @@ export default function MethodologiesScreen () {
 
       {/* Modal de selección manual */}
       <Dialog open={manualHandler.showManualSelectionModal} onOpenChange={manualHandler.cancelManualSelection}>
-        <DialogContent className="max-w-md bg-gray-900 border-yellow-400/20 text-white">
+        <DialogContent className="w-full max-w-[calc(100vw-1rem)] sm:max-w-md bg-gray-900 border-yellow-400/20 text-white">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center">
               <UserIcon className="w-5 h-5 mr-2 text-yellow-400" />
@@ -712,7 +712,7 @@ export default function MethodologiesScreen () {
 
       {/* Modal de Detalles Mejorado */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="max-w-4xl bg-gray-900 border-yellow-400/20 text-white max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-full max-w-[calc(100vw-1rem)] sm:max-w-2xl md:max-w-4xl bg-gray-900 border-yellow-400/20 text-white max-h-[calc(100vh-1rem)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center">
               {detailsMethod?.icon && React.createElement(detailsMethod.icon, { className: 'w-6 h-6 mr-3 text-yellow-400' })}
@@ -843,7 +843,7 @@ export default function MethodologiesScreen () {
 
       {/* --- POPUP: Cargando IA --- */}
       <Dialog open={isLoading}>
-        <DialogContent className="max-w-sm bg-gray-900 border-yellow-400/20">
+        <DialogContent className="w-full max-w-[calc(100vw-1rem)] sm:max-w-sm bg-gray-900 border-yellow-400/20">
           <div className="flex items-center gap-3">
             <Loader2 className="w-5 h-5 text-yellow-400 animate-spin" />
             <DialogTitle className="text-yellow-400">La IA está comprobando tu perfil…</DialogTitle>
@@ -860,7 +860,7 @@ export default function MethodologiesScreen () {
           open={!!successData}
           onOpenChange={(open) => { if (!open) handleCloseSuccessDialog() }}
         >
-          <DialogContent className="max-w-xl bg-gray-900 border-yellow-400/20">
+          <DialogContent className="w-full max-w-[calc(100vw-1rem)] sm:max-w-xl bg-gray-900 border-yellow-400/20">
             <DialogHeader>
               <DialogTitle className="text-yellow-400 flex items-center gap-2">
                 <Brain className="w-4 h-4 text-yellow-400" />

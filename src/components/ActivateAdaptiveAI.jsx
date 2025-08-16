@@ -112,7 +112,7 @@ const ActivateAdaptiveAI = ({ isOpen, onClose, onResult }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-gray-900 border-yellow-400/20">
+      <DialogContent className="w-full max-w-[calc(100vw-1rem)] sm:max-w-2xl md:max-w-4xl max-h-[calc(100vh-1rem)] overflow-y-auto bg-gray-900 border-yellow-400/20">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-white flex items-center">
             <Brain className="w-6 h-6 mr-2 text-yellow-400" />
