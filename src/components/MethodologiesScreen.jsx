@@ -6,6 +6,9 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUserContext } from '@/contexts/UserContext'
 
+// Handlers independientes para metodologías
+import { useAutomaticAIHandler, useManualMethodologyHandler } from '@/components/methodology'
+
 // UI (con .jsx para mantener consistencia)
 import { Button } from '@/components/ui/button.jsx'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card.jsx'
@@ -312,88 +315,17 @@ export default function MethodologiesScreen () {
   const [selectionMode, setSelectionMode] = useState('automatico') // 'automatico' | 'manual'
   const [error, setError] = useState(null)
 
-  // Loading específico del proceso IA (independiente del contextLoading)
-  const [iaLoading, setIaLoading] = useState(false)
-
-  // Usar el loading del contexto
-  const isLoading = contextLoading
-
-  // Manual selection / details
-  const [showManualSelectionModal, setShowManualSelectionModal] = useState(false)
-  const [pendingMethodology, setPendingMethodology] = useState(null)
-
+  // UI state para detalles y modal de éxito (DECLARAR PRIMERO)
   const [showDetails, setShowDetails] = useState(false)
   const [detailsMethod, setDetailsMethod] = useState(null)
-
-  // Success dialog with DB row from backend
   const [successData, setSuccessData] = useState(null)
 
-  // --- Activar IA (automático o forzado) ---
-  const handleActivateIA = async (forcedMethodology = null) => {
-    try {
-      setError(null)
-      setIaLoading(true)
+  // Handlers independientes para cada modo (DESPUÉS de setSuccessData)
+  const automaticHandler = useAutomaticAIHandler(currentUser, activarIAAdaptativa, setSuccessData, setError)
+  const manualHandler = useManualMethodologyHandler(currentUser, activarIAAdaptativa, setSuccessData, setError)
 
-      // 1) Construye el perfil que ya usabas para IA
-      const variablesPrompt = {
-        userId: currentUser?.id,
-        age: currentUser?.edad,
-        sex: currentUser?.sexo,
-        heightCm: currentUser?.altura,
-        weightKg: currentUser?.peso,
-        level: currentUser?.nivel,
-        experienceYears: currentUser?.años_entrenando,
-        goals: currentUser?.objetivos || [currentUser?.objetivo_principal],
-        injuries: [], // si tienes endpoint, puedes rellenarlo
-        // Preferencia SUAVE (opcional). Si no quieres ni eso, ponla en null.
-        preference: currentUser?.metodologia_preferida
-          ? { favoriteMethodology: currentUser.metodologia_preferida, weight: 0.2 }
-          : null
-      }
-
-      const forced = selectionMode === 'manual' ? pendingMethodology?.name : null
-
-      // 2) Llamada a contexto: manual híbrido si hay "forced"
-      const result = await activarIAAdaptativa(
-        forced
-          ? { modo: 'manual', variablesPrompt, forcedMethodology: forced }
-          : { modo: 'automatico', variablesPrompt }
-      )
-
-      if (result?.success) {
-        // Guardamos la respuesta íntegra para el modal de resumen
-        // y además recordamos qué metodología fue forzada (por si el back no la respeta)
-        const enriched = {
-          ...result,
-          forcedMethodology: forced || null
-        }
-        setSuccessData(enriched)
-      } else {
-        setError(result?.error || 'Error al activar IA adaptativa')
-      }
-    } catch (e) {
-      console.error('[handleActivateIA]', e)
-      setError(e.message || 'Error inesperado')
-    } finally {
-      setIaLoading(false)
-    }
-  };
-
-  // --- Flujo manual ---
-  const handleManualCardClick = (methodology) => {
-    if (selectionMode === 'manual') {
-      setPendingMethodology(methodology)
-      setShowManualSelectionModal(true)
-    }
-  }
-
-  const confirmManualSelection = () => {
-    if (pendingMethodology) {
-      handleActivateIA(pendingMethodology.name)
-      setShowManualSelectionModal(false)
-      setPendingMethodology(null)
-    }
-  }
+  // Usar el loading del contexto o de los handlers
+  const isLoading = contextLoading || automaticHandler.iaLoading || manualHandler.iaLoading
 
   const handleOpenDetails = (m) => {
     setDetailsMethod(m)
@@ -408,13 +340,11 @@ export default function MethodologiesScreen () {
       const fechaInicio = toYMD(today)
       const fechaFin = toYMD(new Date(today.getTime() + (7 * 24 * 60 * 60 * 1000)))
 
-      // Dentro de handleCloseSuccessDialog (ya lo tienes con Bloque 2)
-      const forced = successData?.forcedMethodology || null
+      // La IA puede venir como successData.respuestaIA o successData.data?.respuestaIA
       const ai = successData?.respuestaIA || successData?.data?.respuestaIA || {}
 
       const metodologiaSeleccionada =
         ai?.metodologiaSeleccionada ||
-        forced || // 👈 prioridad al forzado si el back no lo puso
         successData?.metodologia ||
         successData?.modo ||
         'IA Adaptativa'
@@ -628,7 +558,7 @@ export default function MethodologiesScreen () {
               {selectionMode === 'automatico' && (
                 <div className="mt-4">
                   <Button
-                    onClick={() => handleActivateIA(null)}
+                    onClick={automaticHandler.handleActivateAutomaticIA}
                     disabled={isLoading}
                     className="bg-yellow-400 text-black hover:bg-yellow-300"
                   >
@@ -678,7 +608,7 @@ export default function MethodologiesScreen () {
               className={`bg-gray-900/90 border-gray-700 transition-all duration-300
                 ${manualActive ? 'cursor-pointer hover:border-yellow-400/60 hover:scale-[1.01]' : 'hover:border-gray-600'}
               `}
-              onClick={() => manualActive && handleManualCardClick(m)}
+              onClick={() => manualActive && manualHandler.handleManualCardClick(m)}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -725,7 +655,7 @@ export default function MethodologiesScreen () {
                     className={`flex-1 ${manualActive ? 'bg-yellow-400 text-black hover:bg-yellow-300' : 'bg-gray-700 text-gray-400 cursor-not-allowed'}`}
                     onClick={(e) => {
                       e.stopPropagation()
-                      if (manualActive) handleManualCardClick(m)
+                      if (manualActive) manualHandler.handleManualCardClick(m)
                     }}
                   >
                     Seleccionar Metodología
@@ -749,7 +679,7 @@ export default function MethodologiesScreen () {
       )}
 
       {/* Modal de selección manual */}
-      <Dialog open={showManualSelectionModal} onOpenChange={setShowManualSelectionModal}>
+      <Dialog open={manualHandler.showManualSelectionModal} onOpenChange={manualHandler.cancelManualSelection}>
         <DialogContent className="max-w-md bg-gray-900 border-yellow-400/20 text-white">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center">
@@ -757,22 +687,22 @@ export default function MethodologiesScreen () {
               Confirmar selección
             </DialogTitle>
             <DialogDescription className="text-gray-400">
-              Has elegido <span className="font-semibold text-white">{pendingMethodology?.name}</span>. ¿Deseas continuar?
+              Has elegido <span className="font-semibold text-white">{manualHandler.pendingMethodology?.name}</span>. ¿Deseas continuar?
             </DialogDescription>
           </DialogHeader>
 
-          {pendingMethodology && (
+          {manualHandler.pendingMethodology && (
             <div className="mt-2 text-sm grid grid-cols-2 gap-2">
-              <p><span className="text-gray-400">Nivel:</span> {pendingMethodology.level}</p>
-              <p><span className="text-gray-400">Frecuencia:</span> {pendingMethodology.frequency}</p>
-              <p><span className="text-gray-400">Volumen:</span> {pendingMethodology.volume}</p>
-              <p><span className="text-gray-400">Intensidad:</span> {pendingMethodology.intensity}</p>
+              <p><span className="text-gray-400">Nivel:</span> {manualHandler.pendingMethodology.level}</p>
+              <p><span className="text-gray-400">Frecuencia:</span> {manualHandler.pendingMethodology.frequency}</p>
+              <p><span className="text-gray-400">Volumen:</span> {manualHandler.pendingMethodology.volume}</p>
+              <p><span className="text-gray-400">Intensidad:</span> {manualHandler.pendingMethodology.intensity}</p>
             </div>
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowManualSelectionModal(false)}>Cancelar</Button>
-            <Button className="bg-yellow-400 text-black hover:bg-yellow-300" onClick={confirmManualSelection}>
+            <Button variant="outline" onClick={manualHandler.cancelManualSelection}>Cancelar</Button>
+            <Button className="bg-yellow-400 text-black hover:bg-yellow-300" onClick={manualHandler.confirmManualSelection}>
               <CheckCircle className="w-4 h-4 mr-2" />
               Confirmar selección
             </Button>
@@ -900,7 +830,7 @@ export default function MethodologiesScreen () {
                 onClick={() => {
                   if (selectionMode === 'manual' && detailsMethod) {
                     setShowDetails(false)
-                    handleManualCardClick(detailsMethod)
+                    manualHandler.handleManualCardClick(detailsMethod)
                   }
                 }}
               >
@@ -912,7 +842,7 @@ export default function MethodologiesScreen () {
       </Dialog>
 
       {/* --- POPUP: Cargando IA --- */}
-      <Dialog open={iaLoading}>
+      <Dialog open={isLoading}>
         <DialogContent className="max-w-sm bg-gray-900 border-yellow-400/20">
           <div className="flex items-center gap-3">
             <Loader2 className="w-5 h-5 text-yellow-400 animate-spin" />
