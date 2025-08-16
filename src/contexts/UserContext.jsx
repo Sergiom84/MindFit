@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react'
+import React, { createContext, useContext, useState, useCallback } from 'react'
 import { useAuth } from './AuthContext'
 
 // Crear el contexto
@@ -64,8 +64,8 @@ export const UserProvider = ({ children }) => {
     if (!currentUser) return false
 
     const updatedPanelData = {
-      ...panelIA,
-      ...newPanelData,
+      ...(panelIA || {}),
+      ...(newPanelData || {}),
       ultimaActualizacion: new Date().toISOString()
     }
 
@@ -73,57 +73,37 @@ export const UserProvider = ({ children }) => {
   }
 
   /*  🔸 FUNCIÓN ACTUALIZADA  🔸 */
-  const activarIAAdaptativa = async (modoId) => {
-    if (!userData) return { success: false, error: 'Usuario no cargado' }
-
-    setIsLoading(true)
+  const activarIAAdaptativa = async (input) => {
     try {
-      /* 1. Lesiones activas */
-      let injuries = []
-      try {
-        const r = await fetch(`/api/users/${userData.id}/injuries`)
-        if (r.ok) {
-          const data = await r.json()
-          injuries = data.injuries || []
-        }
-      } catch (_) {
-        console.warn('No se pudieron cargar las lesiones del usuario')
+      // Normaliza entrada
+      let modo = 'automatico'
+      let variablesPrompt = {}
+      let forcedMethodology = null
+
+      if (typeof input === 'string') {
+        modo = input
+      } else if (input && typeof input === 'object') {
+        modo = input.modo || 'automatico'
+        variablesPrompt = input.variablesPrompt || {}
+        forcedMethodology = input.forcedMethodology || null
       }
 
-      /* 2. Payload con los 9 parámetros exactos solicitados */
-      const variablesPrompt = {
-        userId:          userData.id,                    // userId (uuid)
-        age:             userData.edad,                  // profile.age
-        sex:             userData.sexo,                  // profile.sex
-        heightCm:        userData.altura,                // profile.heightCm
-        weightKg:        userData.peso,                  // profile.weightKg
-        level:           userData.nivel,                 // profile.level
-        experienceYears: userData.años_entrenando,       // profile.experienceYears
-        methodology:     userData.metodologia_preferida, // profile.methodology
-        goals:           userData.objetivos || [userData.objetivo_principal], // profile.goals (array)
-        injuries                                         // injuries (array devuelta por /api/injuries)
-      }
+      const body = { modo, variablesPrompt }
+      if (forcedMethodology) body.forcedMethodology = forcedMethodology
 
-      /* 3. POST al backend real */
-      const res = await fetch('/api/activar-ia-adaptativa', {
-        method : 'POST',
+      const response = await fetch('/api/activar-ia-adaptativa', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body   : JSON.stringify({ modo: modoId, variablesPrompt })
+        body: JSON.stringify(body)
       })
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || 'Error generando plan adaptativo')
-      }
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Error en IA')
 
-      const data = await res.json()
-      setPlan(data)
-      return { success: true, data }
-    } catch (e) {
-      console.error('[activarIAAdaptativa]', e)
-      return { success: false, error: e.message }
-    } finally {
-      setIsLoading(false)
+      return data // { success, modo, respuestaIA, metodologia }
+    } catch (err) {
+      console.error('activarIAAdaptativa :: error', err)
+      return { success: false, error: err.message || 'Fallo al activar IA' }
     }
   }
 
@@ -161,20 +141,22 @@ export const UserProvider = ({ children }) => {
   }
 
   // Función para establecer metodología activa
-  const setMetodologiaActiva = (metodologia, fechaInicio, fechaFin) => {
-    if (!currentUser) return false
+  const setMetodologiaActiva = (metodologiaPlan, fechaInicio, fechaFin) => {
+    if (!currentUser) return false;
 
     const metodologiaData = {
-      metodologia,
+      ...metodologiaPlan, // 👈 aquí ya vienen methodology_name y methodology_data al nivel raíz
       fechaInicio,
       fechaFin,
       progreso: 0,
       entrenamientosCompletados: 0,
-      fechaSeleccion: new Date().toISOString()
-    }
+      fechaSeleccion: new Date().toISOString(),
+      generadaPorIA: metodologiaPlan.generadaPorIA || true, // conservar bandera de IA
+      respuestaCompleta: metodologiaPlan.respuestaCompleta || null // guardar respuesta IA entera
+    };
 
-    return updateAuthUserData('metodologiaActiva', metodologiaData)
-  }
+    return updateAuthUserData("metodologiaActiva", metodologiaData);
+  };
 
   // Función para actualizar progreso de metodología
   const updateMetodologiaProgress = (nuevoProgreso, entrenamientosCompletados = null) => {
@@ -190,20 +172,25 @@ export const UserProvider = ({ children }) => {
     return updateAuthUserData('metodologiaActiva', updatedData)
   }
 
-  // Función para completar un entrenamiento
+  // Función para completar un entrenamiento (ROBUSTA para formato PLANO)
   const completarEntrenamiento = () => {
     if (!currentUser || !metodologiaActiva) return false
 
+    const totalDias = Array.isArray(metodologiaActiva?.methodology_data?.dias)
+      ? metodologiaActiva.methodology_data.dias.length
+      : 7 // fallback
+
     const entrenamientosCompletados = (metodologiaActiva.entrenamientosCompletados || 0) + 1
-    const metodologia = metodologiaActiva.metodologia
+    const nuevoProgreso = Math.min((entrenamientosCompletados / totalDias) * 100, 100)
 
-    // Calcular progreso basado en entrenamientos completados
-    const frecuenciaSemanal = parseInt(metodologia.frequency?.split('-')[0]) || 3
-    const duracionSemanas = parseInt(metodologia.programDuration?.split('-')[1]) || 8
-    const totalEntrenamientos = frecuenciaSemanal * duracionSemanas
-    const nuevoProgreso = Math.min((entrenamientosCompletados / totalEntrenamientos) * 100, 100)
+    const updatedData = {
+      ...metodologiaActiva,
+      entrenamientosCompletados,
+      progreso: Math.round(nuevoProgreso),
+      ultimaActualizacion: new Date().toISOString()
+    }
 
-    return updateMetodologiaProgress(nuevoProgreso, entrenamientosCompletados)
+    return updateAuthUserData('metodologiaActiva', updatedData)
   }
 
   // Función para obtener el color de las alertas
@@ -263,5 +250,3 @@ export const UserProvider = ({ children }) => {
     </UserContext.Provider>
   )
 }
-
-export default UserContext

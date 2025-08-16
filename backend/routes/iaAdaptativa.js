@@ -18,7 +18,7 @@ if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'tu_api_key_de_
 // Endpoint para activar IA adaptativa
 router.post('/activar-ia-adaptativa', async (req, res) => {
   try {
-    const { modo, variablesPrompt } = req.body
+    const { modo, variablesPrompt, forcedMethodology } = req.body
 
     // Validar que se recibieron los datos necesarios
     if (!modo || !variablesPrompt) {
@@ -30,6 +30,9 @@ router.post('/activar-ia-adaptativa', async (req, res) => {
 
     console.log(`Procesando IA adaptativa - Modo: ${modo}`)
     console.log('Variables del prompt:', variablesPrompt)
+    if (forcedMethodology) {
+      console.log(`🎯 Metodología forzada: ${forcedMethodology}`)
+    }
 
     // Verificar si OpenAI está disponible
     if (!openai) {
@@ -48,17 +51,15 @@ router.post('/activar-ia-adaptativa', async (req, res) => {
       messages: [
         {
           role: 'system',
-          content: `Eres MindBot, un entrenador personal con IA avanzada especializado en adaptación metabólica y anatómica.
+          content: `Eres un entrenador especializado.
+Tareas:
+1) Elegir la METODOLOGÍA óptima según objetivos, lesiones, equipamiento y nivel.
+2) Generar una rutina semanal (7 días) clara y accionable.
 
-Tu función es analizar TODOS los datos del usuario y proporcionar recomendaciones específicas basadas en el modo de adaptación seleccionado.
-
-MODO DE ADAPTACIÓN: ${modo}
-
-Modos disponibles:
-- BÁSICO: Ajustes semanales, recomendaciones simples
-- AVANZADO: Análisis multifactorial cada 3-5 días, periodización automática
-- EXPERTO: Adaptación diaria en tiempo real, microperiodización
-- PERSONALIZADO: Según preferencias específicas del usuario
+Reglas:
+- Si 'forcedMethodology' está presente, DEBES usar EXACTAMENTE esa metodología.
+- Si 'preference.favoriteMethodology' existe, trátala como preferencia SUAVE (peso 0..1). Úsala sólo como DESEMPATE cuando varias opciones sean equivalentes. No la elijas si es subóptima para los objetivos/lesiones/equipamiento.
+- No asumas que la favorita del usuario es siempre la mejor.
 
 METODOLOGÍAS DE ENTRENAMIENTO DISPONIBLES:
 - Heavy Duty: Alta intensidad, bajo volumen, descansos largos
@@ -70,56 +71,24 @@ METODOLOGÍAS DE ENTRENAMIENTO DISPONIBLES:
 - Calistenia: Peso corporal, progresiones, control corporal
 - Entrenamiento en casa: Adaptado a espacio limitado y equipamiento básico
 
-INSTRUCCIONES ESPECIALES:
-1. SELECCIONA la metodología más apropiada según el perfil del usuario
-2. GENERA una rutina semanal completa de 7 días con ejercicios específicos
-3. CONSIDERA limitaciones, lesiones y equipamiento disponible
-4. RESPETA el historial médico y medicamentos actuales
-5. ADAPTA las recomendaciones a la metodología preferida del usuario
-6. INCLUYE consideraciones nutricionales basadas en alimentos excluidos
-7. AJUSTA la intensidad según el nivel de experiencia y años entrenando
-8. CONSIDERA la composición corporal actual vs objetivos
-9. ADAPTA horarios según preferencias del usuario
-
-IMPORTANTE: Responde SOLO en formato JSON válido. NO añadas texto adicional.
-
-Estructura JSON requerida:
+Devuelve SIEMPRE JSON válido con este esquema:
 {
-  "estadoMetabolico": "Optimo",
-  "recuperacionNeural": "85%",
-  "eficienciaAdaptativa": "+12%",
-  "proximaRevision": "7 dias",
-  "recomendacionIA": "Recomendacion breve y concisa",
-  "metodologiaSeleccionada": "Hipertrofia",
+  "metodologiaSeleccionada": "string",
+  "estadoMetabolico": "string",
+  "recuperacionNeural": "string",
+  "eficienciaAdaptativa": "string",
+  "proximaRevision": "string",
+  "recomendacionIA": "string",
   "rutinaSemanal": [
-    {
-      "dia": 1,
-      "nombre_sesion": "Entrenamiento Dia 1",
-      "ejercicios": [
-        {
-          "nombre": "Press Banca",
-          "series": 4,
-          "repeticiones": "8-12",
-          "descanso": "90 seg"
-        },
-        {
-          "nombre": "Remo con Barra",
-          "series": 4,
-          "repeticiones": "8-12",
-          "descanso": "90 seg"
-        }
-      ]
-    },
-    {
-      "dia": 2,
-      "nombre_sesion": "Descanso",
-      "ejercicios": []
-    }
+    { "dia": 1, "nombre_sesion": "string", "ejercicios": [
+      { "nombre": "string", "series": 3, "repeticiones": "10-12", "descanso": "60-90 seg", "peso": "opcional" }
+    ]},
+    { "dia": 2, "nombre_sesion": "Descanso", "ejercicios": [] }
   ],
   "ajustesRecomendados": {
     "volumenEntrenamiento": "mantener",
     "intensidad": "aumentar",
-    "metodologia": "Hipertrofia"
+    "metodologia": "string"
   },
   "alertas": [
     {
@@ -129,15 +98,15 @@ Estructura JSON requerida:
     }
   ]
 }
-
-Genera EXACTAMENTE 7 dias de rutina. Mantén las descripciones CORTAS.
-
-Analiza los datos del usuario y proporciona recomendaciones específicas para el modo ${modo}.`
+Asegúrate de que "rutinaSemanal" tenga 7 entradas (puedes marcar descansos con ejercicios vacíos).`
         },
         {
           role: 'user',
-          content: `Analiza mi situación actual y proporciona recomendaciones
-                    para el modo ${modo}.\n\nDATOS:\n${JSON.stringify(variablesPrompt)}`
+          content: JSON.stringify({
+            modo,
+            forcedMethodology, // puede ser null
+            profile: variablesPrompt // incluye preference si existe
+          })
         }
       ],
       max_tokens: 1500,
@@ -194,13 +163,26 @@ Analiza los datos del usuario y proporciona recomendaciones específicas para el
 
     console.log('Análisis de IA adaptativa completado exitosamente')
 
+    // ✅ MODO MANUAL HÍBRIDO: forzar metodología elegida por el usuario
+    if (forcedMethodology) {
+      // 1) Sobrescribe la metodología seleccionada
+      respuestaIA.metodologiaSeleccionada = forcedMethodology
+
+      // 2) (Opcional) Asegura que los títulos/días aludan a esa metodología si tu generador los usa
+      if (Array.isArray(respuestaIA.rutinaSemanal)) {
+        respuestaIA.rutinaSemanal = respuestaIA.rutinaSemanal.map((d, i) => ({
+          ...d,
+          nombre_sesion: d.nombre_sesion || `${forcedMethodology} - Día ${i + 1}`
+        }))
+      }
+    }
+
     res.json({
       success: true,
       modo,
       respuestaIA,
-      metodologia:                   // 👈 nuevo campo
-        respuestaIA?.ajustesRecomendados?.metodologia
-        || variablesPrompt.methodology,
+      metodologia: forcedMethodology || respuestaIA?.ajustesRecomendados?.metodologia || variablesPrompt.methodology,
+      origen: forcedMethodology ? 'manual_hibrido' : 'automatico',
       timestamp: new Date().toISOString()
     })
   } catch (error) {

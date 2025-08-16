@@ -312,6 +312,9 @@ export default function MethodologiesScreen () {
   const [selectionMode, setSelectionMode] = useState('automatico') // 'automatico' | 'manual'
   const [error, setError] = useState(null)
 
+  // Loading específico del proceso IA (independiente del contextLoading)
+  const [iaLoading, setIaLoading] = useState(false)
+
   // Usar el loading del contexto
   const isLoading = contextLoading
 
@@ -327,27 +330,54 @@ export default function MethodologiesScreen () {
 
   // --- Activar IA (automático o forzado) ---
   const handleActivateIA = async (forcedMethodology = null) => {
-    if (!selectionMode) {
-      setError('Selecciona un modo de adaptación')
-      return
-    }
-
-    setError(null)
-
     try {
-      // Usar la función del contexto que ya está bien implementada
-      const result = await activarIAAdaptativa(selectionMode)
+      setError(null)
+      setIaLoading(true)
 
-      if (result.success) {
-        setSuccessData(result.data)   // Guardar todo el objeto de respuesta
+      // 1) Construye el perfil que ya usabas para IA
+      const variablesPrompt = {
+        userId: currentUser?.id,
+        age: currentUser?.edad,
+        sex: currentUser?.sexo,
+        heightCm: currentUser?.altura,
+        weightKg: currentUser?.peso,
+        level: currentUser?.nivel,
+        experienceYears: currentUser?.años_entrenando,
+        goals: currentUser?.objetivos || [currentUser?.objetivo_principal],
+        injuries: [], // si tienes endpoint, puedes rellenarlo
+        // Preferencia SUAVE (opcional). Si no quieres ni eso, ponla en null.
+        preference: currentUser?.metodologia_preferida
+          ? { favoriteMethodology: currentUser.metodologia_preferida, weight: 0.2 }
+          : null
+      }
+
+      const forced = selectionMode === 'manual' ? pendingMethodology?.name : null
+
+      // 2) Llamada a contexto: manual híbrido si hay "forced"
+      const result = await activarIAAdaptativa(
+        forced
+          ? { modo: 'manual', variablesPrompt, forcedMethodology: forced }
+          : { modo: 'automatico', variablesPrompt }
+      )
+
+      if (result?.success) {
+        // Guardamos la respuesta íntegra para el modal de resumen
+        // y además recordamos qué metodología fue forzada (por si el back no la respeta)
+        const enriched = {
+          ...result,
+          forcedMethodology: forced || null
+        }
+        setSuccessData(enriched)
       } else {
-        setError(result.error || 'Error al activar IA adaptativa')
+        setError(result?.error || 'Error al activar IA adaptativa')
       }
     } catch (e) {
       console.error('[handleActivateIA]', e)
-      setError(e.message)
+      setError(e.message || 'Error inesperado')
+    } finally {
+      setIaLoading(false)
     }
-  }
+  };
 
   // --- Flujo manual ---
   const handleManualCardClick = (methodology) => {
@@ -370,30 +400,38 @@ export default function MethodologiesScreen () {
     setShowDetails(true)
   }
 
+  // --- REEMPLAZA COMPLETO handleCloseSuccessDialog ---
   const handleCloseSuccessDialog = () => {
-    // Guardar la metodología activa en el contexto antes de navegar
     if (successData) {
       const today = new Date()
-      const fechaInicio = today.toISOString().split('T')[0] // Formato YYYY-MM-DD
-      const fechaFin = new Date(today.getTime() + (7 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0] // +7 días
+      const toYMD = (d) => d.toISOString().split('T')[0]
+      const fechaInicio = toYMD(today)
+      const fechaFin = toYMD(new Date(today.getTime() + (7 * 24 * 60 * 60 * 1000)))
 
-      // Crear la estructura que espera RoutinesScreen
-      const metodologiaSeleccionada = successData.respuestaIA?.metodologiaSeleccionada
-        || successData.metodologia
-        || successData.modo
-        || 'IA Adaptativa'
+      // Dentro de handleCloseSuccessDialog (ya lo tienes con Bloque 2)
+      const forced = successData?.forcedMethodology || null
+      const ai = successData?.respuestaIA || successData?.data?.respuestaIA || {}
+
+      const metodologiaSeleccionada =
+        ai?.metodologiaSeleccionada ||
+        forced || // 👈 prioridad al forzado si el back no lo puso
+        successData?.metodologia ||
+        successData?.modo ||
+        'IA Adaptativa'
+
+      // Construye los días normalizados
+      const dias = generateWeeklyRoutineFromIA(ai, today)
 
       const metodologiaData = {
         methodology_name: metodologiaSeleccionada,
-        methodology_data: {
-          dias: generateWeeklyRoutineFromIA(successData.respuestaIA, today)
-        },
+        methodology_data: { dias },
         fechaInicio,
         fechaFin,
         generadaPorIA: true,
         respuestaCompleta: successData
       }
 
+      // 👇 Esta función, tras el Bloque 1, guarda "plano" en el contexto
       setMetodologiaActiva(metodologiaData, fechaInicio, fechaFin)
     }
 
@@ -401,43 +439,64 @@ export default function MethodologiesScreen () {
     navigate('/routines')
   }
 
-  // Función para generar rutina semanal desde la respuesta de IA
+  // --- REEMPLAZA COMPLETO generateWeeklyRoutineFromIA ---
   const generateWeeklyRoutineFromIA = (respuestaIA, startDate) => {
-    // Si la IA ya devuelve una rutina estructurada, usarla directamente
-    if (respuestaIA?.rutinaSemanal && Array.isArray(respuestaIA.rutinaSemanal)) {
-      // Actualizar las fechas para que empiecen desde hoy
-      return respuestaIA.rutinaSemanal.map((dia, index) => ({
-        ...dia,
-        dia: index + 1,
-        fecha: new Date(startDate.getTime() + (index * 24 * 60 * 60 * 1000)).toISOString().split('T')[0]
-      }))
+    const toYMD = (d) => d.toISOString().split('T')[0]
+
+    // Pequeño normalizador de ejercicios (por si IA usa otras claves)
+    const normalizeExercises = (list) => {
+      const src = Array.isArray(list) ? list : []
+      return src.map((ex) => {
+        const nombre = ex.nombre || ex.name || ex.ejercicio || 'Ejercicio'
+        const series = ex.series != null ? ex.series : ex.sets != null ? ex.sets : 3
+        const repeticiones = ex.repeticiones || ex.reps || ex.repetitions || '10-12'
+        const descanso = ex.descanso || ex.rest || '60-90 seg'
+        const peso = ex.peso || ex.weight || 'corporal'
+        return { nombre, series, repeticiones, descanso, peso }
+      })
     }
 
-    // Si no, generar una rutina básica de 7 días basada en las recomendaciones
+    // Si la IA ya devolvió una rutina estructurada
+    if (respuestaIA?.rutinaSemanal && Array.isArray(respuestaIA.rutinaSemanal)) {
+      return respuestaIA.rutinaSemanal.map((dia, index) => {
+        const nombreSesion =
+          dia.nombre_sesion || dia.nombreSesion || dia.titulo || `Sesión ${index + 1}`
+        const ejercicios = normalizeExercises(dia.ejercicios || dia.exercises)
+
+        return {
+          dia: index + 1,
+          fecha: toYMD(new Date(startDate.getTime() + (index * 24 * 60 * 60 * 1000))),
+          nombre_sesion: nombreSesion,
+          ejercicios
+        }
+      })
+    }
+
+    // Si la IA NO trajo rutina diaria, generamos una básica
     const dias = []
     const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
-    const metodologia = respuestaIA?.metodologiaSeleccionada || respuestaIA?.ajustesRecomendados?.metodologia || 'Hipertrofia'
+    const metodologia =
+      respuestaIA?.metodologiaSeleccionada ||
+      respuestaIA?.ajustesRecomendados?.metodologia ||
+      'Hipertrofia'
 
     for (let i = 0; i < 7; i++) {
       const currentDate = new Date(startDate.getTime() + (i * 24 * 60 * 60 * 1000))
-      const dayName = dayNames[currentDate.getDay() === 0 ? 6 : currentDate.getDay() - 1] // Ajustar domingo
-
-      // Nunca empezar con descanso el primer día
-      const isRestDay = i > 0 && (i === 2 || i === 4 || i === 6) // Descanso miércoles, viernes, domingo
+      const dayName = dayNames[currentDate.getDay() === 0 ? 6 : currentDate.getDay() - 1]
+      const isRestDay = i > 0 && (i === 2 || i === 4 || i === 6) // Descanso: Mié, Vie, Dom
 
       if (isRestDay) {
         dias.push({
           dia: i + 1,
-          fecha: currentDate.toISOString().split('T')[0],
+          fecha: toYMD(currentDate),
           nombre_sesion: `Descanso - ${dayName}`,
           ejercicios: []
         })
       } else {
-        // Generar entrenamiento basado en las recomendaciones de IA
         const ejercicios = generateExercisesFromIA(respuestaIA, i + 1, metodologia)
         dias.push({
           dia: i + 1,
-          fecha: currentDate.toISOString().split('T')[0],
+          fecha: toYMD(currentDate),
           nombre_sesion: `${metodologia} - ${dayName}`,
           ejercicios
         })
@@ -852,50 +911,82 @@ export default function MethodologiesScreen () {
         </DialogContent>
       </Dialog>
 
-      {/* Diálogo de éxito (respuesta de /api/ia/recommend-and-generate) */}
-      <Dialog open={!!successData} onOpenChange={(open) => { if (!open) handleCloseSuccessDialog() }}>
-        <DialogContent className="max-w-lg bg-gray-900 border-yellow-400/20 text-white">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center">
-              <Brain className="w-5 h-5 mr-2 text-yellow-400" />
-              ¡Rutina generada!
-            </DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Hemos guardado tu metodología activa y su rutina semanal.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-2 text-sm">
-            <p>
-              <span className="text-gray-400">Metodología:</span>{' '}
-              <span className="text-white font-semibold">{successData?.metodologia || successData?.modo || '—'}</span>
-            </p>
-            <p className="text-gray-300">
-              {successData?.respuestaIA?.recomendacionIA || 'Rutina generada exitosamente'}
-            </p>
-
-            {/* Mostrar información adicional de la IA */}
-            {successData?.respuestaIA && (
-              <div className="mt-4 p-3 bg-gray-800/50 rounded-lg">
-                <h4 className="text-yellow-400 font-semibold mb-2">Análisis de IA:</h4>
-                <div className="space-y-1 text-xs">
-                  <p><span className="text-gray-400">Estado Metabólico:</span> {successData.respuestaIA.estadoMetabolico}</p>
-                  <p><span className="text-gray-400">Recuperación Neural:</span> {successData.respuestaIA.recuperacionNeural}</p>
-                  <p><span className="text-gray-400">Eficiencia Adaptativa:</span> {successData.respuestaIA.eficienciaAdaptativa}</p>
-                  <p><span className="text-gray-400">Próxima Revisión:</span> {successData.respuestaIA.proximaRevision}</p>
-                </div>
-              </div>
-            )}
+      {/* --- POPUP: Cargando IA --- */}
+      <Dialog open={iaLoading}>
+        <DialogContent className="max-w-sm bg-gray-900 border-yellow-400/20">
+          <div className="flex items-center gap-3">
+            <Loader2 className="w-5 h-5 text-yellow-400 animate-spin" />
+            <DialogTitle className="text-yellow-400">La IA está comprobando tu perfil…</DialogTitle>
           </div>
-
-          <DialogFooter className="mt-2">
-            <Button className="bg-yellow-400 text-black hover:bg-yellow-300" onClick={handleCloseSuccessDialog}>
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Ir a Rutinas
-            </Button>
-          </DialogFooter>
+          <DialogDescription className="text-gray-300 mt-2">
+            Preparando tu mejor entrenamiento para hoy según tu equipamiento y nivel.
+          </DialogDescription>
         </DialogContent>
       </Dialog>
+
+      {/* --- POPUP: Resumen IA --- */}
+      {successData?.respuestaIA && (
+        <Dialog
+          open={!!successData}
+          onOpenChange={(open) => { if (!open) handleCloseSuccessDialog() }}
+        >
+          <DialogContent className="max-w-xl bg-gray-900 border-yellow-400/20">
+            <DialogHeader>
+              <DialogTitle className="text-yellow-400 flex items-center gap-2">
+                <Brain className="w-4 h-4 text-yellow-400" />
+                Recomendación de la IA
+              </DialogTitle>
+              <DialogDescription className="text-gray-300">
+                Análisis basado en tu perfil actual
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 text-sm">
+              <div>
+                <p className="text-gray-400">Metodología seleccionada</p>
+                <p className="text-white font-semibold">
+                  {successData.respuestaIA.metodologiaSeleccionada || successData.metodologia || '—'}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-gray-400">Estado metabólico</p>
+                  <p className="text-white">{successData.respuestaIA.estadoMetabolico || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400">Recuperación neural</p>
+                  <p className="text-white">{successData.respuestaIA.recuperacionNeural || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400">Eficiencia adaptativa</p>
+                  <p className="text-white">{successData.respuestaIA.eficienciaAdaptativa || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400">Próxima revisión</p>
+                  <p className="text-white">{successData.respuestaIA.proximaRevision || '—'}</p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-gray-400">Recomendación</p>
+                <p className="text-white">
+                  {successData.respuestaIA.recomendacionIA || '—'}
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter className="mt-4">
+              <Button
+                onClick={handleCloseSuccessDialog}
+                className="bg-yellow-400 text-black hover:bg-yellow-300"
+              >
+                Usar esta metodología
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }
